@@ -30,6 +30,7 @@ async function main() {
   await db.setting.upsert({ where: { key: "siteName" }, create: { key: "siteName", value: "RALECHE" }, update: {} });
   await db.setting.upsert({ where: { key: "tagline" }, create: { key: "tagline", value: "Technology, AI and the people building what's next." }, update: {} });
 
+  if (await db.post.count()) return console.log("Seeded. Articles already present; use Admin → Import TTS42 to re-sync.");
   const r = await importFromSource();
   console.log(`Seeded. Imported ${r.created} new / ${r.updated} updated articles from tts42.com`, r.errors);
 }

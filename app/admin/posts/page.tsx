@@ -7,7 +7,7 @@ import { fmtDate } from "@/lib/utils";
 export default async function Posts({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
   const { q = "", status = "" } = await searchParams;
   const posts = await db.post.findMany({
-    where: { ...(status ? { status } : {}), ...(q ? { OR: [{ title: { contains: q } }, { tags: { contains: q } }] } : {}) },
+    where: { ...(status ? { status } : {}), ...(q ? { OR: [{ title: { contains: q, mode: "insensitive" } }, { tags: { contains: q, mode: "insensitive" } }] } : {}) },
     include: { category: true },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
   });

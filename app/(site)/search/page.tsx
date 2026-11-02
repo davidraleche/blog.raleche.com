@@ -7,7 +7,7 @@ export default async function Search({ searchParams }: { searchParams: Promise<{
   const q = ((await searchParams).q ?? "").trim();
   const posts = q
     ? await db.post.findMany({
-        where: { status: "published", OR: [{ title: { contains: q } }, { dek: { contains: q } }, { tags: { contains: q } }, { body: { contains: q } }] },
+        where: { status: "published", OR: [{ title: { contains: q, mode: "insensitive" } }, { dek: { contains: q, mode: "insensitive" } }, { tags: { contains: q, mode: "insensitive" } }, { body: { contains: q, mode: "insensitive" } }] },
         include: { category: true }, orderBy: { publishedAt: "desc" }, take: 30,
       })
     : [];

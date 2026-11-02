@@ -35,5 +35,16 @@ Local Stripe webhooks: `stripe listen --forward-to localhost:3002/api/stripe/web
 ## Re-sync articles
 Admin → Import TTS42 → **Sync now**, or `npm run import:tts42`. Re-syncing updates article text but keeps any executive summary you edited.
 
-## Deploy
-Any Node host (Vercel, Render, Fly). For production switch `provider` in `prisma/schema.prisma` to `"postgresql"`, set `DATABASE_URL`, and run `npx prisma db push && npm run db:seed` once.
+## Deploy (Google Cloud project `raleche-blog`)
+- **Web**: Cloud Run service `blog` (us-central1), scales to zero.
+- **Database**: Cloud SQL Postgres 16 `raleche-db` (db-f1-micro, 10 GB HDD, 7 daily backups).
+- **Secrets** (Secret Manager): `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_PASSWORD`. Add Stripe/Google/Twilio/Resend keys the same way and pass them with `--set-secrets`.
+
+Release a new version:
+```bash
+gcloud builds submit --project raleche-blog --tag us-central1-docker.pkg.dev/raleche-blog/web/blog:vN .
+gcloud run deploy blog --project raleche-blog --region us-central1 --image us-central1-docker.pkg.dev/raleche-blog/web/blog:vN
+gcloud run jobs update setup --project raleche-blog --region us-central1 --image us-central1-docker.pkg.dev/raleche-blog/web/blog:vN
+gcloud run jobs execute setup --project raleche-blog --region us-central1 --wait   # applies schema changes
+```
+Admin password: `gcloud secrets versions access latest --secret ADMIN_PASSWORD --project raleche-blog`
