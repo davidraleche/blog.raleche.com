@@ -38,7 +38,9 @@ Admin → Import TTS42 → **Sync now**, or `npm run import:tts42`. Re-syncing u
 ## Deploy (Google Cloud project `raleche-blog`)
 - **Web**: Cloud Run service `blog` (us-central1), scales to zero.
 - **Database**: Cloud SQL Postgres 16 `raleche-db` (db-f1-micro, 10 GB HDD, 7 daily backups).
-- **Secrets** (Secret Manager): `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_PASSWORD`. Add Stripe/Google/Twilio/Resend keys the same way and pass them with `--set-secrets`.
+- **Secrets** (Secret Manager): `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_PASSWORD`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`. Add Google/Twilio keys the same way and pass them with `--update-secrets`.
+- **Email**: Resend, domain `raleche.com` verified (records on `send`, `rsend`, `resend._domainkey`), sender `EMAIL_FROM=Raleche <newsletter@raleche.com>`.
+- **Hosting**: Firebase Hosting site `raleche-blog` serves blog.raleche.com and rewrites all traffic to Cloud Run.
 
 Release a new version:
 ```bash
