@@ -25,6 +25,8 @@ export async function Footer() {
             <li><Link href="/membership" className="hover:text-accent">Membership</Link></li>
             <li><Link href="/account" className="hover:text-accent">Account</Link></li>
             <li><Link href="/search" className="hover:text-accent">Search</Link></li>
+            <li><Link href="/privacy" className="hover:text-accent">Privacy</Link></li>
+            <li><Link href="/terms" className="hover:text-accent">Terms</Link></li>
             <li><a href="https://tts42.com" className="hover:text-accent">Tech Team Strategy</a></li>
           </ul>
         </div>
