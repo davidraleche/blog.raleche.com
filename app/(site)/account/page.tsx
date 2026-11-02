@@ -21,26 +21,11 @@ export default async function Account({ searchParams }: { searchParams: Promise<
   const newsletter = user.email ? await db.subscriber.findUnique({ where: { email: user.email } }) : null;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12">
+    <>
       {welcome && plan && <p className="mb-8 bg-ink px-5 py-4 font-mono text-sm text-terminal-up">✓ Welcome aboard. Executive summaries are now unlocked on every story.</p>}
-      <h1 className="hed text-6xl">Your account</h1>
 
-      <section className="mt-10 grid gap-6 md:grid-cols-2">
-        <div className="border-[3px] border-ink p-6">
-          <p className="kicker">Profile</p>
-          <dl className="mt-4 space-y-2 text-sm">
-            {user.name && <div><dt className="inline text-ink/50">Name: </dt><dd className="inline">{user.name}</dd></div>}
-            {user.email && <div><dt className="inline text-ink/50">Email: </dt><dd className="inline">{user.email}</dd></div>}
-            {user.phone && <div><dt className="inline text-ink/50">Phone: </dt><dd className="inline">{user.phone}</dd></div>}
-            <div><dt className="inline text-ink/50">Member since: </dt><dd className="inline">{fmtDate(user.createdAt)}</dd></div>
-          </dl>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {user.role === "ADMIN" && <Link href="/admin" className="btn-dark">Admin dashboard</Link>}
-            <form action={signOut}><button className="btn-light">Sign out</button></form>
-          </div>
-        </div>
-
-        <div className="border-[3px] border-ink p-6">
+      <section className="grid gap-6 md:grid-cols-2">
+        <div className="border-[3px] border-ink p-6 md:col-span-2">
           <p className="kicker">Membership</p>
           {sub ? (
             <>
@@ -48,15 +33,20 @@ export default async function Account({ searchParams }: { searchParams: Promise<
               <p className="mt-1 font-mono text-sm">{money(sub.priceCents)}/month · <span className="uppercase">{sub.status}</span></p>
               {sub.currentPeriodEnd && <p className="mt-1 text-sm text-ink/60">{sub.cancelAtPeriodEnd ? "Ends" : "Renews"} {fmtDate(sub.currentPeriodEnd)}</p>}
               <div className="mt-6 flex flex-wrap gap-2">
+                <Link href="/account/summaries" className="btn-dark">Read your executive summaries</Link>
+                {sub.stripeSubscriptionId && <Link href="/account/invoices" className="btn-light">Invoices</Link>}
                 {sub.stripeSubscriptionId ? (
-                  <form action={openBillingPortal}><button className="btn-dark">Manage billing</button></form>
+                  <form action={openBillingPortal}><button className="btn-light">Change plan or card</button></form>
                 ) : (
                   <form action={cancelDemoSubscription}><button className="btn-light">Cancel</button></form>
                 )}
               </div>
             </>
           ) : plan === "executive" && user.role === "ADMIN" ? (
-            <p className="mt-3 font-serif">Admins have full access.</p>
+            <>
+              <p className="mt-3 font-serif">Admins have full access.</p>
+              <Link href="/account/summaries" className="btn-dark mt-6">Read executive summaries</Link>
+            </>
           ) : (
             <>
               <p className="mt-3 font-serif text-lg">You're on the free plan.</p>
@@ -74,7 +64,17 @@ export default async function Account({ searchParams }: { searchParams: Promise<
             </div>
           </div>
         )}
+
+        <div className="flex flex-wrap items-center justify-between gap-4 border-[3px] border-ink p-6 md:col-span-2">
+          <p className="text-sm text-ink/60">
+            Signed in as <span className="text-ink">{user.email ?? user.phone}</span> · member since {fmtDate(user.createdAt)}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {user.role === "ADMIN" && <Link href="/admin" className="btn-dark">Admin dashboard</Link>}
+            <form action={signOut}><button className="btn-light">Sign out</button></form>
+          </div>
+        </div>
       </section>
-    </div>
+    </>
   );
 }

@@ -13,11 +13,17 @@ export function normalizePhone(raw: string) {
 
 const hash = (s: string) => crypto.createHash("sha256").update(s + (process.env.SESSION_SECRET ?? "")).digest("hex");
 
-export async function sendOtp(phone: string) {
-  const recent = await db.otpCode.count({ where: { phone, createdAt: { gt: new Date(Date.now() - 10 * 60e3) } } });
+/** Create a 6-digit code for `key` (a phone number, or any other identifier such as an email change). */
+export async function issueCode(key: string) {
+  const recent = await db.otpCode.count({ where: { phone: key, createdAt: { gt: new Date(Date.now() - 10 * 60e3) } } });
   if (recent >= 5) throw new Error("Too many codes requested. Try again in a few minutes.");
   const code = String(crypto.randomInt(100000, 1000000));
-  await db.otpCode.create({ data: { phone, codeHash: hash(code), expiresAt: new Date(Date.now() + 10 * 60e3) } });
+  await db.otpCode.create({ data: { phone: key, codeHash: hash(code), expiresAt: new Date(Date.now() + 10 * 60e3) } });
+  return code;
+}
+
+export async function sendOtp(phone: string) {
+  const code = await issueCode(phone);
 
   const { TWILIO_ACCOUNT_SID: sid, TWILIO_AUTH_TOKEN: token, TWILIO_FROM_NUMBER: from } = process.env;
   if (!sid || !token || !from) {

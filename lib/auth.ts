@@ -39,6 +39,11 @@ export async function destroySession() {
   jar.delete(COOKIE);
 }
 
+export async function currentSessionId() {
+  const token = (await cookies()).get(COOKIE)?.value;
+  return token ? sha256(token) : null;
+}
+
 export async function getUser() {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
