@@ -9,6 +9,8 @@ export async function syncStripeSubscription(sub: Stripe.Subscription) {
   const userId = sub.metadata.userId;
   const planId = sub.metadata.planId;
   if (!userId || !planId) return;
+  // Test-mode events from other environments (e.g. local dev) reference users that don't exist here.
+  if (!(await db.user.findUnique({ where: { id: userId }, select: { id: true } }))) return;
   const item = sub.items.data[0];
   const periodEnd = (item as unknown as { current_period_end?: number })?.current_period_end ?? (sub as unknown as { current_period_end?: number }).current_period_end;
   const data = {
