@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+body { @apply bg-paper text-ink font-sans antialiased; }
+
+.kicker { @apply font-mono text-[11px] uppercase tracking-[0.18em] text-accent; }
+.hed { @apply font-display font-bold uppercase leading-[0.95] tracking-tight; }
+.btn { @apply inline-flex items-center justify-center gap-2 px-5 py-3 font-mono text-xs uppercase tracking-[0.15em] transition; }
+.btn-dark { @apply btn bg-ink text-white hover:bg-accent; }
+.btn-light { @apply btn border border-ink bg-white text-ink hover:bg-ink hover:text-white; }
+.input { @apply w-full border border-ink/30 bg-white px-4 py-3 text-base outline-none transition focus:border-ink; }
+.rule { @apply border-t-[3px] border-ink; }
+
+.prose-article { @apply prose prose-lg max-w-none font-serif prose-headings:font-display prose-headings:uppercase prose-headings:tracking-tight prose-h2:text-3xl prose-a:text-accent prose-a:no-underline hover:prose-a:underline prose-blockquote:border-accent prose-blockquote:font-sans prose-blockquote:not-italic prose-strong:text-ink; }
+
+/* Admin terminal */
+.term { @apply bg-terminal-bg text-slate-200; }
+.term-panel { @apply border border-terminal-line bg-terminal-panel; }
+.term-label { @apply font-mono text-[10px] uppercase tracking-[0.2em] text-terminal-dim; }
+.term-input { @apply w-full border border-terminal-line bg-terminal-bg px-3 py-2 font-mono text-sm text-slate-100 outline-none focus:border-terminal-amber; }
+.term-btn { @apply inline-flex items-center gap-2 border border-terminal-amber/60 bg-terminal-amber/10 px-3 py-2 font-mono text-xs uppercase tracking-widest text-terminal-amber hover:bg-terminal-amber hover:text-black transition; }
+.term-btn-ghost { @apply inline-flex items-center gap-2 border border-terminal-line px-3 py-2 font-mono text-xs uppercase tracking-widest text-slate-300 hover:border-slate-400 transition; }
+.term-btn-danger { @apply inline-flex items-center gap-2 border border-terminal-down/60 px-3 py-2 font-mono text-xs uppercase tracking-widest text-terminal-down hover:bg-terminal-down hover:text-white transition; }
+.term-table { @apply w-full font-mono text-xs; }
+.term-table th { @apply border-b border-terminal-line px-3 py-2 text-left font-normal uppercase tracking-widest text-terminal-dim; }
+.term-table td { @apply border-b border-terminal-line/60 px-3 py-2 align-middle; }
+.term-table tr:hover td { @apply bg-white/[0.02]; }
+
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ticker-track { animation: ticker 40s linear infinite; }
