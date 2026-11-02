@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSession, upsertUser, safeNext } from "@/lib/auth";
+import { readState } from "@/lib/oauth-state";
 
 export async function GET(req: NextRequest) {
   const appUrl = process.env.APP_URL || req.nextUrl.origin;
   const code = req.nextUrl.searchParams.get("code");
   const state = req.nextUrl.searchParams.get("state");
-  if (!code || !state || state !== req.cookies.get("g_state")?.value) return NextResponse.redirect(`${appUrl}/signin?error=google_state`);
+  const st = readState(state);
+  if (!code || !st) return NextResponse.redirect(`${appUrl}/signin?error=google_state`);
 
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -26,8 +28,6 @@ export async function GET(req: NextRequest) {
 
   const user = await upsertUser({ googleId: profile.sub, email: profile.email }, { name: profile.name, image: profile.picture }, profile.email_verified === true);
   await createSession(user.id);
-  const res = NextResponse.redirect(`${appUrl}${safeNext(req.cookies.get("g_next")?.value)}`);
-  res.cookies.delete("g_state");
-  res.cookies.delete("g_next");
+  const res = NextResponse.redirect(`${appUrl}${safeNext(st.next)}`);
   return res;
 }

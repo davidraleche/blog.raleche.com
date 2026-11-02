@@ -5,7 +5,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "./db";
 
-const COOKIE = "rl_session";
+// Firebase Hosting only forwards a cookie named __session to Cloud Run, so the session must use that name.
+const COOKIE = "__session";
 const SESSION_DAYS = 60;
 
 const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
