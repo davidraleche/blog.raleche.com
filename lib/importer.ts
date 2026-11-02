@@ -76,8 +76,8 @@ export async function fetchSourceArticle(source: string, slug: string) {
   };
 }
 
-export async function importFromSource(source = process.env.IMPORT_SOURCE || "https://tts42.com") {
-  const slugs = await listSourceArticles(source);
+export async function importFromSource(source = process.env.IMPORT_SOURCE || "https://tts42.com", only?: string) {
+  const slugs = only ? [only] : await listSourceArticles(source);
   let created = 0, updated = 0;
   const errors: string[] = [];
   for (const slug of slugs) {
