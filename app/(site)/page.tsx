@@ -44,7 +44,7 @@ export default async function Home() {
       <section className="grid gap-12 py-8 lg:grid-cols-[1fr_340px]">
         <div>
           <h2 className="hed rule pt-3 text-3xl">The Latest</h2>
-          <div className="mt-6 grid gap-x-8 gap-y-10 sm:grid-cols-2">
+          <div className="mt-6 grid gap-x-6 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
             {(grid.length ? grid : rest).map((p) => <GridCard key={p.id} post={p} />)}
           </div>
         </div>

@@ -23,12 +23,12 @@ export function Kicker({ post }: { post: P }) {
 
 export function HeroCard({ post }: { post: P }) {
   return (
-    <Link href={`/story/${post.slug}`} className="group block">
-      <Img post={post} className="aspect-[16/10]" />
-      <div className="mt-5">
+    <Link href={`/story/${post.slug}`} className="group grid items-start gap-6 md:grid-cols-[3fr_2fr]">
+      <Img post={post} className="aspect-[40/21]" />
+      <div>
         <Kicker post={post} />
-        <h2 className="hed mt-2 text-4xl group-hover:underline decoration-4 underline-offset-4 sm:text-6xl">{post.title}</h2>
-        <p className="mt-4 max-w-2xl font-serif text-xl text-ink/80">{post.dek}</p>
+        <h2 className="hed mt-2 text-3xl group-hover:underline decoration-4 underline-offset-4 sm:text-4xl">{post.title}</h2>
+        <p className="mt-4 line-clamp-4 font-serif text-lg text-ink/80">{post.dek}</p>
         <p className="mt-3 font-mono text-[11px] uppercase tracking-widest text-ink/50">{post.authorName} · {fmtDate(post.publishedAt)}</p>
       </div>
     </Link>
@@ -37,13 +37,13 @@ export function HeroCard({ post }: { post: P }) {
 
 export function StackCard({ post }: { post: P }) {
   return (
-    <Link href={`/story/${post.slug}`} className="group grid grid-cols-[1fr_96px] gap-4 border-t border-ink/15 py-4 first:border-t-0 first:pt-0">
+    <Link href={`/story/${post.slug}`} className="group grid grid-cols-[1fr_120px] gap-4 border-t border-ink/15 py-4 first:border-t-0 first:pt-0">
       <div>
         <Kicker post={post} />
         <h3 className="hed mt-1 text-xl group-hover:text-accent">{post.title}</h3>
         <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-ink/50">{post.authorName}</p>
       </div>
-      <Img post={post} className="aspect-square" />
+      <Img post={post} className="aspect-[40/21] self-start" />
     </Link>
   );
 }
@@ -51,7 +51,7 @@ export function StackCard({ post }: { post: P }) {
 export function GridCard({ post }: { post: P }) {
   return (
     <Link href={`/story/${post.slug}`} className="group block">
-      <Img post={post} className="aspect-[4/3]" />
+      <Img post={post} className="aspect-[40/21]" />
       <div className="mt-3">
         <Kicker post={post} />
         <h3 className="hed mt-1 text-2xl group-hover:underline decoration-2 underline-offset-2">{post.title}</h3>

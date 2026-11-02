@@ -48,7 +48,7 @@ export default async function Story({ params }: Props) {
       </header>
 
       {post.coverImage && (
-        <figure className="mx-auto mt-10 max-w-6xl px-4">
+        <figure className="mx-auto mt-10 max-w-3xl px-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={post.coverImage} alt="" className="w-full" />
         </figure>
