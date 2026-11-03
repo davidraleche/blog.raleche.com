@@ -37,7 +37,7 @@ export async function Header() {
           {categories.map((c) => (
             <li key={c.id}><Link href={`/category/${c.slug}`} className="whitespace-nowrap hover:text-accent">{c.name}</Link></li>
           ))}
-          <li><Link href="/membership" className="whitespace-nowrap text-accent">Executive Summaries</Link></li>
+          <li><Link href="/executive-summaries" className="whitespace-nowrap text-accent">Executive Summaries</Link></li>
           <li className="ml-auto"><Link href="/search" className="whitespace-nowrap hover:text-accent">Search</Link></li>
         </ul>
       </nav>
