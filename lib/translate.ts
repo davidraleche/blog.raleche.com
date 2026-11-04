@@ -1,4 +1,3 @@
-import "server-only";
 import crypto from "crypto";
 import { execFile } from "child_process";
 import { promisify } from "util";
