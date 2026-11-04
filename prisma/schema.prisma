@@ -147,3 +147,11 @@ model ImportRun {
   errors    String   @default("")
   createdAt DateTime @default(now())
 }
+
+/// Machine translations, keyed by a hash of (language, format, source text), so edited text is retranslated automatically.
+model Translation {
+  id        String   @id
+  lang      String
+  text      String
+  createdAt DateTime @default(now())
+}

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { stripe } from "@/lib/stripe";
+import { getLocale } from "@/lib/i18n/server";
 
 const appUrl = () => process.env.APP_URL || "http://localhost:3000";
 
@@ -29,6 +30,7 @@ export async function startCheckout(form: FormData) {
   }
 
   const session = await stripe.checkout.sessions.create({
+    locale: await getLocale(),
     mode: "subscription",
     customer: customerId,
     line_items: [{
@@ -46,7 +48,7 @@ export async function startCheckout(form: FormData) {
 export async function openBillingPortal() {
   const user = await requireUser();
   if (!stripe || !user.stripeCustomerId) redirect("/account");
-  const s = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, return_url: `${appUrl()}/account` });
+  const s = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, locale: await getLocale(), return_url: `${appUrl()}/account` });
   redirect(s.url);
 }
 

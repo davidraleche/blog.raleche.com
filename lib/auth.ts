@@ -20,33 +20,54 @@ export async function verifyPassword(pw: string, hash: string) {
   return bcrypt.compare(pw, hash);
 }
 
-export async function createSession(userId: string) {
-  const token = crypto.randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + SESSION_DAYS * 864e5);
-  await db.session.create({ data: { id: sha256(token), userId, expiresAt } });
-  (await cookies()).set(COOKIE, token, {
+// The cookie holds "<session token>~<language>"; either part may be empty.
+async function readCookie() {
+  const [token = "", lang = ""] = ((await cookies()).get(COOKIE)?.value ?? "").split("~");
+  return { token: token || null, lang: lang || null };
+}
+
+async function writeCookie(token: string | null, lang: string | null, expires: Date) {
+  const jar = await cookies();
+  if (!token && !lang) return jar.delete(COOKIE);
+  jar.set(COOKIE, `${token ?? ""}${lang ? `~${lang}` : ""}`, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    expires: expiresAt,
+    expires,
   });
 }
 
+export async function createSession(userId: string) {
+  const token = crypto.randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + SESSION_DAYS * 864e5);
+  await db.session.create({ data: { id: sha256(token), userId, expiresAt } });
+  await writeCookie(token, (await readCookie()).lang, expiresAt);
+}
+
 export async function destroySession() {
-  const jar = await cookies();
-  const token = jar.get(COOKIE)?.value;
+  const { token, lang } = await readCookie();
   if (token) await db.session.deleteMany({ where: { id: sha256(token) } });
-  jar.delete(COOKIE);
+  await writeCookie(null, lang, new Date(Date.now() + 365 * 864e5));
 }
 
 export async function currentSessionId() {
-  const token = (await cookies()).get(COOKIE)?.value;
+  const { token } = await readCookie();
   return token ? sha256(token) : null;
 }
 
+export async function getLangCookie() {
+  return (await readCookie()).lang;
+}
+
+export async function setLangCookie(lang: string) {
+  const { token } = await readCookie();
+  const session = token ? await db.session.findUnique({ where: { id: sha256(token) }, select: { expiresAt: true } }) : null;
+  await writeCookie(session ? token : null, lang, session?.expiresAt ?? new Date(Date.now() + 365 * 864e5));
+}
+
 export async function getUser() {
-  const token = (await cookies()).get(COOKIE)?.value;
+  const { token } = await readCookie();
   if (!token) return null;
   const session = await db.session.findUnique({
     where: { id: sha256(token) },

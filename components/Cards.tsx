@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Post, Category } from "@prisma/client";
-import { fmtDate } from "@/lib/utils";
+import { getI18n } from "@/lib/i18n/server";
 
 type P = Post & { category: Category | null };
 
@@ -21,7 +21,8 @@ export function Kicker({ post }: { post: P }) {
   return post.category ? <span className="kicker">{post.category.name}</span> : null;
 }
 
-export function HeroCard({ post }: { post: P }) {
+export async function HeroCard({ post }: { post: P }) {
+  const { date: fmtDate } = await getI18n();
   return (
     <Link href={`/story/${post.slug}`} className="group grid items-start gap-6 md:grid-cols-[3fr_2fr]">
       <Img post={post} className="aspect-[40/21]" />
@@ -48,7 +49,8 @@ export function StackCard({ post }: { post: P }) {
   );
 }
 
-export function GridCard({ post }: { post: P }) {
+export async function GridCard({ post }: { post: P }) {
+  const { t, date: fmtDate } = await getI18n();
   return (
     <Link href={`/story/${post.slug}`} className="group block">
       <Img post={post} className="aspect-[40/21]" />
@@ -56,7 +58,7 @@ export function GridCard({ post }: { post: P }) {
         <Kicker post={post} />
         <h3 className="hed mt-1 text-2xl group-hover:underline decoration-2 underline-offset-2">{post.title}</h3>
         <p className="mt-2 line-clamp-2 font-serif text-base text-ink/70">{post.dek}</p>
-        <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-ink/50">{fmtDate(post.publishedAt)} · {post.readMinutes} min</p>
+        <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-ink/50">{fmtDate(post.publishedAt)} · {t("minShort", { n: post.readMinutes })}</p>
       </div>
     </Link>
   );

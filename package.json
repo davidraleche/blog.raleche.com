@@ -9,7 +9,8 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "import:tts42": "tsx scripts/import-tts42.ts",
-    "setup": "prisma db push && tsx prisma/seed.ts"
+    "setup": "prisma db push && tsx prisma/seed.ts",
+    "translate:all": "tsx --conditions=react-server scripts/translate-all.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

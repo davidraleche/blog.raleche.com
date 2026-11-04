@@ -6,6 +6,7 @@ import { requireUser, hashPassword, verifyPassword, adminEmail, currentSessionId
 import { issueCode, verifyOtp } from "@/lib/sms";
 import { sendEmail } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
+import { getI18n } from "@/lib/i18n/server";
 
 export type FormState = { ok?: string; error?: string; step?: "code"; email?: string } | null;
 
@@ -15,53 +16,56 @@ async function syncStripeCustomer(customerId: string | null, data: { name?: stri
 
 export async function saveName(_: FormState, form: FormData): Promise<FormState> {
   const user = await requireUser();
+  const { t } = await getI18n();
   const name = String(form.get("name") ?? "").trim().slice(0, 80);
-  if (!name) return { error: "Enter your name." };
+  if (!name) return { error: t("enterName") };
   await db.user.update({ where: { id: user.id }, data: { name } });
   await syncStripeCustomer(user.stripeCustomerId, { name });
   revalidatePath("/account", "layout");
-  return { ok: "Name saved." };
+  return { ok: t("nameSaved") };
 }
 
 /** Two steps: send a code to the new address, then confirm it. The email only changes once the code is entered. */
 export async function changeEmail(_: FormState, form: FormData): Promise<FormState> {
   const user = await requireUser();
+  const { t } = await getI18n();
   const parsed = z.string().email().safeParse(String(form.get("email") ?? "").trim().toLowerCase());
-  if (!parsed.success) return { error: "Enter a valid email address." };
+  if (!parsed.success) return { error: t("invalidEmail") };
   const email = parsed.data;
-  if (email === user.email) return { error: "That's already your email." };
-  if (email === adminEmail()) return { error: "That email can't be used." };
-  if (await db.user.findUnique({ where: { email } })) return { error: "Another account already uses that email." };
+  if (email === user.email) return { error: t("alreadyYourEmail") };
+  if (email === adminEmail()) return { error: t("emailNotAllowed") };
+  if (await db.user.findUnique({ where: { email } })) return { error: t("emailTaken") };
   const key = `email-change:${user.id}:${email}`;
 
   const code = String(form.get("code") ?? "").trim();
   if (!code) {
-    if (process.env.NODE_ENV === "production" && !process.env.RESEND_API_KEY) return { error: "Email changes aren't available yet. Please contact us." };
+    if (process.env.NODE_ENV === "production" && !process.env.RESEND_API_KEY) return { error: t("emailChangeUnavailable") };
     try {
       const c = await issueCode(key);
-      await sendEmail(email, `Your Raleche code: ${c}`, `<p>Enter <b>${c}</b> to confirm your new email address. It expires in 10 minutes.</p>`);
+      await sendEmail(email, t("codeEmailSubject", { code: c }), `<p>${t("codeEmailBody", { code: `<b>${c}</b>` })}</p>`);
     } catch (e) {
       return { error: (e as Error).message };
     }
     return { step: "code", email };
   }
-  if (!(await verifyOtp(key, code))) return { step: "code", email, error: "That code is wrong or expired." };
+  if (!(await verifyOtp(key, code))) return { step: "code", email, error: t("codeWrong") };
   await db.user.update({ where: { id: user.id }, data: { email } });
   await syncStripeCustomer(user.stripeCustomerId, { email });
   revalidatePath("/account", "layout");
-  return { ok: `Email changed to ${email}.` };
+  return { ok: t("emailChanged", { email }) };
 }
 
 export async function changePassword(_: FormState, form: FormData): Promise<FormState> {
   const user = await requireUser();
+  const { t } = await getI18n();
   const current = String(form.get("current") ?? "");
   const next = String(form.get("password") ?? "");
-  if (next.length < 8) return { error: "New password must be at least 8 characters." };
-  if (user.passwordHash && !(await verifyPassword(current, user.passwordHash))) return { error: "Current password is wrong." };
+  if (next.length < 8) return { error: t("newPasswordMin") };
+  if (user.passwordHash && !(await verifyPassword(current, user.passwordHash))) return { error: t("currentPasswordWrong") };
   await db.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(next) } });
   // Sign out other devices.
   const keep = await currentSessionId();
   await db.session.deleteMany({ where: { userId: user.id, ...(keep ? { NOT: { id: keep } } : {}) } });
   revalidatePath("/account/profile");
-  return { ok: user.passwordHash ? "Password changed." : "Password set. You can now sign in with your email and password." };
+  return { ok: user.passwordHash ? t("passwordChanged") : t("passwordSet") };
 }
