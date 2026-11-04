@@ -17,6 +17,8 @@ export default function Page() {
         <p className="mt-3">To sign you in, deliver the newsletter, manage your membership, answer your messages and keep the site secure. We do not sell your personal information.</p>
         <h2 className="hed mt-10 text-3xl">Who we share it with</h2>
         <p className="mt-3">Service providers that run the site for us: Google Cloud (hosting and database), Stripe (payments), Twilio (text-message codes) and Resend (email delivery). They may only use your data to provide their service to us.</p>
+        <h2 className="hed mt-10 text-3xl">Advertising</h2>
+        <p className="mt-3">Visitors who are not paying members may see ads served by Google AdSense. Google and its partners use cookies to show ads based on your visits to this and other sites. You can turn off personalized ads at <a href="https://adssettings.google.com" className="text-accent hover:underline">adssettings.google.com</a>, and learn more at <a href="https://policies.google.com/technologies/ads" className="text-accent hover:underline">policies.google.com/technologies/ads</a>. Paying members don&apos;t see ads.</p>
         <h2 className="hed mt-10 text-3xl">Your choices</h2>
         <p className="mt-3">You can unsubscribe from any email with the link at the bottom of it. To see, correct or delete your account data, write to info@tts42.com and we will respond within 30 days.</p>
         <h2 className="hed mt-10 text-3xl">Changes</h2>
