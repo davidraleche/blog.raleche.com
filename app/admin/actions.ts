@@ -8,6 +8,7 @@ import { importFromSource } from "@/lib/importer";
 import { sendEmail } from "@/lib/email";
 import { renderMarkdown } from "@/lib/markdown";
 import { stripe } from "@/lib/stripe";
+import { AD_KEYS } from "@/lib/ads";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
@@ -213,6 +214,18 @@ export async function saveSettings(form: FormData) {
   await requireAdmin();
   for (const key of ["siteName", "tagline"]) {
     const value = str(form, key);
+    await db.setting.upsert({ where: { key }, create: { key, value }, update: { value } });
+  }
+  revalidatePath("/", "layout");
+  redirect("/admin/settings?saved=1");
+}
+
+export async function saveAdSettings(form: FormData) {
+  await requireAdmin();
+  for (const key of AD_KEYS) {
+    let value = str(form, key);
+    if (key === "adsenseClient" && /^pub-\d+$/.test(value)) value = `ca-${value}`;
+    if (key === "adsHideForMembers") value = value === "on" ? "on" : "off";
     await db.setting.upsert({ where: { key }, create: { key, value }, update: { value } });
   }
   revalidatePath("/", "layout");

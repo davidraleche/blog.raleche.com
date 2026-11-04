@@ -7,6 +7,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import { fmtDate } from "@/lib/utils";
 import { GridCard } from "@/components/Cards";
 import { NewsletterForm } from "@/components/NewsletterForm";
+import { AdSlot } from "@/components/Ads";
 import { ViewPing } from "./ViewPing";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -56,6 +57,7 @@ export default async function Story({ params }: Props) {
 
       <div className="mx-auto mt-10 max-w-3xl px-4">
         <ExecutiveSummary summary={post.executiveSummary} member={member} signedIn={!!user} />
+        <AdSlot name="articleTop" />
 
         <div className="prose-article" dangerouslySetInnerHTML={{ __html: renderMarkdown(body) }} />
 
@@ -65,6 +67,8 @@ export default async function Story({ params }: Props) {
             <Link href="/membership" className="btn-dark mt-4">Subscribe to keep reading</Link>
           </div>
         )}
+
+        <AdSlot name="articleEnd" />
 
         {post.tags && (
           <div className="mt-10 flex flex-wrap gap-2 border-t border-ink/15 pt-6">

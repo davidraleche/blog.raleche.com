@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { HeroCard, StackCard, GridCard, NumberedList } from "@/components/Cards";
 import { NewsletterForm } from "@/components/NewsletterForm";
+import { AdSlot } from "@/components/Ads";
 import { getUser, activePlan } from "@/lib/auth";
 
 const published = { status: "published", publishedAt: { lte: new Date() } };
@@ -50,6 +51,8 @@ export default async function Home() {
         </div>
         <NumberedList title="Most Popular" posts={popular} />
       </section>
+
+      <AdSlot name="feed" />
 
       <section className="my-12 bg-ink px-6 py-12 text-white md:px-12">
         <div className="grid items-center gap-8 md:grid-cols-2">
