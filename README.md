@@ -1,4 +1,4 @@
-# blog.raleche.com
+# raleche.com
 
 A Wired-style tech magazine with paid memberships for executive summaries, a newsletter, and a Wall Street-terminal admin.
 
@@ -40,7 +40,8 @@ Admin → Import TTS42 → **Sync now**, or `npm run import:tts42`. Re-syncing u
 - **Database**: Cloud SQL Postgres 16 `raleche-db` (db-f1-micro, 10 GB HDD, 7 daily backups).
 - **Secrets** (Secret Manager): `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_PASSWORD`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`. Add Google/Twilio keys the same way and pass them with `--update-secrets`.
 - **Email**: Resend, domain `raleche.com` verified (records on `send`, `rsend`, `resend._domainkey`), sender `EMAIL_FROM=Raleche <newsletter@raleche.com>`.
-- **Hosting**: Firebase Hosting site `raleche-blog` serves blog.raleche.com and rewrites all traffic to Cloud Run.
+- **Hosting**: Firebase Hosting site `raleche-blog` serves raleche.com (`APP_URL`) and rewrites all traffic to Cloud Run; www.raleche.com and blog.raleche.com 301-redirect to it. Stripe webhook: `https://raleche.com/api/stripe/webhook`. Google OAuth redirect URI: `https://raleche.com/api/auth/google/callback`.
+- **Analytics**: GA4 `G-BTN45MJ4RG` via `GA_MEASUREMENT_ID` (Admin → Settings overrides it).
 
 Release a new version:
 ```bash
