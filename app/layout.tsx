@@ -5,6 +5,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { BCP47 } from "@/lib/i18n/messages";
 import { I18nProvider } from "@/components/I18nProvider";
 import { adsConfig } from "@/lib/ads";
+import { analyticsId } from "@/lib/analytics";
 import { SITE, JsonLd, siteJsonLd } from "@/lib/seo";
 
 const display = Barlow_Condensed({ subsets: ["latin"], weight: ["600", "700", "800"], variable: "--font-display" });
@@ -26,10 +27,16 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [locale, ads] = await Promise.all([getLocale(), adsConfig()]);
+  const [locale, ads, ga] = await Promise.all([getLocale(), adsConfig(), analyticsId()]);
   return (
     <html lang={BCP47[locale]} className={`${display.variable} ${serif.variable} ${sans.variable} ${mono.variable}`}>
       <head>
+        {ga && (
+          <>
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${ga}`} />
+            <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date());gtag("config",${JSON.stringify(ga)});` }} />
+          </>
+        )}
         {ads && (
           <>
             {/* AdSense: plain tag in <head> on every page so Google's site verification finds it. */}

@@ -22,6 +22,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
           <p className="term-label text-terminal-amber">Site</p>
           <label className="block"><span className="term-label">Site name (logo)</span><input name="siteName" defaultValue={s.siteName} className="term-input mt-1" /></label>
           <label className="block"><span className="term-label">Tagline</span><input name="tagline" defaultValue={s.tagline} className="term-input mt-1" /></label>
+          <label className="block"><span className="term-label">Google Analytics measurement ID</span><input name="gaMeasurementId" defaultValue={s.gaMeasurementId} placeholder="G-XXXXXXXXXX" className="term-input mt-1" /></label>
           <button className="term-btn">Save</button>
         </form>
         <form action={saveAdSettings} className="term-panel space-y-3 p-5">

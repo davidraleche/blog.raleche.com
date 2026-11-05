@@ -215,8 +215,9 @@ export async function runImport() {
 
 export async function saveSettings(form: FormData) {
   await requireAdmin();
-  for (const key of ["siteName", "tagline"]) {
-    const value = str(form, key);
+  for (const key of ["siteName", "tagline", "gaMeasurementId"]) {
+    let value = str(form, key);
+    if (key === "gaMeasurementId") value = value.toUpperCase();
     await db.setting.upsert({ where: { key }, create: { key, value }, update: { value } });
   }
   revalidatePath("/", "layout");
