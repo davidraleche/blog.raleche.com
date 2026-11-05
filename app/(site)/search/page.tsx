@@ -3,7 +3,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { localizePosts } from "@/lib/localize";
 import { GridCard } from "@/components/Cards";
 
-export const metadata = { title: "Search" };
+export const metadata = { title: "Search", robots: { index: false, follow: true } };
 
 export default async function Search({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const q = ((await searchParams).q ?? "").trim();

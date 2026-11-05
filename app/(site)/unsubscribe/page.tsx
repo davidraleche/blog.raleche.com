@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+
+export const metadata = { title: "Unsubscribe", robots: { index: false, follow: false } };
 import { getI18n } from "@/lib/i18n/server";
 
 export default async function Unsubscribe({ searchParams }: { searchParams: Promise<{ key?: string }> }) {

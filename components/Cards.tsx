@@ -4,12 +4,12 @@ import { getI18n } from "@/lib/i18n/server";
 
 type P = Post & { category: Category | null };
 
-function Img({ post, className = "" }: { post: P; className?: string }) {
+function Img({ post, className = "", eager = false }: { post: P; className?: string; eager?: boolean }) {
   return (
     <div className={`overflow-hidden bg-neutral-200 ${className}`}>
       {post.coverImage ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={post.coverImage} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+        <img src={post.coverImage} alt={post.title} loading={eager ? "eager" : "lazy"} width={1200} height={630} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-ink font-display text-5xl font-extrabold text-white/20">R</div>
       )}
@@ -25,7 +25,7 @@ export async function HeroCard({ post }: { post: P }) {
   const { date: fmtDate } = await getI18n();
   return (
     <Link href={`/story/${post.slug}`} className="group grid items-start gap-6 md:grid-cols-[3fr_2fr]">
-      <Img post={post} className="aspect-[40/21]" />
+      <Img post={post} className="aspect-[40/21]" eager />
       <div>
         <Kicker post={post} />
         <h2 className="hed mt-2 text-3xl group-hover:underline decoration-4 underline-offset-4 sm:text-4xl">{post.title}</h2>

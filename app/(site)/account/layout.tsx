@@ -1,4 +1,6 @@
 import { AccountNav } from "@/components/AccountNav";
+
+export const metadata = { robots: { index: false, follow: false } };
 import { getI18n } from "@/lib/i18n/server";
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {

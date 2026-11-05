@@ -6,7 +6,7 @@ import { startCheckout, openBillingPortal } from "@/app/actions/billing";
 import { money } from "@/lib/utils";
 import { stripe } from "@/lib/stripe";
 
-export const metadata = { title: "Membership" };
+export const metadata = { title: "Membership", description: "Become a RALECHE member: executive summaries of every story from $12/month, ad-free.", alternates: { canonical: "/membership" } };
 
 export default async function Membership({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
   const { locale, t } = await getI18n();

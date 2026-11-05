@@ -5,6 +5,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { BCP47 } from "@/lib/i18n/messages";
 import { I18nProvider } from "@/components/I18nProvider";
 import { adsConfig } from "@/lib/ads";
+import { SITE, JsonLd, siteJsonLd } from "@/lib/seo";
 
 const display = Barlow_Condensed({ subsets: ["latin"], weight: ["600", "700", "800"], variable: "--font-display" });
 const serif = Source_Serif_4({ subsets: ["latin"], variable: "--font-serif" });
@@ -12,9 +13,16 @@ const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.APP_URL || "http://localhost:3000"),
+  metadataBase: new URL(SITE.url),
   title: { default: "RALECHE — Technology, AI & Leadership", template: "%s | RALECHE" },
-  description: "Technology, AI and the people building what's next. Executive summaries for members.",
+  description: SITE.description,
+  applicationName: SITE.name,
+  alternates: {
+    types: { "application/rss+xml": [{ url: "/feed.xml", title: "RALECHE" }], "text/plain": [{ url: "/llms.txt", title: "llms.txt" }] },
+  },
+  openGraph: { type: "website", siteName: SITE.name, locale: "en_US", title: "RALECHE — Technology, AI & Leadership", description: SITE.description },
+  twitter: { card: "summary_large_image" },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -32,7 +40,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </>
         )}
       </head>
-      <body><I18nProvider locale={locale}>{children}</I18nProvider></body>
+      <body>
+        <JsonLd data={siteJsonLd()} />
+        <I18nProvider locale={locale}>{children}</I18nProvider></body>
     </html>
   );
 }

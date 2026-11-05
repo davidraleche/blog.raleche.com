@@ -7,6 +7,8 @@ import { getUser, activePlan } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n/server";
 import { localizePosts, localizeFields } from "@/lib/localize";
 
+export const metadata = { alternates: { canonical: "/" }, openGraph: { url: "/" } };
+
 const published = { status: "published", publishedAt: { lte: new Date() } };
 
 export default async function Home() {
@@ -38,6 +40,7 @@ export default async function Home() {
 
   return (
     <div className="mx-auto max-w-7xl px-4">
+      <h1 className="sr-only">RALECHE: technology, AI and leadership, from interviews with the people building what&apos;s next</h1>
       <section className="grid gap-10 py-8 lg:grid-cols-[1fr_340px]">
         <HeroCard post={hero} />
         <aside>

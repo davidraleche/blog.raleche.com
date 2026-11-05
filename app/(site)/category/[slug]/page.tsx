@@ -1,8 +1,17 @@
+import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getI18n } from "@/lib/i18n/server";
 import { localizeFields, localizePosts } from "@/lib/localize";
 import { db } from "@/lib/db";
 import { HeroCard, GridCard } from "@/components/Cards";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const c = await db.category.findUnique({ where: { slug: (await params).slug } });
+  if (!c) return {};
+  const path = `/category/${c.slug}`;
+  const description = `${c.name}: stories and executive summaries from interviews with tech leaders, on RALECHE.`;
+  return { title: c.name, description, alternates: { canonical: path, types: { "application/rss+xml": `/feed.xml?category=${c.slug}` } }, openGraph: { url: path, title: c.name, description } };
+}
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const category = await db.category.findUnique({

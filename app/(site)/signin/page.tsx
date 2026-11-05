@@ -4,7 +4,7 @@ import type { Messages } from "@/lib/i18n/messages";
 import { getUser, safeNext } from "@/lib/auth";
 import { SignInForms } from "./SignInForms";
 
-export const metadata = { title: "Sign in" };
+export const metadata = { title: "Sign in", robots: { index: false, follow: true }, alternates: { canonical: "/signin" } };
 
 const ERRORS: Record<string, keyof Messages> = {
   google_not_configured: "googleNotConfigured",

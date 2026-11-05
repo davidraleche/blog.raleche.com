@@ -4,7 +4,7 @@ import { localizeFields, localizePosts } from "@/lib/localize";
 import { db } from "@/lib/db";
 import { money } from "@/lib/utils";
 
-export const metadata = { title: "Executive Summaries", description: "Every Raleche story has an executive summary for members, and our in-depth Executive Briefs are available one at a time." };
+export const metadata = { title: "Executive Summaries", description: "Every Raleche story has an executive summary for members, and our in-depth Executive Briefs are available one at a time.", alternates: { canonical: "/executive-summaries" } };
 
 interface Brief { id: string; title: string; summary: string; price: number; image: string; url: string; articleUrl: string | null }
 
