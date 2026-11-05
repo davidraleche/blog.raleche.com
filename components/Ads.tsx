@@ -5,7 +5,7 @@ import { getI18n } from "@/lib/i18n/server";
 export async function AdSlot({ name, className = "" }: { name: AdSlotName; className?: string }) {
   const ads = await adsConfig();
   const slot = ads?.slots[name];
-  if (!ads || !slot) return null;
+  if (!ads || ads.adFree || !slot) return null;
   const { t } = await getI18n();
   return (
     <div className={`my-10 ${className}`}>

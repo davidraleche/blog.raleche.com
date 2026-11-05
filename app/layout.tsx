@@ -24,8 +24,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         {ads && (
           <>
-            {/* AdSense: plain tag in <head> so Google's site verification finds it. */}
+            {/* AdSense: plain tag in <head> on every page so Google's site verification finds it. */}
             <meta name="google-adsense-account" content={ads.client} />
+            {/* Members and admins get the tag too, but with ad requests paused so no ads load. */}
+            {ads.adFree && <script dangerouslySetInnerHTML={{ __html: "(window.adsbygoogle=window.adsbygoogle||[]).pauseAdRequests=1;" }} />}
             <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ads.client}`} crossOrigin="anonymous" />
           </>
         )}
