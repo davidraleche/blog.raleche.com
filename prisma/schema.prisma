@@ -92,6 +92,9 @@ model Post {
   premium          Boolean   @default(false) // whole article members-only
   readMinutes      Int       @default(5)
   views            Int       @default(0)
+  speaker          String?   // person interviewed, e.g. "Sam Altman"
+  host             String?   // interviewer, e.g. "Lenny Rachitsky"
+  show             String?   // podcast/channel, e.g. "Lenny's Podcast"
   source           String?   // e.g. tts42
   sourceUrl        String?   @unique
   categoryId       String?

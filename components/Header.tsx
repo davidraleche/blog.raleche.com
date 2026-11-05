@@ -42,6 +42,8 @@ export async function Header() {
       <nav className="border-t border-ink/10">
         <ul className="mx-auto flex max-w-7xl items-center gap-6 overflow-x-auto px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] [scrollbar-width:none]">
           <li><Link href="/" className="whitespace-nowrap hover:text-accent">{t("latest")}</Link></li>
+          <li><Link href="/speakers" className="whitespace-nowrap hover:text-accent">{t("speakers")}</Link></li>
+          <li><Link href="/hosts" className="whitespace-nowrap hover:text-accent">{t("hosts")}</Link></li>
           {categories.map((c) => (
             <li key={c.id}><Link href={`/category/${c.slug}`} className="whitespace-nowrap hover:text-accent">{c.name}</Link></li>
           ))}

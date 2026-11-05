@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { importFromSource } from "../lib/importer";
+import { importFromSource, migrateSections, CATEGORIES } from "../lib/importer";
 
 const db = new PrismaClient();
 
@@ -23,9 +23,9 @@ async function main() {
   ];
   for (const p of plans) await db.plan.upsert({ where: { id: p.id }, create: p, update: {} });
 
-  const cats = ["AI", "Big Tech", "Leadership", "Startups", "Careers", "Security"];
-  for (const [i, name] of cats.entries())
+  for (const [i, name] of CATEGORIES.entries())
     await db.category.upsert({ where: { name }, create: { name, slug: name.toLowerCase().replace(/\s+/g, "-"), sortOrder: i }, update: {} });
+  console.log("Sections:", await migrateSections());
 
   await db.setting.upsert({ where: { key: "siteName" }, create: { key: "siteName", value: "RALECHE" }, update: {} });
   await db.setting.upsert({ where: { key: "tagline" }, create: { key: "tagline", value: "Technology, AI and the people building what's next." }, update: {} });

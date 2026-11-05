@@ -72,6 +72,11 @@ export function PostEditor({ post, categories }: { post?: Post | null; categorie
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select></label>
           <label className="block"><span className="term-label">Tags (comma separated)</span><input name="tags" defaultValue={post?.tags} className="term-input mt-1" /></label>
+          <label className="block"><span className="term-label">Speaker (guest)</span><input name="speaker" defaultValue={post?.speaker ?? ""} className="term-input mt-1" /></label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block"><span className="term-label">Host</span><input name="host" defaultValue={post?.host ?? ""} className="term-input mt-1" /></label>
+            <label className="block"><span className="term-label">Show</span><input name="show" defaultValue={post?.show ?? ""} className="term-input mt-1" /></label>
+          </div>
           <label className="block"><span className="term-label">Byline</span><input name="authorName" defaultValue={post?.authorName} className="term-input mt-1" /></label>
           <label className="block"><span className="term-label">Cover image URL</span><input name="coverImage" value={cover} onChange={(e) => setCover(e.target.value)} className="term-input mt-1" /></label>
           {/* eslint-disable-next-line @next/next/no-img-element */}

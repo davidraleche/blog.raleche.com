@@ -10,6 +10,7 @@ import { translateHtml } from "@/lib/translate";
 import { GridCard } from "@/components/Cards";
 import { NewsletterForm } from "@/components/NewsletterForm";
 import { AdSlot } from "@/components/Ads";
+import { personSlug } from "@/lib/people";
 import { ViewPing } from "./ViewPing";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -55,6 +56,13 @@ export default async function Story({ params }: Props) {
         <p className="mt-6 font-mono text-[11px] uppercase tracking-widest text-ink/60">
           {t("by")} <span className="text-ink">{post.authorName}</span> · {fmtDate(post.publishedAt)} · {t("minRead", { n: post.readMinutes })}
         </p>
+        {(post.speaker || post.host) && (
+          <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-ink/60">
+            {post.speaker && <Link href={`/speakers#${personSlug(post.speaker)}`} className="text-accent hover:underline">{t("withSpeaker", { name: post.speaker })}</Link>}
+            {post.speaker && post.host && " · "}
+            {post.host && <Link href={`/hosts#${personSlug(post.host)}`} className="hover:underline">{t("hostedBy", { name: post.host })}{post.show ? `, ${post.show}` : ""}</Link>}
+          </p>
+        )}
         {locale !== "en" && <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-ink/40">{t("machineTranslated")}</p>}
       </header>
 

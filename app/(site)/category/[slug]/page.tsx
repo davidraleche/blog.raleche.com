@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getI18n } from "@/lib/i18n/server";
 import { localizeFields, localizePosts } from "@/lib/localize";
 import { db } from "@/lib/db";
@@ -9,7 +9,11 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     where: { slug: (await params).slug },
     include: { posts: { where: { status: "published" }, include: { category: true }, orderBy: { publishedAt: "desc" } } },
   });
-  if (!category) notFound();
+  if (!category) {
+    // Sections retired in Nov 2026 (AI, Big Tech, …) send old links to the homepage.
+    if (["ai", "big-tech", "leadership", "startups", "careers", "security"].includes((await params).slug)) permanentRedirect("/");
+    notFound();
+  }
   const { locale, t } = await getI18n();
   const [[{ name }], posts] = await Promise.all([localizeFields(locale, [category], ["name"]), localizePosts(locale, category.posts)]);
   const [first, ...rest] = posts;
