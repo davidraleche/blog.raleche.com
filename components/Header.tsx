@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getUser, activePlan } from "@/lib/auth";
 import { Logo } from "./Logo";
 import { LanguageToggle } from "./LanguageToggle";
+import { MastheadSignup } from "./MastheadSignup";
 import { getI18n } from "@/lib/i18n/server";
 import { localizeFields } from "@/lib/localize";
 
@@ -36,6 +37,7 @@ export async function Header() {
       </div>
       <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-6">
         <Link href="/"><Logo text={name?.value || "RALECHE"} /></Link>
+        <MastheadSignup text={t("briefingInbox")} />
       </div>
       <nav className="border-t border-ink/10">
         <ul className="mx-auto flex max-w-7xl items-center gap-6 overflow-x-auto px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] [scrollbar-width:none]">
