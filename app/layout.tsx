@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   },
   openGraph: { type: "website", siteName: SITE.name, locale: "en_US", title: "RALECHE — Technology, AI & Leadership", description: SITE.description },
   twitter: { card: "summary_large_image" },
+  verification: { other: { "msvalidate.01": "5761FF3B1390FDAF6F172F158EEE9CD5" } },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
 };
 
