@@ -1,6 +1,7 @@
 "use client";
 import { useActionState } from "react";
-import { saveName, changeEmail, changePassword, type FormState } from "@/app/actions/account";
+import { saveName, changeEmail, changePassword, saveLanguage, type FormState } from "@/app/actions/account";
+import { LOCALES, LOCALE_NAME } from "@/lib/i18n/messages";
 import { useT } from "@/components/I18nProvider";
 
 function Status({ state }: { state: FormState }) {
@@ -18,11 +19,12 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-export function ProfileForms({ name, email, phone, hasPassword }: { name: string; email: string | null; phone: string | null; hasPassword: boolean }) {
+export function ProfileForms({ name, email, phone, hasPassword, language }: { name: string; email: string | null; phone: string | null; hasPassword: boolean; language: string }) {
   const t = useT();
   const [nameState, nameAction, namePending] = useActionState(saveName, null);
   const [emailState, emailAction, emailPending] = useActionState(changeEmail, null);
   const [pwState, pwAction, pwPending] = useActionState(changePassword, null);
+  const [langState, langAction, langPending] = useActionState(saveLanguage, null);
   const codeStep = emailState?.step === "code";
 
   return (
@@ -33,6 +35,17 @@ export function ProfileForms({ name, email, phone, hasPassword }: { name: string
           <button disabled={namePending} className="btn-dark shrink-0">{namePending ? t("saving") : t("save")}</button>
         </form>
         <Status state={nameState} />
+      </Card>
+
+      <Card title={t("preferredLanguage")}>
+        <form action={langAction} className="flex flex-col gap-3 sm:flex-row">
+          <select name="language" defaultValue={language} className="input">
+            {LOCALES.map((l) => <option key={l} value={l}>{LOCALE_NAME[l]}</option>)}
+          </select>
+          <button disabled={langPending} className="btn-dark shrink-0">{langPending ? t("saving") : t("save")}</button>
+        </form>
+        <p className="mt-3 text-xs text-ink/50">{t("preferredLanguageHelp")}</p>
+        <Status state={langState} />
       </Card>
 
       <Card title={t("email")}>

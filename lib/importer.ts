@@ -76,7 +76,8 @@ export async function fetchSourceArticle(source: string, slug: string) {
     readMinutes: Number(html.match(/(\d+) min read/)?.[1]) || readMinutes(body),
     publishedAt: published ? new Date(published) : new Date(),
     sourceUrl: meta(html, "og:url") || url,
-    category: pickCategory(`${title} ${title} ${meta(html, "description")} ${tags.join(" ")} ${executiveSummary}`),
+    // Sections (Save Money, Mistakes to Avoid) were retired; imports no longer get one automatically.
+    category: null as string | null,
     ...extractPeople({ tags: tags.join(", "), body }),
   };
 }

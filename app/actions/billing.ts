@@ -64,7 +64,7 @@ export async function toggleNewsletter() {
   const sub = await db.subscriber.findUnique({ where: { email: user.email } });
   await db.subscriber.upsert({
     where: { email: user.email },
-    create: { email: user.email, source: "account" },
+    create: { email: user.email, source: "account", language: user.language ?? (await getLocale()) },
     update: { status: sub?.status === "subscribed" ? "unsubscribed" : "subscribed" },
   });
   redirect("/account");

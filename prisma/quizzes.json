@@ -1,0 +1,376 @@
+{
+  "alex-karp-palantir-artist-colony-true-cost-of-ai-china": [
+    {
+      "q": "According to Karp, the true cost of AI includes the tokens you paid for and what else?",
+      "options": [
+        "The energy used by data centers",
+        "The staff hours spent on training",
+        "The portion of your IP you transferred",
+        "The legal fees for AI compliance"
+      ],
+      "answer": 2
+    },
+    {
+      "q": "How far ahead of China does Karp say the U.S. is in the AI race?",
+      "options": [
+        "About six months",
+        "About two years",
+        "About five years",
+        "Roughly ten years"
+      ],
+      "answer": 0
+    }
+  ],
+  "alexandr-wang-meta-muse-200-direct-reports-zuckerberg": [
+    {
+      "q": "How did Meta's team decide Muse was ready to launch?",
+      "options": [
+        "A board vote after a public beta",
+        "Evals for 100+ behaviors, each with a launch-blocking bar",
+        "A survey of 10,000 employees",
+        "Matching a rival agent's benchmark score"
+      ],
+      "answer": 1
+    },
+    {
+      "q": "Which kind of work does Wang compare frontier research to, as opposed to building skyscrapers?",
+      "options": [
+        "Farming",
+        "Shipbuilding",
+        "Road paving",
+        "Diamond mining"
+      ],
+      "answer": 3
+    }
+  ],
+  "andy-jassy-reinventing-amazon-ai-era": [
+    {
+      "q": "What example did Jassy give of a small team's output?",
+      "options": [
+        "Six engineers rebuilt an inference engine in 76 days",
+        "Three engineers rebuilt Alexa over a weekend",
+        "Ten engineers launched a new AWS region in 30 days",
+        "Two engineers rewrote the retail app in 90 days"
+      ],
+      "answer": 0
+    },
+    {
+      "q": "What does Jassy say Amazon's own chips deliver versus comparable alternatives?",
+      "options": [
+        "About 10% lower power consumption",
+        "About twice the raw training speed",
+        "Roughly 30 to 40% better price performance",
+        "Roughly 50% less memory usage"
+      ],
+      "answer": 2
+    }
+  ],
+  "brian-chesky-airbnb-ai-founder-mode-small-teams": [
+    {
+      "q": "Chesky cites the Catholic Church to argue for fewer layers. How many layers does he say it has?",
+      "options": [
+        "Two",
+        "Four",
+        "Seven",
+        "Nine"
+      ],
+      "answer": 1
+    },
+    {
+      "q": "About how much did Project Hawaii's team of 10 to 12 people deliver in its first year?",
+      "options": [
+        "About $30 million",
+        "About $100 million",
+        "About $1 billion",
+        "About $300 million"
+      ],
+      "answer": 3
+    }
+  ],
+  "colin-lernell-negotiate-tech-salary-ai-pay": [
+    {
+      "q": "How many of Lernell's clients does he say lack a competing offer?",
+      "options": [
+        "One out of five",
+        "Half of them",
+        "Four out of five",
+        "Nine out of ten"
+      ],
+      "answer": 2
+    },
+    {
+      "q": "What does Lernell advise when telling a company what pay you want?",
+      "options": [
+        "Give a wide range so they can choose",
+        "Ask for one specific number, not a range",
+        "Let the recruiter name the first figure",
+        "Quote the top of the published salary band"
+      ],
+      "answer": 1
+    }
+  ],
+  "ethan-evans-amazon-vp-influence-without-insulting": [
+    {
+      "q": "At Twitch, which question did Evans use to share advice without raising defenses?",
+      "options": [
+        "\"Could I share how I've seen this done elsewhere?\"",
+        "\"Would Amazon handle this the same way?\"",
+        "\"Can I tell you what our CEO expects here?\"",
+        "\"Have you considered that this might fail?\""
+      ],
+      "answer": 0
+    },
+    {
+      "q": "According to Evans, what are directors mainly judged on?",
+      "options": [
+        "Team size and headcount growth",
+        "Hands-on technical depth and code quality",
+        "Hiring speed and employee survey scores",
+        "Making money (or a clear proxy) and working with peers"
+      ],
+      "answer": 3
+    }
+  ],
+  "ethan-mollick-wharton-manage-ai-agents-keep-your-thinking": [
+    {
+      "q": "What does Mollick recommend doing before asking AI to brainstorm ideas?",
+      "options": [
+        "Write down your own ideas alone first",
+        "Ask a colleague to pick a direction",
+        "Run a customer survey for input",
+        "Give the AI several example prompts"
+      ],
+      "answer": 0
+    },
+    {
+      "q": "Which is NOT one of Mollick's four skills for using AI well?",
+      "options": [
+        "Deep knowledge",
+        "Taste",
+        "Prompt engineering",
+        "Agency"
+      ],
+      "answer": 2
+    }
+  ],
+  "fiverr-ai-small-gigs-shrinking-marketplace-upmarket-bet": [
+    {
+      "q": "Why did Fiverr's marketplace revenue fall only slightly while active buyers dropped about 24%?",
+      "options": [
+        "Fiverr raised its seller commission",
+        "Remaining buyers spent more per year",
+        "New AI categories replaced old ones",
+        "Ad revenue was counted as marketplace"
+      ],
+      "answer": 1
+    },
+    {
+      "q": "How long did management say the upmarket shift would take to show financial impact?",
+      "options": [
+        "At least two quarters",
+        "About one year",
+        "At least four quarters",
+        "At least six quarters"
+      ],
+      "answer": 3
+    }
+  ],
+  "guillermo-rauch-vercel-one-person-ai-agents-trillion-dollar-company": [
+    {
+      "q": "What does Rauch mean by \"trust is an output, not an input\"?",
+      "options": [
+        "Trust comes from meetups, tweets and events",
+        "Trust is bought through brand advertising",
+        "Trust is earned through security, details and docs",
+        "Trust is granted by agents choosing your product"
+      ],
+      "answer": 2
+    },
+    {
+      "q": "What is the internal Vercel Slack channel where Rauch reads every bad-experience post?",
+      "options": [
+        "\"scream\"",
+        "\"pain\"",
+        "\"feedback\"",
+        "\"fire\""
+      ],
+      "answer": 0
+    }
+  ],
+  "josh-woodward-google-labs-every-company-needs-a-labs-team": [
+    {
+      "q": "What does Woodward say is the key early product-market fit signal?",
+      "options": [
+        "Day-30 retention above a set bar",
+        "People's eyes lighting up at prototypes",
+        "Number of sign-ups in the first week",
+        "Willingness to pay before launch"
+      ],
+      "answer": 1
+    },
+    {
+      "q": "How quickly do the best Labs teams reach a meaningful milestone?",
+      "options": [
+        "Within 2 to 3 weeks",
+        "Within one full year",
+        "In 50 to 100 days",
+        "In about 9 months"
+      ],
+      "answer": 2
+    }
+  ],
+  "linda-hill-ceo-leadership-skills-age-of-ai": [
+    {
+      "q": "What does Hill call leading when no one knows the destination, as with AI?",
+      "options": [
+        "Pathfinding",
+        "Course-setting",
+        "Trailblazing",
+        "Wayfinding"
+      ],
+      "answer": 3
+    },
+    {
+      "q": "Which conversation does Hill say boards avoid but must have before rolling out AI?",
+      "options": [
+        "Their appetite for risk",
+        "Their AI vendor budget",
+        "Their headcount targets",
+        "Their CEO succession plan"
+      ],
+      "answer": 0
+    }
+  ],
+  "nik-storonsky-revolut-ai-teams-of-two-no-middle-managers": [
+    {
+      "q": "How does Storonsky say product team size should change with AI?",
+      "options": [
+        "From 20 people down to 10",
+        "From up to 10 people to 2 or 3",
+        "From 5 people to a single person",
+        "From 10 people up to 15 with agents"
+      ],
+      "answer": 1
+    },
+    {
+      "q": "What share of Revolut's customer support does Storonsky say is already automated?",
+      "options": [
+        "About 50%",
+        "About 70%",
+        "About 30%",
+        "About 90%"
+      ],
+      "answer": 3
+    }
+  ],
+  "paul-graham-startups-ambition-great-founders": [
+    {
+      "q": "Where does the article say Graham expects the next giant company to come from?",
+      "options": [
+        "The most crowded AI category",
+        "Formidable founders with promising ideas",
+        "A large incumbent's internal lab",
+        "One predictable hot industry"
+      ],
+      "answer": 1
+    },
+    {
+      "q": "What first step does the article recommend for your own business?",
+      "options": [
+        "Pick one real customer problem and solve it end to end",
+        "Launch in many markets at once to test demand",
+        "Hire for skills first and teach drive later",
+        "Follow the current AI trend to stay relevant"
+      ],
+      "answer": 0
+    }
+  ],
+  "sam-altman-rsi-ai-consciousness-new-hardware-compute": [
+    {
+      "q": "How much time does Altman say his own assistant, Dot, saves him?",
+      "options": [
+        "About ten minutes a day",
+        "About half a day a week",
+        "About an hour a day",
+        "About three hours a day"
+      ],
+      "answer": 2
+    },
+    {
+      "q": "Which investment did Altman call OpenAI's most important single bet?",
+      "options": [
+        "Data centers",
+        "Robotics",
+        "Consumer hardware",
+        "Chips"
+      ],
+      "answer": 3
+    }
+  ],
+  "shopify-ceo-tobi-lutke-why-using-ai-isnt-optional": [
+    {
+      "q": "What does Lütke say he cares about instead of take-rate percentages?",
+      "options": [
+        "Gross profit dollar growth",
+        "Merchant count growth",
+        "Gross margin percentage",
+        "Agent order volume share"
+      ],
+      "answer": 0
+    },
+    {
+      "q": "What does Lütke do at the start of every year?",
+      "options": [
+        "Writes a detailed annual plan",
+        "Works out how he'd build a better Shopify",
+        "Reviews every team's AI usage stats",
+        "Visits the top 100 Shopify merchants"
+      ],
+      "answer": 1
+    }
+  ],
+  "supabase-ceo-paul-copplestone-everyone-can-build-software": [
+    {
+      "q": "What tactic does Copplestone stress for not losing agents once they pick Supabase?",
+      "options": [
+        "Offering agents a free tier",
+        "Adding more dashboard tutorials",
+        "Writing error messages that tell agents how to fix it",
+        "Paying model labs to list Supabase first"
+      ],
+      "answer": 2
+    },
+    {
+      "q": "Why did Supabase move to a \"code first\" approach this year?",
+      "options": [
+        "Enterprises demanded closed-source tools",
+        "No one visits dashboards and agents prefer the CLI",
+        "Its dashboard was too costly to maintain",
+        "Investors pushed for a developer-only product"
+      ],
+      "answer": 1
+    }
+  ],
+  "yossi-matias-google-research-thinker-who-will-thrive-ai-era": [
+    {
+      "q": "What example does Matias give of a flood forecast leading to action?",
+      "options": [
+        "India rebuilt dams before monsoon season",
+        "Brazil moved villagers to higher ground",
+        "Nigeria's government sent villagers money ahead of a flood",
+        "Kenya closed schools based on rain alerts"
+      ],
+      "answer": 2
+    },
+    {
+      "q": "What does Matias mean by \"ambient intelligence\"?",
+      "options": [
+        "AI that runs only on home devices",
+        "AI that listens through smart speakers",
+        "AI that monitors the environment",
+        "AI so good we use it without noticing"
+      ],
+      "answer": 3
+    }
+  ]
+}

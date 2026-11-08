@@ -12,8 +12,8 @@ export async function subscribeNewsletter(_: unknown, form: FormData) {
   const before = await db.subscriber.findUnique({ where: { email: email.data }, select: { status: true } });
   const sub = await db.subscriber.upsert({
     where: { email: email.data },
-    create: { email: email.data, source: String(form.get("source") ?? "site") },
-    update: { status: "subscribed" },
+    create: { email: email.data, source: String(form.get("source") ?? "site"), language: locale },
+    update: before?.status === "subscribed" ? {} : { status: "subscribed", language: locale },
   });
   // Welcome only new or returning subscribers, so resubmitting the form doesn't spam anyone.
   if (before?.status !== "subscribed") {

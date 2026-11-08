@@ -32,7 +32,7 @@ ${categories.map((c) => `- [${c.name}](${absUrl(`/category/${c.slug}`)})`).join(
 - [All stories in one file](${absUrl("/llms-full.txt")})
 - [RSS feed](${absUrl("/feed.xml")})
 - [Sitemap](${absUrl("/sitemap.xml")})
-- [Membership](${absUrl("/membership")})
+- [Token store](${absUrl("/store")})
 `;
   return new Response(body, { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
 }

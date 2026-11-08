@@ -7,6 +7,7 @@ import { issueCode, verifyOtp } from "@/lib/sms";
 import { sendEmail } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 import { getI18n } from "@/lib/i18n/server";
+import { isLocale } from "@/lib/i18n/messages";
 
 export type FormState = { ok?: string; error?: string; step?: "code"; email?: string } | null;
 
@@ -68,4 +69,16 @@ export async function changePassword(_: FormState, form: FormData): Promise<Form
   await db.session.deleteMany({ where: { userId: user.id, ...(keep ? { NOT: { id: keep } } : {}) } });
   revalidatePath("/account/profile");
   return { ok: user.passwordHash ? t("passwordChanged") : t("passwordSet") };
+}
+
+/** Preferred language for newsletters and emails. Also applied to the newsletter subscription, if any. */
+export async function saveLanguage(_: FormState, form: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const { t } = await getI18n();
+  const language = String(form.get("language") ?? "");
+  if (!isLocale(language)) return { error: "Unknown language" };
+  await db.user.update({ where: { id: user.id }, data: { language } });
+  if (user.email) await db.subscriber.updateMany({ where: { email: user.email }, data: { language } });
+  revalidatePath("/account/profile");
+  return { ok: t("languageSaved") };
 }

@@ -7,9 +7,10 @@ const ITEMS = [
   ["/admin/posts", "Posts", "F2"],
   ["/admin/categories", "Categories", "F3"],
   ["/admin/members", "Members", "F4"],
-  ["/admin/subscriptions", "Subscriptions", "F5"],
+  ["/admin/tokens", "Tokens", "T"],
+  ["/admin/comments", "Comments", "C"],
+  ["/admin/quizzes", "Quizzes", "Q"],
   ["/admin/newsletter", "Newsletter", "F6"],
-  ["/admin/plans", "Plans & Pricing", "F7"],
   ["/admin/import", "Import TTS42", "F8"],
   ["/admin/settings", "Settings", "F9"],
 ];

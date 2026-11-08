@@ -4,9 +4,16 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getUser, canReadSummaries } from "@/lib/auth";
 import { renderMarkdown } from "@/lib/markdown";
+import { unlockSummary, deleteOwnComment } from "@/app/actions/tokens";
+import { StoryPoll, CommentForm } from "@/components/StoryEngage";
+import { StoryQuiz } from "@/components/StoryQuiz";
+import { FollowButton } from "@/components/FollowButton";
+import { getQuiz, ensureQuiz, nextStory } from "@/lib/quiz";
+import { after } from "next/server";
+import { hasUnlocked, UNLOCK_COST, PARTICIPATION_REWARD, QUIZ_REWARD } from "@/lib/tokens";
 import { getI18n } from "@/lib/i18n/server";
 import { localizePosts } from "@/lib/localize";
-import { translateHtml } from "@/lib/translate";
+import { translateHtml, translateMany } from "@/lib/translate";
 import { GridCard } from "@/components/Cards";
 import { NewsletterForm } from "@/components/NewsletterForm";
 import { AdSlot } from "@/components/Ads";
@@ -47,8 +54,42 @@ export default async function Story({ params }: Props) {
   const [raw, user, { locale, t, date: fmtDate }] = await Promise.all([load(slug), getUser(), getI18n()]);
   if (!raw || (raw.status !== "published" && user?.role !== "ADMIN")) notFound();
 
-  const member = canReadSummaries(user);
+  const subscriber = canReadSummaries(user);
+  const unlocked = !subscriber && (await hasUnlocked(user?.id, raw.id));
+  const member = subscriber || unlocked;
   const locked = raw.premium && !member;
+  const [voteGroups, myVote, comments, earnedRefs] = await Promise.all([
+    db.pollVote.groupBy({ by: ["choice"], where: { postId: raw.id }, _count: true }),
+    user ? db.pollVote.findUnique({ where: { userId_postId: { userId: user.id, postId: raw.id } }, select: { choice: true } }) : null,
+    db.comment.findMany({ where: { postId: raw.id, hidden: false }, include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: "desc" }, take: 100 }),
+    user ? db.tokenTxn.findMany({ where: { ref: { in: [`poll:${user.id}:${raw.id}`, `comment:${user.id}:${raw.id}`] } }, select: { ref: true } }) : [],
+  ]);
+  // Quiz: questions (translated, answers never sent to the browser), this reader's play, and where to go next.
+  const quiz = raw.status === "published" ? await getQuiz(raw.id) : null;
+  if (raw.status === "published" && !quiz) after(() => ensureQuiz(raw));
+  const [quizPlay, quizNextStory, quizText] = quiz
+    ? await Promise.all([
+        user ? db.quizAttempt.findUnique({ where: { userId_postId: { userId: user.id, postId: raw.id } } }) : null,
+        nextStory(raw.id, raw.publishedAt),
+        translateMany(locale, quiz.flatMap((q) => [q.q, ...q.options])),
+      ])
+    : [null, null, [] as string[]];
+  const quizQuestions = quiz ? quiz.map((_, i) => ({ q: quizText[i * 5], options: quizText.slice(i * 5 + 1, i * 5 + 5) })) : [];
+  const quizLabels = Object.fromEntries(
+    (["quizTitle", "quizDek", "quizSubmit", "quizAnswerAll", "quizWin", "quizLose", "quizNext", "quizPlayed", "signInToPlay"] as const).map((k) => [k, t(k, { n: "{n}", c: "{c}" })]),
+  );
+  const follows = new Set(
+    user && (raw.speaker || raw.host)
+      ? (await db.follow.findMany({ where: { userId: user.id, name: { in: [raw.speaker, raw.host].filter(Boolean) as string[] } } })).map((f) => `${f.kind}:${f.name}`)
+      : [],
+  );
+  const followLabels = { follow: t("follow"), following: t("followingBtn"), unfollow: t("unfollow") };
+  const voteCounts = Object.fromEntries(voteGroups.map((g) => [g.choice, g._count]));
+  const earnedPoll = earnedRefs.some((r) => r.ref?.startsWith("poll:"));
+  const earnedComment = earnedRefs.some((r) => r.ref?.startsWith("comment:"));
+  const engageLabels = Object.fromEntries(
+    (["pollTitle", "poll_great", "poll_average", "poll_not_great", "pollEarn", "pollThanks", "votesN", "earnedTokens", "signInToVote", "commentsEarn", "commentPlaceholder", "postComment"] as const).map((k) => [k, t(k, { n: "{n}" })]),
+  );
   const body = locked ? raw.body.split(/\n\n/).slice(0, 3).join("\n\n") : raw.body;
   const rawRelated = await db.post.findMany({
     where: { status: "published", id: { not: raw.id }, categoryId: raw.categoryId },
@@ -74,11 +115,13 @@ export default async function Story({ params }: Props) {
           {t("by")} <span className="text-ink">{post.authorName}</span> · {fmtDate(post.publishedAt)} · {t("minRead", { n: post.readMinutes })}
         </p>
         {(post.speaker || post.host) && (
-          <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-ink/60">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-1 gap-y-2 font-mono text-[11px] uppercase tracking-widest text-ink/60">
             {post.speaker && <Link href={`/speakers#${personSlug(post.speaker)}`} className="text-accent hover:underline">{t("withSpeaker", { name: post.speaker })}</Link>}
+            {raw.speaker && <span className="ml-2 align-middle"><FollowButton kind="speaker" name={raw.speaker} following={follows.has(`speaker:${raw.speaker}`)} signedIn={!!user} back={`/story/${raw.slug}`} labels={followLabels} /></span>}
             {post.speaker && post.host && " · "}
             {post.host && <Link href={`/hosts#${personSlug(post.host)}`} className="hover:underline">{t("hostedBy", { name: post.host })}{post.show ? `, ${post.show}` : ""}</Link>}
-          </p>
+            {raw.host && <span className="ml-2 align-middle"><FollowButton kind="host" name={raw.host} following={follows.has(`host:${raw.host}`)} signedIn={!!user} back={`/story/${raw.slug}`} labels={followLabels} /></span>}
+          </div>
         )}
         {locale !== "en" && <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-ink/40">{t("machineTranslated")}</p>}
       </header>
@@ -91,15 +134,23 @@ export default async function Story({ params }: Props) {
       )}
 
       <div className="mx-auto mt-10 max-w-3xl px-4">
-        <ExecutiveSummary hasSummary={!!raw.executiveSummary} html={summaryHtml} member={member} signedIn={!!user} t={t} />
+        <ExecutiveSummary hasSummary={!!raw.executiveSummary} html={summaryHtml} member={member} unlocked={unlocked} signedIn={!!user} balance={user?.tokenBalance ?? 0} postId={raw.id} back={`/story/${raw.slug}`} t={t} />
         <AdSlot name="articleTop" />
 
         <div className="prose-article" dangerouslySetInnerHTML={{ __html: bodyHtml }} />
 
         {locked && (
           <div className="relative -mt-24 bg-gradient-to-t from-white via-white to-transparent pt-24 text-center">
-            <p className="hed text-3xl">{t("storyForMembers")}</p>
-            <Link href="/membership" className="btn-dark mt-4">{t("keepReading")}</Link>
+            <p className="hed text-3xl">{t("storyLocked")}</p>
+            {user ? (
+              <form action={unlockSummary} className="mt-4">
+                <input type="hidden" name="postId" value={raw.id} /><input type="hidden" name="back" value={`/story/${raw.slug}`} />
+                <button className="btn bg-terminal-amber text-ink hover:bg-ink hover:text-white">{t("unlockFor", { n: UNLOCK_COST })}</button>
+              </form>
+            ) : (
+              <Link href={`/signin?next=${encodeURIComponent(`/story/${raw.slug}`)}`} className="btn bg-terminal-amber text-ink hover:bg-ink hover:text-white mt-4">{t("unlockFor", { n: UNLOCK_COST })}</Link>
+            )}
+            {user && <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-ink/60">{t("youHaveTokens", { n: user.tokenBalance })} · <Link href="/store" className="text-accent underline">{t("getTokens")}</Link></p>}
           </div>
         )}
 
@@ -116,6 +167,45 @@ export default async function Story({ params }: Props) {
           <p className="mt-6 font-mono text-[11px] uppercase tracking-widest text-ink/50">
             {t("originallyPublished")} <a href={post.sourceUrl} className="underline">Tech Team Strategy</a>
           </p>
+        )}
+
+        {raw.status === "published" && (
+          <>
+            {quiz && (
+              <StoryQuiz
+                postId={raw.id} questions={quizQuestions} signedIn={!!user} reward={QUIZ_REWARD}
+                played={quizPlay ? { correct: quizPlay.correct, answers: quiz.map((q) => q.answer) } : null}
+                signinHref={`/signin?next=${encodeURIComponent(`/story/${raw.slug}#quiz`)}`} next={quizNextStory} labels={quizLabels}
+              />
+            )}
+            <StoryPoll postId={raw.id} signedIn={!!user} mine={myVote?.choice ?? null} counts={voteCounts} earned={earnedPoll} reward={PARTICIPATION_REWARD} signinHref={`/signin?next=${encodeURIComponent(`/story/${raw.slug}#poll`)}`} labels={engageLabels} />
+            <section id="comments" className="mt-12">
+              <h2 className="hed rule pt-3 text-3xl">{t("commentsTitle")} {comments.length > 0 && <span className="font-mono text-base text-ink/50">({comments.length})</span>}</h2>
+              {user ? (
+                <CommentForm postId={raw.id} earned={earnedComment} reward={PARTICIPATION_REWARD} labels={engageLabels} />
+              ) : (
+                <p className="mt-4 font-serif text-ink/70">
+                  <Link href={`/signin?next=${encodeURIComponent(`/story/${raw.slug}#comments`)}`} className="btn-dark">{t("signInToComment")}</Link>
+                  <span className="ml-3 font-mono text-[11px] uppercase tracking-widest">{t("commentsEarn", { n: PARTICIPATION_REWARD })}</span>
+                </p>
+              )}
+              <ul className="mt-8 space-y-6">
+                {comments.length === 0 && <li className="font-serif text-ink/60">{t("noComments")}</li>}
+                {comments.map((c) => (
+                  <li key={c.id} className="border-l-[3px] border-ink pl-4">
+                    <div className="flex flex-wrap items-baseline gap-x-3 font-mono text-[11px] uppercase tracking-widest">
+                      <span className="font-bold">{c.user.name || c.user.email?.split("@")[0] || "Reader"}</span>
+                      <span className="text-ink/50">{fmtDate(c.createdAt)}</span>
+                      {(user?.id === c.userId || user?.role === "ADMIN") && (
+                        <form action={deleteOwnComment} className="inline"><input type="hidden" name="id" value={c.id} /><button className="text-accent hover:underline">{t("deleteComment")}</button></form>
+                      )}
+                    </div>
+                    <p className="mt-1 whitespace-pre-line font-serif text-lg">{c.body}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </>
         )}
 
         <div className="mt-12 border-y-[3px] border-ink py-8">
@@ -135,13 +225,13 @@ export default async function Story({ params }: Props) {
   );
 }
 
-function ExecutiveSummary({ hasSummary, html, member, signedIn, t }: { hasSummary: boolean; html: string; member: boolean; signedIn: boolean; t: Awaited<ReturnType<typeof getI18n>>["t"] }) {
+function ExecutiveSummary({ hasSummary, html, member, unlocked, signedIn, balance, postId, back, t }: { hasSummary: boolean; html: string; member: boolean; unlocked: boolean; signedIn: boolean; balance: number; postId: string; back: string; t: Awaited<ReturnType<typeof getI18n>>["t"] }) {
   if (!hasSummary) return null;
   return (
     <aside className="mb-10 border-[3px] border-ink">
       <div className="flex items-center justify-between bg-ink px-5 py-3 text-white">
         <span className="font-mono text-[11px] uppercase tracking-[0.2em]">{t("executiveSummary")}</span>
-        <span className="font-mono text-[10px] uppercase tracking-widest text-terminal-amber">{member ? t("member") : t("membersOnly")}</span>
+        <span className="font-mono text-[10px] uppercase tracking-widest text-terminal-amber">{unlocked ? t("unlockedBadge") : member ? t("unlockedBadge") : t("unlockFor", { n: UNLOCK_COST })}</span>
       </div>
       {member ? (
         <div className="prose-article prose-base px-5 py-4 prose-h2:text-xl" dangerouslySetInnerHTML={{ __html: html }} />
@@ -153,9 +243,20 @@ function ExecutiveSummary({ hasSummary, html, member, signedIn, t }: { hasSummar
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/60 px-4 text-center">
             <p className="font-display text-2xl font-bold uppercase">{t("takeaways")}</p>
             <div className="flex flex-wrap justify-center gap-2">
-              <Link href="/membership" className="btn-dark">{t("unlockFrom")}</Link>
-              {!signedIn && <Link href="/signin" className="btn-light">{t("signIn")}</Link>}
+              {signedIn ? (
+                <form action={unlockSummary}>
+                  <input type="hidden" name="postId" value={postId} /><input type="hidden" name="back" value={back} />
+                  <button className="btn bg-terminal-amber text-ink hover:bg-ink hover:text-white">{t("unlockFor", { n: UNLOCK_COST })}</button>
+                </form>
+              ) : (
+                <Link href={`/signin?next=${encodeURIComponent(back)}`} className="btn bg-terminal-amber text-ink hover:bg-ink hover:text-white">{t("unlockFor", { n: UNLOCK_COST })}</Link>
+              )}
             </div>
+            {signedIn && (
+              <p className="font-mono text-[11px] uppercase tracking-widest text-ink/70">
+                {t("youHaveTokens", { n: balance })}{balance < UNLOCK_COST && <> · <Link href={`/store?next=${encodeURIComponent(back)}`} className="text-accent underline">{t("getTokens")}</Link></>}
+              </p>
+            )}
           </div>
         </div>
       )}

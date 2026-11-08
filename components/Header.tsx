@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { getUser, activePlan } from "@/lib/auth";
+import { getUser } from "@/lib/auth";
+import { BCP47 } from "@/lib/i18n/messages";
 import { Logo } from "./Logo";
 import { LanguageToggle } from "./LanguageToggle";
 import { MastheadSignup } from "./MastheadSignup";
@@ -15,7 +16,6 @@ export async function Header() {
     getI18n(),
   ]);
   const categories = await localizeFields(locale, rawCategories, ["name"]);
-  const plan = activePlan(user);
   const date = fmtDate(new Date(), { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
   return (
@@ -31,7 +31,12 @@ export async function Header() {
             ) : (
               <Link href="/signin" className="hover:underline">{t("signIn")}</Link>
             )}
-            {!plan && <Link href="/membership" className="bg-accent px-3 py-1 hover:bg-white hover:text-ink">{t("subscribe")}</Link>}
+            {user && (
+              <Link href="/store" title={t("tokenBalanceTitle")} className="flex items-center gap-1.5 border border-terminal-amber/60 px-2 py-0.5 text-terminal-amber hover:bg-terminal-amber hover:text-ink">
+                <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full bg-terminal-amber" />
+                {user.tokenBalance.toLocaleString(BCP47[locale])} <span className="hidden sm:inline">{t("tokensLabel")}</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -48,6 +53,8 @@ export async function Header() {
             <li key={c.id}><Link href={`/category/${c.slug}`} className="whitespace-nowrap hover:text-accent">{c.name}</Link></li>
           ))}
           <li><Link href="/executive-summaries" className="whitespace-nowrap text-accent">{t("executiveSummaries")}</Link></li>
+          <li><Link href="/play" className="whitespace-nowrap font-bold text-terminal-amber hover:text-accent">{t("play")}</Link></li>
+          <li><Link href="/store" className="whitespace-nowrap hover:text-accent">{t("store")}</Link></li>
           <li className="ml-auto"><Link href="/search" className="whitespace-nowrap hover:text-accent">{t("search")}</Link></li>
         </ul>
       </nav>

@@ -10,7 +10,7 @@ export type AuthState = { error?: string; step?: "code"; phone?: string; devHint
 
 /** One form for both sign in and sign up: unknown email = new account. */
 export async function emailAuth(_: AuthState, form: FormData): Promise<AuthState> {
-  const { t } = await getI18n();
+  const { t, locale } = await getI18n();
   const parsed = z.object({ email: z.string().email(t("invalidEmail")), password: z.string().min(8, t("passwordMin")) })
     .safeParse({ email: String(form.get("email") ?? "").trim().toLowerCase(), password: form.get("password") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -26,7 +26,8 @@ export async function emailAuth(_: AuthState, form: FormData): Promise<AuthState
   } else {
     const user = await upsertUser({ email }, { passwordHash: await hashPassword(password), name: String(form.get("name") ?? "") || undefined });
     userId = user.id;
-    if (form.get("newsletter") === "on") await db.subscriber.upsert({ where: { email }, create: { email, source: "signup" }, update: { status: "subscribed" } });
+    await db.user.update({ where: { id: userId }, data: { language: locale } });
+    if (form.get("newsletter") === "on") await db.subscriber.upsert({ where: { email }, create: { email, source: "signup", language: locale }, update: { status: "subscribed", language: locale } });
   }
   await createSession(userId);
   redirect(safeNext(String(form.get("next") ?? "")));

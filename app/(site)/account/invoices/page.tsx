@@ -21,7 +21,7 @@ export default async function Invoices() {
       <div className="border-[3px] border-ink p-6">
         <p className="kicker">{t("tabInvoices")}</p>
         <p className="mt-3 font-serif text-lg">{t("noInvoices")}</p>
-        <Link href="/membership" className="btn-dark mt-6">{t("seePlans")}</Link>
+        <Link href="/store" className="btn-dark mt-6">{t("getTokens")}</Link>
       </div>
     );
   }

@@ -60,7 +60,7 @@ export default async function ExecutiveSummaries() {
       )}
 
       <h2 className="hed mt-20 text-4xl">{t("storySummaries")}</h2>
-      <p className="mt-2 font-serif text-ink/70">{t("storySummariesText")} <Link className="underline" href="/membership">{t("seeMembership")}</Link></p>
+      <p className="mt-2 font-serif text-ink/70">{t("storySummariesText")} <Link className="underline" href="/store">{t("getTokens")}</Link></p>
       <ul className="mt-6 divide-y divide-ink/15 border-y border-ink/15">
         {stories.map((s) => (
           <li key={s.slug} className="py-4">

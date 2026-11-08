@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type Stripe from "stripe";
 import { stripe, syncStripeSubscription } from "@/lib/stripe";
+import { creditTokenCheckout } from "@/lib/tokens";
 
 export async function POST(req: NextRequest) {
   if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) return NextResponse.json({ error: "Stripe not configured" }, { status: 400 });
@@ -14,6 +15,12 @@ export async function POST(req: NextRequest) {
     case "checkout.session.completed": {
       const s = event.data.object as Stripe.Checkout.Session;
       if (s.subscription) await syncStripeSubscription(await stripe.subscriptions.retrieve(String(s.subscription)));
+      else await creditTokenCheckout({ id: s.id, payment_status: s.payment_status, metadata: s.metadata });
+      break;
+    }
+    case "checkout.session.async_payment_succeeded": {
+      const s = event.data.object as Stripe.Checkout.Session;
+      await creditTokenCheckout({ id: s.id, payment_status: s.payment_status, metadata: s.metadata });
       break;
     }
     case "customer.subscription.created":

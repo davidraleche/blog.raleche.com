@@ -25,7 +25,7 @@ export async function Footer() {
         <div>
           <p className="kicker mb-4 text-white/50">Raleche</p>
           <ul className="space-y-2 font-display text-xl font-semibold uppercase">
-            <li><Link href="/membership" className="hover:text-accent">{t("membership")}</Link></li>
+            <li><Link href="/store" className="hover:text-accent">{t("store")}</Link></li>
             <li><Link href="/account" className="hover:text-accent">{t("account")}</Link></li>
             <li><Link href="/search" className="hover:text-accent">{t("search")}</Link></li>
             <li><Link href="/privacy" className="hover:text-accent">{t("privacy")}</Link></li>

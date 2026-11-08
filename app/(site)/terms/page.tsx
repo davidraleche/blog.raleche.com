@@ -11,8 +11,8 @@ export default function Page() {
         <p className="mt-3">By using blog.raleche.com you agree to these terms. Articles are provided for general information and are not legal, financial or investment advice.</p>
         <h2 className="hed mt-10 text-3xl">Accounts</h2>
         <p className="mt-3">You are responsible for your account and for keeping your sign-in secure. We may suspend accounts that abuse the site.</p>
-        <h2 className="hed mt-10 text-3xl">Memberships and payments</h2>
-        <p className="mt-3">Paid memberships are billed through Stripe at the price shown when you subscribe and renew until you cancel. You can cancel at any time from your account page; access continues until the end of the paid period.</p>
+        <h2 className="hed mt-10 text-3xl">Tokens and payments</h2>
+        <p className="mt-3">Tokens are bought through Stripe as one-time payments at the price shown ($1 = 100 tokens), and can also be earned on the site. Tokens have no cash value, cannot be transferred or exchanged for money, and purchases are non-refundable except where the law requires. Unlocked content stays unlocked on your account. We may adjust balances to correct errors or abuse.</p>
         <h2 className="hed mt-10 text-3xl">Content</h2>
         <p className="mt-3">Articles and summaries are our own commentary on public interviews and news. Third-party names, videos and marks belong to their owners. Please do not copy or republish our content without permission.</p>
         <h2 className="hed mt-10 text-3xl">Liability</h2>

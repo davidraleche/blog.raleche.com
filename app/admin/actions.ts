@@ -9,6 +9,10 @@ import { sendEmail } from "@/lib/email";
 import { renderMarkdown } from "@/lib/markdown";
 import { stripe } from "@/lib/stripe";
 import { AD_KEYS } from "@/lib/ads";
+import { translateHtml, translateMany } from "@/lib/translate";
+import { messages, isLocale, type Locale } from "@/lib/i18n/messages";
+import { credit } from "@/lib/tokens";
+import { generateQuiz, isValidQuiz } from "@/lib/quiz";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
@@ -171,30 +175,45 @@ export async function draftDigest() {
   await requireAdmin();
   const posts = await db.post.findMany({ where: { status: "published" }, orderBy: { publishedAt: "desc" }, take: 5 });
   const url = process.env.APP_URL || "http://localhost:3000";
-  const body = ["This week on Raleche:", "", ...posts.flatMap((p) => [`## [${p.title}](${url}/story/${p.slug})`, p.dek, ""]), `[Become a member](${url}/membership) to unlock the executive summary on every story.`].join("\n");
+  const body = ["This week on Raleche:", "", ...posts.flatMap((p) => [`## [${p.title}](${url}/story/${p.slug})`, p.dek, ""]), `[Get tokens](${url}/store) to unlock executive summaries. Spin the daily wheel and take each story's quiz to earn them free.`].join("\n");
   const c = await db.campaign.create({ data: { subject: `The Raleche Briefing — ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric" })}`, body } });
   redirect(`/admin/newsletter/campaigns/${c.id}`);
 }
 
-function campaignHtml(body: string, unsubscribeKey?: string) {
+function campaignHtml(bodyHtml: string, unsubscribeKey?: string, lang: Locale = "en") {
   const url = process.env.APP_URL || "http://localhost:3000";
   return `<div style="max-width:600px;margin:auto;font-family:Georgia,serif;font-size:17px;line-height:1.6;color:#111">
 <div style="background:#000;color:#fff;padding:16px 20px;font-family:Arial Narrow,Arial,sans-serif;font-weight:800;font-size:28px;letter-spacing:2px">RALECHE</div>
-<div style="padding:20px">${renderMarkdown(body)}</div>
-<p style="font-family:monospace;font-size:11px;color:#888;padding:0 20px">${unsubscribeKey ? `<a href="${url}/unsubscribe?key=${unsubscribeKey}" style="color:#888">Unsubscribe</a>` : "Test send"}</p></div>`;
+<div style="padding:20px">${bodyHtml}</div>
+<p style="font-family:monospace;font-size:11px;color:#888;padding:0 20px">${unsubscribeKey ? `<a href="${url}/unsubscribe?key=${unsubscribeKey}" style="color:#888">${messages[lang].unsubscribe}</a>` : "Test send"}</p></div>`;
+}
+
+/** Subject and body translated into one language (machine translation, cached). */
+async function campaignIn(lang: Locale, subject: string, body: string) {
+  const [[s], html] = await Promise.all([translateMany(lang, [subject]), translateHtml(lang, renderMarkdown(body))]);
+  return { subject: s, html };
 }
 
 export async function sendCampaign(form: FormData) {
   const admin = await requireAdmin();
   const c = await db.campaign.findUniqueOrThrow({ where: { id: str(form, "id") } });
   if (form.get("test")) {
-    if (admin.email) await sendEmail(admin.email, `[TEST] ${c.subject}`, campaignHtml(c.body));
+    // Test goes out in the admin's preferred language, so translations can be checked.
+    const lang = isLocale(admin.language) ? admin.language : "en";
+    const v = await campaignIn(lang, c.subject, c.body);
+    if (admin.email) await sendEmail(admin.email, `[TEST] ${v.subject}`, campaignHtml(v.html, undefined, lang));
     redirect(`/admin/newsletter/campaigns/${c.id}?test=1`);
   }
   if (c.status === "sent") redirect(`/admin/newsletter/campaigns/${c.id}`);
   const subs = await db.subscriber.findMany({ where: { status: "subscribed" } });
   let sent = 0;
-  for (const s of subs) if (await sendEmail(s.email, c.subject, campaignHtml(c.body, s.unsubscribeKey))) sent++;
+  const versions = new Map<Locale, { subject: string; html: string }>();
+  for (const s of subs) {
+    const lang: Locale = isLocale(s.language) ? s.language : "en";
+    if (!versions.has(lang)) versions.set(lang, await campaignIn(lang, c.subject, c.body));
+    const v = versions.get(lang)!;
+    if (await sendEmail(s.email, v.subject, campaignHtml(v.html, s.unsubscribeKey, lang))) sent++;
+  }
   await db.campaign.update({ where: { id: c.id }, data: { status: "sent", sentCount: sent, sentAt: new Date() } });
   redirect(`/admin/newsletter/campaigns/${c.id}?sent=${sent}`);
 }
@@ -251,4 +270,56 @@ export async function setMemberList(form: FormData) {
   }
   revalidatePath("/admin/members");
   revalidatePath("/admin/newsletter");
+}
+
+/* ---------- Tokens, language, comments ---------- */
+export async function adjustTokens(form: FormData) {
+  const admin = await requireAdmin();
+  const amount = Math.trunc(Number(str(form, "amount")));
+  if (!amount) return;
+  await credit(str(form, "id"), amount, "admin", undefined, str(form, "note") || `by ${admin.email ?? admin.id}`);
+  revalidatePath("/admin/members");
+}
+
+export async function setMemberLanguage(form: FormData) {
+  await requireAdmin();
+  const language = str(form, "language");
+  if (!isLocale(language)) return;
+  const user = await db.user.update({ where: { id: str(form, "id") }, data: { language }, select: { email: true } });
+  if (user.email) await db.subscriber.updateMany({ where: { email: user.email }, data: { language } });
+  revalidatePath("/admin/members");
+}
+
+export async function moderateComment(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "id");
+  if (str(form, "op") === "delete") await db.comment.delete({ where: { id } });
+  else await db.comment.update({ where: { id }, data: { hidden: str(form, "op") === "hide" } });
+  revalidatePath("/admin/comments");
+}
+
+/* ---------- Quizzes ---------- */
+export async function saveQuiz(form: FormData) {
+  await requireAdmin();
+  const postId = str(form, "postId");
+  let questions: unknown;
+  try { questions = JSON.parse(str(form, "json")); } catch { redirect(`/admin/quizzes?error=json&post=${postId}`); }
+  if (!isValidQuiz(questions)) redirect(`/admin/quizzes?error=shape&post=${postId}`);
+  await db.quiz.upsert({ where: { postId }, create: { postId, questions: questions as object, source: "admin" }, update: { questions: questions as object, source: "admin" } });
+  revalidatePath("/admin/quizzes");
+  redirect(`/admin/quizzes?saved=${postId}`);
+}
+
+export async function regenerateQuiz(form: FormData) {
+  await requireAdmin();
+  const post = await db.post.findUniqueOrThrow({ where: { id: str(form, "postId") }, select: { id: true, title: true, body: true } });
+  let questions;
+  try {
+    questions = await generateQuiz(post.title, post.body);
+  } catch (e) {
+    redirect(`/admin/quizzes?error=${encodeURIComponent((e as Error).message.slice(0, 120))}&post=${post.id}`);
+  }
+  await db.quiz.upsert({ where: { postId: post.id }, create: { postId: post.id, questions, source: "ai" }, update: { questions, source: "ai" } });
+  revalidatePath("/admin/quizzes");
+  redirect(`/admin/quizzes?saved=${post.id}`);
 }

@@ -11,7 +11,7 @@ export const publishedPosts = (where: object = {}, take?: number) =>
 /** What anyone may read: the full body of free stories, a teaser of members-only ones. Executive summaries are never included. */
 export function publicBody(post: Post) {
   if (!post.premium) return post.body;
-  return `${post.body.split(/\n\n/).slice(0, 3).join("\n\n")}\n\n*The rest of this story is for members: ${absUrl("/membership")}*`;
+  return `${post.body.split(/\n\n/).slice(0, 3).join("\n\n")}\n\n*Unlock the rest of this story with tokens: ${absUrl(`/story/${post.slug}`)}*`;
 }
 
 /** A clean Markdown copy of a story, for AI tools and readers that prefer plain text. */

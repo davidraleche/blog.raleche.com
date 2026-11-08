@@ -30,3 +30,9 @@ body { @apply bg-paper text-ink font-sans antialiased; }
 
 @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .ticker-track { animation: ticker 40s linear infinite; }
+
+/* Prize wheel bulbs */
+@keyframes wheel-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.wheel-bulb { animation: wheel-twinkle 1s ease-in-out infinite; }
+.wheel-bulb-fast { animation: wheel-twinkle 0.25s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .wheel-bulb, .wheel-bulb-fast { animation: none; } }

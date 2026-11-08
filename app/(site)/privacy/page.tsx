@@ -14,7 +14,7 @@ export default function Page() {
         <h2 className="hed mt-10 text-3xl">Google sign-in</h2>
         <p className="mt-3">If you choose Sign in with Google we receive only your name, email address and Google account identifier. We do not access your Gmail, contacts, calendar or any other Google data.</p>
         <h2 className="hed mt-10 text-3xl">How we use it</h2>
-        <p className="mt-3">To sign you in, deliver the newsletter, manage your membership, answer your messages and keep the site secure. We do not sell your personal information.</p>
+        <p className="mt-3">To sign you in, deliver the newsletter, manage your tokens and purchases, answer your messages and keep the site secure. We do not sell your personal information.</p>
         <h2 className="hed mt-10 text-3xl">Who we share it with</h2>
         <p className="mt-3">Service providers that run the site for us: Google Cloud (hosting and database), Stripe (payments), Twilio (text-message codes) and Resend (email delivery). They may only use your data to provide their service to us.</p>
         <h2 className="hed mt-10 text-3xl">Analytics</h2>

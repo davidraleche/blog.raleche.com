@@ -22,6 +22,15 @@ model User {
   sessions         Session[]
   subscriptions    Subscription[]
   posts            Post[]
+  tokenBalance     Int       @default(0)
+  language         String?   // preferred language for emails: en | fr | es | zh
+  tokenTxns        TokenTxn[]
+  unlocks          Unlock[]
+  spins            WheelSpin[]
+  votes            PollVote[]
+  comments         Comment[]
+  quizAttempts     QuizAttempt[]
+  follows          Follow[]
 }
 
 model Session {
@@ -92,6 +101,11 @@ model Post {
   premium          Boolean   @default(false) // whole article members-only
   readMinutes      Int       @default(5)
   views            Int       @default(0)
+  unlocks          Unlock[]
+  votes            PollVote[]
+  comments         Comment[]
+  quiz             Quiz?
+  quizAttempts     QuizAttempt[]
   speaker          String?   // person interviewed, e.g. "Sam Altman"
   host             String?   // interviewer, e.g. "Lenny Rachitsky"
   show             String?   // podcast/channel, e.g. "Lenny's Podcast"
@@ -124,6 +138,7 @@ model Subscriber {
   status         String   @default("subscribed") // subscribed | unsubscribed
   source         String   @default("site")
   unsubscribeKey String   @unique @default(cuid())
+  language       String   @default("en") // language the newsletter is sent in
   createdAt      DateTime @default(now())
 }
 
@@ -157,4 +172,101 @@ model Translation {
   lang      String
   text      String
   createdAt DateTime @default(now())
+}
+
+/// Every token change. The balance on User is the running total; this is the audit trail.
+model TokenTxn {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int      // positive = earned/bought, negative = spent
+  reason    String   // purchase | wheel | unlock | admin
+  ref       String?  @unique // Stripe checkout session, spin id or unlock id: makes credits idempotent
+  note      String?
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
+}
+
+/// An executive summary unlocked with tokens.
+model Unlock {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tokens    Int
+  createdAt DateTime @default(now())
+  @@unique([userId, postId])
+}
+
+/// One prize-wheel spin. Signed-out spins wait (userId null) until the visitor signs in to claim them.
+model WheelSpin {
+  id        String    @id @default(cuid())
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day       String    // YYYY-MM-DD (UTC)
+  prize     Int
+  claimedAt DateTime?
+  createdAt DateTime  @default(now())
+  @@unique([userId, day])
+}
+
+/// One reader's rating of an article: great | average | not_great. Earns tokens once.
+model PollVote {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  choice    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, postId])
+  @@index([postId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  body      String
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  @@index([postId, createdAt])
+}
+
+/// Two multiple-choice questions about an article: [{ q, options[4], answer }].
+model Quiz {
+  postId    String   @id
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  questions Json
+  source    String   @default("ai") // seed | ai | admin
+  updatedAt DateTime @updatedAt
+}
+
+/// One play per reader per article.
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  correct   Int
+  earned    Int      @default(0)
+  createdAt DateTime @default(now())
+  @@unique([userId, postId])
+}
+
+/// A reader following a speaker or host (by name, as it appears on stories).
+model Follow {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String   // speaker | host
+  name      String
+  createdAt DateTime @default(now())
+  @@unique([userId, kind, name])
+  @@index([kind, name])
 }

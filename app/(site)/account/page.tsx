@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { getI18n } from "@/lib/i18n/server";
-import type { Messages } from "@/lib/i18n/messages";
-import { translateMany } from "@/lib/translate";
 import { db } from "@/lib/db";
-import { requireUser, activePlan } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
+import { FollowButton } from "@/components/FollowButton";
+import { personSlug } from "@/lib/people";
 import { stripe, syncStripeSubscription } from "@/lib/stripe";
 import { signOut } from "@/app/actions/auth";
-import { openBillingPortal, cancelDemoSubscription, toggleNewsletter } from "@/app/actions/billing";
-import { money } from "@/lib/utils";
+import { toggleNewsletter } from "@/app/actions/billing";
 
 export const metadata = { title: "Account" };
 
@@ -19,45 +18,27 @@ export default async function Account({ searchParams }: { searchParams: Promise<
     if (s?.subscription) await syncStripeSubscription(await stripe.subscriptions.retrieve(String(s.subscription)));
   }
   const user = await requireUser();
-  const { locale, t, date: fmtDate } = await getI18n();
-  const plan = activePlan(user);
-  const sub = user.subscriptions.find((s) => ["active", "trialing", "past_due"].includes(s.status));
-  const [planName] = sub ? await translateMany(locale, [sub.plan.name]) : [""];
+  const { t, date: fmtDate } = await getI18n();
+  const [unlockCount, follows] = await Promise.all([
+    db.unlock.count({ where: { userId: user.id } }),
+    db.follow.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" } }),
+  ]);
   const newsletter = user.email ? await db.subscriber.findUnique({ where: { email: user.email } }) : null;
 
   return (
     <>
-      {welcome && plan && <p className="mb-8 bg-ink px-5 py-4 font-mono text-sm text-terminal-up">{t("welcomeAboard")}</p>}
+      {welcome && <p className="mb-8 bg-ink px-5 py-4 font-mono text-sm text-terminal-up">{t("welcomeAboard")}</p>}
 
       <section className="grid gap-6 md:grid-cols-2">
         <div className="border-[3px] border-ink p-6 md:col-span-2">
-          <p className="kicker">{t("membership")}</p>
-          {sub ? (
-            <>
-              <p className="hed mt-3 text-4xl">{planName}</p>
-              <p className="mt-1 font-mono text-sm">{t("perMonth", { price: money(sub.priceCents) })} · <span className="uppercase">{t(`status_${sub.status}` as keyof Messages) ?? sub.status}</span></p>
-              {sub.currentPeriodEnd && <p className="mt-1 text-sm text-ink/60">{t(sub.cancelAtPeriodEnd ? "ends" : "renews", { date: fmtDate(sub.currentPeriodEnd) })}</p>}
-              <div className="mt-6 flex flex-wrap gap-2">
-                <Link href="/account/summaries" className="btn-dark">{t("readYourSummaries")}</Link>
-                {sub.stripeSubscriptionId && <Link href="/account/invoices" className="btn-light">{t("tabInvoices")}</Link>}
-                {sub.stripeSubscriptionId ? (
-                  <form action={openBillingPortal}><button className="btn-light">{t("changePlanOrCard")}</button></form>
-                ) : (
-                  <form action={cancelDemoSubscription}><button className="btn-light">{t("cancel")}</button></form>
-                )}
-              </div>
-            </>
-          ) : plan === "executive" && user.role === "ADMIN" ? (
-            <>
-              <p className="mt-3 font-serif">{t("adminsFullAccess")}</p>
-              <Link href="/account/summaries" className="btn-dark mt-6">{t("readSummaries")}</Link>
-            </>
-          ) : (
-            <>
-              <p className="mt-3 font-serif text-lg">{t("freePlan")}</p>
-              <Link href="/membership" className="btn-dark mt-6">{t("unlockSummaries")}</Link>
-            </>
-          )}
+          <p className="kicker">{t("tokenEconomy")}</p>
+          <p className="hed mt-3 text-5xl">{user.tokenBalance.toLocaleString()} <span className="font-mono text-base font-normal uppercase">{t("tokensLabel")}</span></p>
+          <p className="mt-2 font-serif text-lg">{t("tokensCardText", { n: unlockCount })}</p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Link href="/store" className="btn-dark">{t("getTokens")}</Link>
+            <Link href="/account/summaries" className="btn-light">{t("readYourSummaries")}</Link>
+            <Link href="/account/invoices" className="btn-light">{t("tabInvoices")}</Link>
+          </div>
         </div>
 
         {user.email && (
@@ -79,6 +60,23 @@ export default async function Account({ searchParams }: { searchParams: Promise<
             <form action={signOut}><button className="btn-light">{t("signOut")}</button></form>
           </div>
         </div>
+      </section>
+
+      <section className="mt-6 border-[3px] border-ink p-6">
+        <p className="kicker">{t("followingTitle")}</p>
+        {follows.length === 0 ? (
+          <p className="mt-3 font-serif text-ink/70">{t("followNone")} <Link href="/speakers" className="text-accent underline">{t("speakers")}</Link> · <Link href="/hosts" className="text-accent underline">{t("hosts")}</Link></p>
+        ) : (
+          <ul className="mt-4 flex flex-wrap gap-3">
+            {follows.map((f) => (
+              <li key={f.id} className="flex items-center gap-2 border border-ink/20 py-1 pl-3 pr-1">
+                <Link href={`/${f.kind === "speaker" ? "speakers" : "hosts"}#${personSlug(f.name)}`} className="font-serif hover:text-accent">{f.name}</Link>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-ink/50">{t(f.kind === "speaker" ? "kind_speaker" : "kind_host")}</span>
+                <FollowButton kind={f.kind as "speaker" | "host"} name={f.name} following signedIn back="/account" labels={{ follow: t("follow"), following: t("followingBtn"), unfollow: t("unfollow") }} />
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </>
   );

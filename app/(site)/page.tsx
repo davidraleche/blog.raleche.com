@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { HeroCard, StackCard, GridCard, NumberedList } from "@/components/Cards";
 import { NewsletterForm } from "@/components/NewsletterForm";
 import { AdSlot } from "@/components/Ads";
-import { getUser, activePlan } from "@/lib/auth";
+import { getUser } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n/server";
 import { localizePosts, localizeFields } from "@/lib/localize";
 
@@ -36,7 +36,6 @@ export default async function Home() {
   const [hero, ...rest] = posts;
   const side = rest.slice(0, 4);
   const grid = rest.slice(4, 10);
-  const member = !!activePlan(user);
 
   return (
     <div className="mx-auto max-w-7xl px-4">
@@ -49,16 +48,14 @@ export default async function Home() {
         </aside>
       </section>
 
-      {!member && (
-        <section className="my-10 grid items-center gap-6 bg-accent px-6 py-8 text-white md:grid-cols-[1fr_auto] md:px-10">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/80">{t("membership")}</p>
-            <h2 className="hed mt-2 text-4xl md:text-5xl">{t("promoTitle")}</h2>
-            <p className="mt-2 font-serif text-lg text-white/90">{t("promoText")}</p>
-          </div>
-          <Link href="/membership" className="btn bg-ink text-white hover:bg-white hover:text-ink">{t("becomeMember")}</Link>
-        </section>
-      )}
+      <section className="my-10 grid items-center gap-6 bg-accent px-6 py-8 text-white md:grid-cols-[1fr_auto] md:px-10">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/80">{t("tokenEconomy")}{user && ` · ${t("youHaveTokens", { n: user.tokenBalance })}`}</p>
+          <h2 className="hed mt-2 text-4xl md:text-5xl">{t("promoTokensTitle")}</h2>
+          <p className="mt-2 font-serif text-lg text-white/90">{t("promoTokensText")}</p>
+        </div>
+        <Link href="/store" className="btn bg-ink text-white hover:bg-white hover:text-ink">{t("getTokens")}</Link>
+      </section>
 
       <section className="grid gap-12 py-8 lg:grid-cols-[1fr_340px]">
         <div>
