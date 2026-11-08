@@ -235,3 +235,20 @@ export async function saveAdSettings(form: FormData) {
   revalidatePath("/", "layout");
   redirect("/admin/settings?saved=1");
 }
+
+/* ---------- Member email lists ---------- */
+/** Subscribe or unsubscribe a member from an email list. Silent: no welcome email when an admin does it. */
+export async function setMemberList(form: FormData) {
+  await requireAdmin();
+  const user = await db.user.findUniqueOrThrow({ where: { id: str(form, "id") }, select: { email: true } });
+  const on = str(form, "on") === "1";
+  if (str(form, "list") === "newsletter" && user.email) {
+    await db.subscriber.upsert({
+      where: { email: user.email },
+      create: { email: user.email, source: "admin", status: on ? "subscribed" : "unsubscribed" },
+      update: { status: on ? "subscribed" : "unsubscribed" },
+    });
+  }
+  revalidatePath("/admin/members");
+  revalidatePath("/admin/newsletter");
+}

@@ -1,12 +1,13 @@
 import { db } from "@/lib/db";
 import { PageTitle, Badge } from "@/components/admin/ui";
-import { setUserRole, compMembership, deleteUser } from "../actions";
+import { setUserRole, compMembership, deleteUser, setMemberList } from "../actions";
+import { EMAIL_LISTS } from "@/lib/lists";
 import { fmtDate } from "@/lib/utils";
 import { getUser } from "@/lib/auth";
 
 export default async function Members({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { q = "" } = await searchParams;
-  const [users, plans, me] = await Promise.all([
+  const [users, plans, me, subscribers] = await Promise.all([
     db.user.findMany({
       where: q ? { OR: [{ email: { contains: q, mode: "insensitive" } }, { phone: { contains: q } }, { name: { contains: q, mode: "insensitive" } }] } : {},
       include: { subscriptions: { include: { plan: true }, orderBy: { createdAt: "desc" } } },
@@ -14,14 +15,16 @@ export default async function Members({ searchParams }: { searchParams: Promise<
     }),
     db.plan.findMany({ orderBy: { sortOrder: "asc" } }),
     getUser(),
+    db.subscriber.findMany({ select: { email: true, status: true } }),
   ]);
+  const newsletter = new Map(subscribers.map((s) => [s.email, s.status === "subscribed"]));
   return (
     <div>
       <PageTitle title="Members" sub={`${users.length} accounts`} />
       <form className="mb-4 flex gap-2"><input name="q" defaultValue={q} placeholder="Search email, phone, name…" className="term-input max-w-sm" /><button className="term-btn-ghost">Search</button></form>
       <div className="term-panel overflow-x-auto">
         <table className="term-table">
-          <thead><tr><th>Account</th><th>Login</th><th>Plan</th><th>Role</th><th>Joined</th><th>Last seen</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Account</th><th>Login</th><th>Plan</th><th>Email lists</th><th>Role</th><th>Joined</th><th>Last seen</th><th>Actions</th></tr></thead>
           <tbody>
             {users.map((u) => {
               const sub = u.subscriptions.find((s) => ["active", "trialing", "past_due"].includes(s.status));
@@ -31,6 +34,22 @@ export default async function Members({ searchParams }: { searchParams: Promise<
                   <td><div className="text-slate-100">{u.email || u.phone}</div><div className="text-[10px] text-terminal-dim">{u.name}</div></td>
                   <td className="space-x-1">{u.googleId && <Badge>Google</Badge>}{u.passwordHash && <Badge>Pwd</Badge>}{u.phone && <Badge>Phone</Badge>}</td>
                   <td>{sub ? <Badge tone="up">{sub.plan.name}{sub.priceCents === 0 ? " · comp" : ""}</Badge> : <span className="text-terminal-dim">Free</span>}</td>
+                  <td>
+                    {!u.email ? <span className="text-terminal-dim">No email</span> : (
+                      <div className="space-y-1">
+                        {EMAIL_LISTS.map((l) => {
+                          const on = l.id === "newsletter" && newsletter.get(u.email!) === true;
+                          return (
+                            <form key={l.id} action={setMemberList} className="flex items-center gap-2 whitespace-nowrap">
+                              <input type="hidden" name="id" value={u.id} /><input type="hidden" name="list" value={l.id} /><input type="hidden" name="on" value={on ? "0" : "1"} />
+                              <Badge tone={on ? "up" : "dim"}>{l.name}</Badge>
+                              <button className={on ? "text-terminal-down hover:underline" : "text-terminal-up hover:underline"}>{on ? "Unsubscribe" : "Subscribe"}</button>
+                            </form>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </td>
                   <td><Badge tone={u.role === "ADMIN" ? "amber" : "dim"}>{u.role}</Badge></td>
                   <td className="whitespace-nowrap text-terminal-dim">{fmtDate(u.createdAt)}</td>
                   <td className="whitespace-nowrap text-terminal-dim">{fmtDate(u.lastSeenAt)}</td>

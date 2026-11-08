@@ -13,6 +13,12 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  welcomeSubject: "Welcome to RALECHE",
+  welcomeHeading: "You're on the list.",
+  welcomeBody: "Thanks for subscribing. Each week the Raleche Briefing brings you the stories that matter in technology, AI and leadership, in a few minutes of reading.",
+  welcomeLatest: "Start with our latest stories",
+  welcomeCta: "Read RALECHE",
+  welcomeFooter: "You're receiving this because you signed up at raleche.com.",
   // Header / footer / shared
   admin: "Admin",
   account: "Account",
@@ -232,6 +238,12 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  welcomeSubject: "Bienvenue chez RALECHE",
+  welcomeHeading: "Vous êtes inscrit.",
+  welcomeBody: "Merci de votre inscription. Chaque semaine, le Raleche Briefing vous apporte l'essentiel de la technologie, de l'IA et du leadership, en quelques minutes de lecture.",
+  welcomeLatest: "Commencez par nos derniers articles",
+  welcomeCta: "Lire RALECHE",
+  welcomeFooter: "Vous recevez cet e-mail car vous vous êtes inscrit sur raleche.com.",
   admin: "Admin",
   account: "Compte",
   signIn: "Connexion",
@@ -437,6 +449,12 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  welcomeSubject: "Bienvenido a RALECHE",
+  welcomeHeading: "Ya estás en la lista.",
+  welcomeBody: "Gracias por suscribirte. Cada semana, el Raleche Briefing te trae lo más importante en tecnología, IA y liderazgo, en pocos minutos de lectura.",
+  welcomeLatest: "Empieza por nuestras últimas historias",
+  welcomeCta: "Leer RALECHE",
+  welcomeFooter: "Recibes este correo porque te suscribiste en raleche.com.",
   admin: "Admin",
   account: "Cuenta",
   signIn: "Iniciar sesión",
@@ -642,6 +660,12 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  welcomeSubject: "欢迎订阅 RALECHE",
+  welcomeHeading: "订阅成功。",
+  welcomeBody: "感谢订阅。每周的 Raleche Briefing 会为你精选科技、AI 与领导力领域最重要的报道，几分钟即可读完。",
+  welcomeLatest: "从最新文章开始阅读",
+  welcomeCta: "阅读 RALECHE",
+  welcomeFooter: "你收到这封邮件，是因为你在 raleche.com 订阅了我们的简报。",
   admin: "管理",
   account: "账户",
   signIn: "登录",
