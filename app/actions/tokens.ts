@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getUser, requireUser } from "@/lib/auth";
-import { stripe } from "@/lib/stripe";
+import { stripe, ensureStripeCustomer } from "@/lib/stripe";
 import { getI18n, getLocale } from "@/lib/i18n/server";
 import { today } from "@/lib/utils";
 import { credit, drawPrize, findPack, unlockWithTokens, PARTICIPATION_REWARD, POLL_CHOICES, QUIZ_REWARD } from "@/lib/tokens";
@@ -34,12 +34,7 @@ export async function buyTokens(form: FormData) {
     redirect(`/store?added=${pack.tokens}`);
   }
 
-  let customerId = user.stripeCustomerId;
-  if (!customerId) {
-    const c = await stripe.customers.create({ email: user.email ?? undefined, phone: user.phone ?? undefined, name: user.name ?? undefined, metadata: { userId: user.id } });
-    customerId = c.id;
-    await db.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } });
-  }
+  const customerId = await ensureStripeCustomer(user);
   const metadata = { kind: "tokens", userId: user.id, tokens: String(pack.tokens), pack: pack.id };
   const session = await stripe.checkout.sessions.create({
     locale: await getLocale(),
