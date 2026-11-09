@@ -46,6 +46,8 @@ export async function Header() {
       </div>
       <nav className="border-t border-ink/10">
         <ul className="mx-auto flex max-w-7xl items-center gap-6 overflow-x-auto px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] [scrollbar-width:none]">
+          <li><Link href="/play" className="whitespace-nowrap font-bold text-terminal-amber hover:text-accent">{t("play")}</Link></li>
+          <li><Link href="/books" className="whitespace-nowrap hover:text-accent">{t("books")}</Link></li>
           <li><Link href="/" className="whitespace-nowrap hover:text-accent">{t("latest")}</Link></li>
           <li><Link href="/speakers" className="whitespace-nowrap hover:text-accent">{t("speakers")}</Link></li>
           <li><Link href="/hosts" className="whitespace-nowrap hover:text-accent">{t("hosts")}</Link></li>
@@ -53,8 +55,6 @@ export async function Header() {
             <li key={c.id}><Link href={`/category/${c.slug}`} className="whitespace-nowrap hover:text-accent">{c.name}</Link></li>
           ))}
           <li><Link href="/executive-summaries" className="whitespace-nowrap text-accent">{t("executiveSummaries")}</Link></li>
-          <li><Link href="/books" className="whitespace-nowrap hover:text-accent">{t("books")}</Link></li>
-          <li><Link href="/play" className="whitespace-nowrap font-bold text-terminal-amber hover:text-accent">{t("play")}</Link></li>
           <li><Link href="/store" className="whitespace-nowrap hover:text-accent">{t("store")}</Link></li>
           <li className="ml-auto"><Link href="/search" className="whitespace-nowrap hover:text-accent">{t("search")}</Link></li>
         </ul>
