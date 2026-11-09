@@ -12,7 +12,7 @@ const OTHER = LOCALES.filter((l): l is Exclude<Locale, "en"> => l !== "en");
 /**
  * Gets a published story ready for readers: its quiz exists and every answer is stated in the executive
  * summary, and the summary, quiz and headline are translated (and cached) in every language.
- * With recheck, an existing AI quiz is verified and rewritten if an answer is not in the summary.
+ * With recheck, an existing AI or starter quiz is verified and rewritten if an answer is not in the summary (quizzes edited by an admin are never touched).
  */
 export async function prepareStory(postId: string, opts: { recheck?: boolean } = {}): Promise<PrepareReport> {
   const post = await db.post.findUnique({ where: { id: postId }, select: { id: true, slug: true, title: true, dek: true, body: true, executiveSummary: true, status: true } });
@@ -31,7 +31,7 @@ export async function prepareStory(postId: string, opts: { recheck?: boolean } =
       const ok = (await answersInSummary(summary, quiz)).every(Boolean);
       report.answersInSummary = ok;
       const row = await db.quiz.findUnique({ where: { postId: post.id }, select: { source: true } });
-      if (!ok && row?.source === "ai") {
+      if (!ok && (row?.source === "ai" || row?.source === "seed")) {
         quiz = await generateQuiz(post.title, summary);
         await db.quiz.update({ where: { postId: post.id }, data: { questions: quiz, source: "ai" } });
         report.quiz = "fixed"; report.answersInSummary = true;
