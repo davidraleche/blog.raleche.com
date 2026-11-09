@@ -42,14 +42,14 @@ export async function Header() {
           </div>
         </div>
       </div>
-      <div className="mx-auto grid max-w-7xl items-center gap-6 px-4 py-6 md:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="mx-auto grid max-w-7xl items-center gap-6 px-4 py-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         {/* Left: logo, mission and newsletter signup. Right: the quote wheel. */}
         <div className="flex flex-col items-center gap-3 md:items-start">
           <Link href="/"><Logo text={name?.value || "RALECHE"} /></Link>
           <p className="font-serif text-base italic leading-snug text-ink/70">{t("tagline")}</p>
           <MastheadSignup text={t("briefingInbox")} />
         </div>
-        <div className="flex justify-center md:justify-end">
+        <div className="flex justify-center md:justify-end [&>button]:w-full">
           <QuoteWheelButton quotes={quotes} labels={quoteWheelLabels(t)} cta={t("quoteWheelTitle")} dek={t("quoteWheelShort")} size="lg" />
         </div>
       </div>
