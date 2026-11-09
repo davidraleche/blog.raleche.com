@@ -8,10 +8,13 @@ const MODELS = [process.env.GEMINI_MODEL || process.env.QUIZ_MODEL, "gemini-2.5-
 let workingModel: string | null = null;
 
 async function accessToken() {
-  try {
-    const r = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" }, signal: AbortSignal.timeout(1500) });
-    if (r.ok) return ((await r.json()) as { access_token: string }).access_token;
-  } catch {}
+  // On Cloud Run the metadata server answers; it can be slow under load, so retry before giving up.
+  for (let i = 0; i < 3; i++) {
+    try {
+      const r = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" }, signal: AbortSignal.timeout(5000) });
+      if (r.ok) return ((await r.json()) as { access_token: string }).access_token;
+    } catch {}
+  }
   // Local development: the developer's gcloud login.
   const { stdout } = await promisify(execFile)("gcloud", ["auth", "print-access-token"]);
   return stdout.trim();
