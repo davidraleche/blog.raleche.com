@@ -7,6 +7,8 @@ import { LanguageToggle } from "./LanguageToggle";
 import { MastheadSignup } from "./MastheadSignup";
 import { getI18n } from "@/lib/i18n/server";
 import { localizeFields } from "@/lib/localize";
+import { QuoteWheelButton } from "./QuoteWheelButton";
+import { getSpeakerQuotes, quoteWheelLabels } from "@/lib/quotes";
 
 export async function Header() {
   const [user, rawCategories, name, { locale, t, date: fmtDate }] = await Promise.all([
@@ -15,7 +17,7 @@ export async function Header() {
     db.setting.findUnique({ where: { key: "siteName" } }),
     getI18n(),
   ]);
-  const categories = await localizeFields(locale, rawCategories, ["name"]);
+  const [categories, quotes] = await Promise.all([localizeFields(locale, rawCategories, ["name"]), getSpeakerQuotes(locale)]);
   const date = fmtDate(new Date(), { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
   return (
@@ -40,9 +42,17 @@ export async function Header() {
           </div>
         </div>
       </div>
-      <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-6">
-        <Link href="/"><Logo text={name?.value || "RALECHE"} /></Link>
-        <MastheadSignup text={t("briefingInbox")} />
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        {/* Mission on the left, logo in the middle, quote wheel on the right. */}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+          <p className="hidden max-w-[16rem] font-serif text-base italic leading-snug text-ink/70 md:block">{t("tagline")}</p>
+          <Link href="/" className="col-start-2"><Logo text={name?.value || "RALECHE"} /></Link>
+          <div className="col-start-3 flex justify-end">
+            <QuoteWheelButton quotes={quotes} labels={quoteWheelLabels(t)} cta={t("quoteWheelTitle")} />
+          </div>
+        </div>
+        <p className="mt-3 text-center font-serif text-sm italic text-ink/70 md:hidden">{t("tagline")}</p>
+        <div className="mt-4 flex justify-center"><MastheadSignup text={t("briefingInbox")} /></div>
       </div>
       <nav className="border-t border-ink/10">
         <ul className="mx-auto flex max-w-7xl items-center gap-6 overflow-x-auto px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] [scrollbar-width:none]">

@@ -4,8 +4,8 @@ import { getUser } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n/server";
 import { localizePosts } from "@/lib/localize";
 import { QUIZ_REWARD } from "@/lib/tokens";
-import { QuoteWheel, type SpeakerQuote } from "@/components/QuoteWheel";
-import { translateMany } from "@/lib/translate";
+import { QuoteWheel } from "@/components/QuoteWheel";
+import { getSpeakerQuotes, quoteWheelLabels } from "@/lib/quotes";
 
 export const metadata = { title: "Play", description: "Two-question quizzes on every RALECHE story. Get both right to win tokens.", alternates: { canonical: "/play" } };
 
@@ -25,17 +25,8 @@ export default async function Play() {
   // Unplayed quizzes first, newest first within each group.
   const ordered = [...posts].sort((a, b) => Number(played.has(a.id)) - Number(played.has(b.id)));
 
-  // Quotes for the wheel: complete sentences quoted in each story with a speaker.
-  const quoteSource = await db.post.findMany({ where: { status: "published", speaker: { not: null } }, select: { slug: true, title: true, speaker: true, body: true } });
-  const rawQuotes: SpeakerQuote[] = quoteSource.flatMap((p) =>
-    [...p.body.matchAll(/_?[\u201c"]([^"\u201d\n]{50,220})[\u201d"]_?/g)]
-      .map((m) => m[1].replace(/^[_\s]+|[_\s]+$/g, ""))
-      .filter((q) => /^[A-Z]/.test(q) && /[.!?]$/.test(q))
-      .map((text) => ({ text, speaker: p.speaker!, slug: p.slug, title: p.title })),
-  );
-  const quoteText = await translateMany(locale, rawQuotes.map((q) => q.text));
-  const quotes = rawQuotes.map((q, i) => ({ ...q, text: quoteText[i] ?? q.text }));
-  const wheelLabels = { title: t("quoteWheelTitle"), dek: t("quoteWheelDek"), spin: t("spin"), spinAgain: t("spinAgain"), quote: t("quoteWord"), miss: t("tryAgain"), missDek: t("quoteMissDek"), readStory: t("readFullStory") };
+  const quotes = await getSpeakerQuotes(locale);
+  const wheelLabels = quoteWheelLabels(t);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
