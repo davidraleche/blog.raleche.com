@@ -79,7 +79,7 @@ export default async function Story({ params }: Props) {
     : [null, null, [] as string[]];
   const quizQuestions = quiz ? quiz.map((_, i) => ({ q: quizText[i * 5], options: quizText.slice(i * 5 + 1, i * 5 + 5) })) : [];
   const quizLabels = Object.fromEntries(
-    (["quizTitle", "quizDek", "quizSubmit", "quizAnswerAll", "quizWin", "quizLose", "quizNext", "quizPlayed", "signInToPlay", "quizAnswersInSummary", "quizReadSummary", "watchInterview", "unlockFor"] as const).map((k) => [k, t(k, { n: "{n}", c: "{c}" })]),
+    (["quizTitle", "quizDek", "quizSubmit", "quizAnswerAll", "quizWin", "quizLose", "quizNext", "quizPlayed", "signInToPlay", "quizAnswersInSummary", "quizReadSummary", "watchInterview", "unlockFor", "signInToSubmit", "quizKeptNote"] as const).map((k) => [k, t(k, { n: "{n}", c: "{c}" })]),
   );
   // Books and people from the interview (extracted in the background the first time if missing).
   const [bookMentions, personMentions, affiliateTag] = await Promise.all([

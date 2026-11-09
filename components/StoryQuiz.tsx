@@ -1,5 +1,5 @@
 "use client";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 import { submitQuiz, unlockSummary, type QuizResult } from "@/app/actions/tokens";
@@ -16,6 +16,28 @@ export function StoryQuiz({ postId, questions, signedIn, played, reward, signinH
   const [state, action, pending] = useActionState<QuizResult, FormData>(submitQuiz, null);
   const result = state && !state.error ? state : played ? { correct: played.correct, earned: 0, answers: played.answers, already: true } : null;
   const won = !!result && result.correct === questions.length;
+  // Anyone can pick answers; sending them needs an account. Picks survive the trip through sign-in.
+  const storeKey = `quiz-picks:${postId}`;
+  const [picks, setPicks] = useState<(number | null)[]>(() => questions.map(() => null));
+  const [needAll, setNeedAll] = useState(false);
+  useEffect(() => {
+    if (result) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem(storeKey) ?? "null");
+      if (Array.isArray(saved) && saved.length === questions.length) {
+        setPicks(saved);
+        setTimeout(() => document.getElementById("quiz")?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+      }
+      if (signedIn) localStorage.removeItem(storeKey);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const pick = (i: number, j: number) => { setNeedAll(false); setPicks((p) => p.map((v, k) => (k === i ? j : v))); };
+  function signInToSend() {
+    if (picks.some((p) => p === null)) return setNeedAll(true);
+    try { localStorage.setItem(storeKey, JSON.stringify(picks)); } catch {}
+    window.location.href = signinHref;
+  }
 
   useEffect(() => {
     if (state && !state.error && !state.already) {
@@ -42,7 +64,7 @@ export function StoryQuiz({ postId, questions, signedIn, played, reward, signinH
                   const isAnswer = !!result && result.answers.length > 0 && result.answers[i] === j;
                   return (
                     <label key={j} className={`flex cursor-pointer items-start gap-2 border-2 px-3 py-2 font-serif transition ${result ? (isAnswer ? "border-green-700 bg-green-50" : "border-ink/15 text-ink/50") : "border-ink/20 hover:border-ink has-[:checked]:border-ink has-[:checked]:bg-terminal-amber/20"}`}>
-                      <input type="radio" name={`q${i}`} value={j} required disabled={!!result || !signedIn} className="mt-1 accent-[#e1251b]" />
+                      <input type="radio" name={`q${i}`} value={j} required disabled={!!result} checked={!result && picks[i] === j} onChange={() => pick(i, j)} className="mt-1 accent-[#e1251b]" />
                       <span>{o}{result && isAnswer && " ✓"}</span>
                     </label>
                   );
@@ -54,7 +76,10 @@ export function StoryQuiz({ postId, questions, signedIn, played, reward, signinH
 
         <div className="mt-6">
           {!signedIn ? (
-            <a href={signinHref} className="btn-dark">{labels.signInToPlay}</a>
+            <div>
+              <button type="button" onClick={signInToSend} className="btn bg-accent text-white hover:bg-ink">{labels.signInToSubmit}</button>
+              <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-ink/50">{labels.quizKeptNote}</p>
+            </div>
           ) : !result ? (
             <button disabled={pending} className="btn bg-accent text-white hover:bg-ink">{labels.quizSubmit}</button>
           ) : won ? (
@@ -75,7 +100,7 @@ export function StoryQuiz({ postId, questions, signedIn, played, reward, signinH
               {summary && !summary.unlocked && <input type="hidden" name="back" value={summary.back} />}
             </div>
           )}
-          {state?.error === "answerAll" && <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-accent">{labels.quizAnswerAll}</p>}
+          {(needAll || state?.error === "answerAll") && <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-accent">{labels.quizAnswerAll}</p>}
         </div>
       </form>
     </section>

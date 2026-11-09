@@ -13,6 +13,8 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  signInToSubmit: "Sign in to check my answers",
+  quizKeptNote: "Free account. Your answers are kept while you sign in.",
   manageCards: "Manage saved cards",
   quizAnswersInSummary: "The answers are in this story's executive summary.",
   quizReadSummary: "Read the summary",
@@ -350,6 +352,8 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  signInToSubmit: "Se connecter pour vérifier",
+  quizKeptNote: "Compte gratuit. Vos réponses sont conservées pendant la connexion.",
   manageCards: "Gérer mes cartes",
   quizAnswersInSummary: "Les réponses sont dans la synthèse de cet article.",
   quizReadSummary: "Lire la synthèse",
@@ -673,6 +677,8 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  signInToSubmit: "Inicia sesión para comprobar",
+  quizKeptNote: "Cuenta gratuita. Tus respuestas se guardan mientras inicias sesión.",
   manageCards: "Gestionar tarjetas guardadas",
   quizAnswersInSummary: "Las respuestas están en el resumen ejecutivo de esta historia.",
   quizReadSummary: "Leer el resumen",
@@ -996,6 +1002,8 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  signInToSubmit: "登录后提交答案",
+  quizKeptNote: "免费注册。登录期间你的答案会被保留。",
   manageCards: "管理已保存的卡",
   quizAnswersInSummary: "答案就在本文的高管摘要里。",
   quizReadSummary: "阅读摘要",
