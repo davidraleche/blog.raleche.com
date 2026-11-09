@@ -25,9 +25,10 @@ import { NewsletterForm } from "@/components/NewsletterForm";
 import { AdSlot } from "@/components/Ads";
 import { personSlug } from "@/lib/people";
 import { ViewPing } from "./ViewPing";
+import { UnlockCelebration } from "@/components/UnlockCelebration";
 import { JsonLd, articleJsonLd } from "@/lib/seo";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ unlocked?: string }> };
 
 async function load(slug: string) {
   return db.post.findUnique({ where: { slug }, include: { category: true } });
@@ -55,8 +56,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function Story({ params }: Props) {
+export default async function Story({ params, searchParams }: Props) {
   const { slug } = await params;
+  const justUnlocked = (await searchParams)?.unlocked === "1";
   const [raw, user, { locale, t, date: fmtDate }] = await Promise.all([load(slug), getUser(), getI18n()]);
   if (!raw || (raw.status !== "published" && user?.role !== "ADMIN")) notFound();
 
@@ -82,7 +84,7 @@ export default async function Story({ params }: Props) {
     : [null, null, [] as string[]];
   const quizQuestions = quiz ? quiz.map((_, i) => ({ q: quizText[i * 5], options: quizText.slice(i * 5 + 1, i * 5 + 5) })) : [];
   const quizLabels = Object.fromEntries(
-    (["quizTitle", "quizDek", "quizSubmit", "quizAnswerAll", "quizWin", "quizLose", "quizNext", "quizPlayed", "signInToPlay", "quizAnswersInSummary", "quizReadSummary", "watchInterview", "unlockFor", "signInToSubmit", "quizKeptNote"] as const).map((k) => [k, t(k, { n: "{n}", c: "{c}" })]),
+    (["quizTitle", "quizDek", "quizSubmit", "quizAnswerAll", "quizWin", "quizLose", "quizNext", "quizPlayed", "signInToPlay", "quizAnswersInSummary", "quizReadSummary", "watchInterview", "unlockFor", "signInToSubmit", "quizKeptNote", "quizYourAnswer", "downloadPdf"] as const).map((k) => [k, t(k, { n: "{n}", c: "{c}" })]),
   );
   // Books and people from the interview (extracted in the background the first time if missing).
   const [bookMentions, personMentions, affiliateTag] = await Promise.all([
@@ -179,13 +181,14 @@ export default async function Story({ params }: Props) {
           <StoryQuiz
             className="mb-10"
             postId={raw.id} questions={quizQuestions} signedIn={!!user} reward={QUIZ_REWARD}
-            played={quizPlay ? { correct: quizPlay.correct, answers: quizPlay.correct === quiz.length ? quiz.map((q) => q.answer) : [] } : null}
-            summary={raw.executiveSummary ? { unlocked: member, cost: UNLOCK_COST, back: `/story/${raw.slug}` } : null}
+            played={quizPlay ? { correct: quizPlay.correct, answers: quizPlay.correct === quiz.length || member ? quiz.map((q) => q.answer) : [], picks: quizPlay.picks } : null}
+            summary={raw.executiveSummary ? { unlocked: member, cost: UNLOCK_COST, back: `/story/${raw.slug}`, pdf: `/story/${raw.slug}/summary.pdf` } : null}
             videoUrl={raw.body.match(/https:\/\/www\.youtube\.com\/watch\?v=[\w-]+/)?.[0] ?? null}
             signinHref={`/signin?next=${encodeURIComponent(`/story/${raw.slug}#quiz`)}`} next={quizNextStory} labels={quizLabels}
           />
         )}
         <StoryBooks books={bookMentions} people={personMentions} tag={affiliateTag} labels={bookLabels} className="mb-10" />
+        {justUnlocked && unlocked && (() => { const fromQuiz = !!quiz && !!quizPlay && quizPlay.correct < quiz.length; return <UnlockCelebration title={t("unlockCelebrateTitle")} detail={t(fromQuiz ? "unlockCelebrateQuiz" : "unlockCelebrateDetail")} target={fromQuiz ? "quiz" : "summary"} />; })()}
         <ExecutiveSummary hasSummary={!!raw.executiveSummary} html={summaryHtml} member={member} unlocked={unlocked} signedIn={!!user} balance={user?.tokenBalance ?? 0} postId={raw.id} back={`/story/${raw.slug}`} t={t} />
         <AdSlot name="articleTop" />
 
@@ -301,7 +304,12 @@ function ExecutiveSummary({ hasSummary, html, member, unlocked, signedIn, balanc
         <span className="font-mono text-[10px] uppercase tracking-widest text-terminal-amber">{unlocked ? t("unlockedBadge") : member ? t("unlockedBadge") : t("unlockFor", { n: UNLOCK_COST })}</span>
       </div>
       {member ? (
-        <div className="prose-article prose-base px-5 py-4 prose-h2:text-xl" dangerouslySetInnerHTML={{ __html: html }} />
+        <>
+          <div className="prose-article prose-base px-5 py-4 prose-h2:text-xl" dangerouslySetInnerHTML={{ __html: html }} />
+          <div className="border-t border-ink/10 px-5 py-3">
+            <a href={`${back}/summary.pdf`} className="btn-dark inline-flex items-center gap-2">⬇ {t("downloadPdf")}</a>
+          </div>
+        </>
       ) : (
         <div className="relative px-5 py-5">
           <div aria-hidden className="pointer-events-none select-none space-y-3 blur-[5px]">

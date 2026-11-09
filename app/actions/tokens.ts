@@ -3,11 +3,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { getUser, requireUser } from "@/lib/auth";
+import { canReadSummaries, getUser, requireUser } from "@/lib/auth";
 import { stripe, ensureStripeCustomer } from "@/lib/stripe";
 import { getI18n, getLocale } from "@/lib/i18n/server";
 import { today } from "@/lib/utils";
-import { credit, drawPrize, findPack, unlockWithTokens, PARTICIPATION_REWARD, POLL_CHOICES, QUIZ_REWARD } from "@/lib/tokens";
+import { credit, drawPrize, findPack, hasUnlocked, unlockWithTokens, PARTICIPATION_REWARD, POLL_CHOICES, QUIZ_REWARD } from "@/lib/tokens";
 import { getQuiz } from "@/lib/quiz";
 import { after } from "next/server";
 import { logActivity } from "@/lib/activity";
@@ -68,7 +68,9 @@ export async function unlockSummary(form: FormData) {
   if (result === "ok") after(() => logActivity({ kind: "unlock", userId: user.id, postId, detail: "Unlocked the executive summary (100 tokens)" }));
   if (result === "insufficient") redirect(`/store?need=1&next=${encodeURIComponent(back)}`);
   revalidatePath(back);
-  redirect(back);
+  // A fresh unlock gets a celebration on the page, then lands on the quiz answers or the summary.
+  const anchor = String(form.get("anchor") || "") === "quiz" ? "#quiz" : "#summary";
+  redirect(result === "ok" && back.startsWith("/") && !back.includes("?") && !back.includes("#") ? `${back}?unlocked=1${anchor}` : back);
 }
 
 /* ---------- Daily wheel ---------- */
@@ -210,7 +212,7 @@ export async function deleteOwnComment(form: FormData) {
 }
 
 /* ---------- Article quiz ---------- */
-export type QuizResult = { correct: number; earned: number; answers: number[]; already?: boolean; error?: string } | null;
+export type QuizResult = { correct: number; earned: number; answers: number[]; picks?: number[]; already?: boolean; error?: string } | null;
 
 /** One play per reader per article. Both answers right = QUIZ_REWARD tokens. */
 export async function submitQuiz(_: QuizResult, form: FormData): Promise<QuizResult> {
@@ -222,25 +224,26 @@ export async function submitQuiz(_: QuizResult, form: FormData): Promise<QuizRes
   if (!quiz) return { correct: 0, earned: 0, answers: [], error: "invalid" };
   const answers = quiz.map((q) => q.answer);
 
-  // The right answers are only revealed to readers who got both right; otherwise they're in the summary.
-  const reveal = (correct: number) => (correct === quiz.length ? answers : []);
+  // The right answers are only revealed to readers who got both right or who unlocked the summary (where they're explained).
+  const canSeeAnswers = canReadSummaries(user) || (await hasUnlocked(user.id, postId));
+  const reveal = (correct: number) => (correct === quiz.length || canSeeAnswers ? answers : []);
   const prior = await db.quizAttempt.findUnique({ where: { userId_postId: { userId: user.id, postId } } });
-  if (prior) return { correct: prior.correct, earned: prior.earned, answers: reveal(prior.correct), already: true };
+  if (prior) return { correct: prior.correct, earned: prior.earned, answers: reveal(prior.correct), picks: prior.picks, already: true };
 
   const picks = quiz.map((_, i) => Number(form.get(`q${i}`)));
   if (picks.some((p) => !Number.isInteger(p) || p < 0 || p > 3)) return { correct: 0, earned: 0, answers: [], error: "answerAll" };
   const correct = picks.filter((p, i) => p === quiz[i].answer).length;
   const won = correct === quiz.length;
   try {
-    await db.quizAttempt.create({ data: { userId: user.id, postId, correct, earned: won ? QUIZ_REWARD : 0 } });
+    await db.quizAttempt.create({ data: { userId: user.id, postId, correct, earned: won ? QUIZ_REWARD : 0, picks } });
   } catch {
     const p = await db.quizAttempt.findUniqueOrThrow({ where: { userId_postId: { userId: user.id, postId } } });
-    return { correct: p.correct, earned: p.earned, answers: reveal(p.correct), already: true };
+    return { correct: p.correct, earned: p.earned, answers: reveal(p.correct), picks: p.picks, already: true };
   }
   if (won) await credit(user.id, QUIZ_REWARD, "quiz", `quiz:${user.id}:${postId}`);
   after(() => logActivity({ kind: "quiz", userId: user.id, postId, detail: `${correct} of ${quiz.length} right${won ? ` (+${QUIZ_REWARD} tokens)` : ""}` }));
   revalidatePath(`/story/${post.slug}`);
-  return { correct, earned: won ? QUIZ_REWARD : 0, answers: reveal(correct) };
+  return { correct, earned: won ? QUIZ_REWARD : 0, answers: reveal(correct), picks };
 }
 
 /* ---------- Follow speakers and hosts ---------- */

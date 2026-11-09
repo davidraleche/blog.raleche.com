@@ -8,13 +8,13 @@ type Q = { q: string; options: string[] };
 const fill = (s: string, vars: Record<string, string | number>) => s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
 
 export function StoryQuiz({ postId, questions, signedIn, played, reward, signinHref, next, summary, videoUrl, labels, className = "mt-12" }: {
-  postId: string; questions: Q[]; signedIn: boolean; played: { correct: number; answers: number[] } | null; reward: number; signinHref: string;
-  next: { slug: string; title: string } | null; summary: { unlocked: boolean; cost: number; back: string } | null; videoUrl: string | null;
+  postId: string; questions: Q[]; signedIn: boolean; played: { correct: number; answers: number[]; picks?: number[] } | null; reward: number; signinHref: string;
+  next: { slug: string; title: string } | null; summary: { unlocked: boolean; cost: number; back: string; pdf?: string } | null; videoUrl: string | null;
   labels: Record<string, string>; className?: string;
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<QuizResult, FormData>(submitQuiz, null);
-  const result = state && !state.error ? state : played ? { correct: played.correct, earned: 0, answers: played.answers, already: true } : null;
+  const result = state && !state.error ? state : played ? { correct: played.correct, earned: 0, answers: played.answers, picks: played.picks, already: true } : null;
   const won = !!result && result.correct === questions.length;
   // Anyone can pick answers; sending them needs an account. Picks survive the trip through sign-in.
   const storeKey = `quiz-picks:${postId}`;
@@ -61,11 +61,24 @@ export function StoryQuiz({ postId, questions, signedIn, played, reward, signinH
               <p className="font-display text-xl font-bold">{i + 1}. {q.q}</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {q.options.map((o, j) => {
-                  const isAnswer = !!result && result.answers.length > 0 && result.answers[i] === j;
+                  const revealed = !!result && result.answers.length > 0;
+                  const isAnswer = revealed && result.answers[i] === j;
+                  const mine = !!result && result.picks?.[i] === j;
+                  const wrongPick = revealed && mine && !isAnswer;
+                  const look = !result
+                    ? "border-ink/20 hover:border-ink has-[:checked]:border-ink has-[:checked]:bg-terminal-amber/20"
+                    : isAnswer ? "border-green-700 bg-green-50 text-green-900"
+                    : wrongPick ? "border-accent bg-red-50 text-accent"
+                    : mine ? "border-ink text-ink" : "border-ink/15 text-ink/50";
                   return (
-                    <label key={j} className={`flex cursor-pointer items-start gap-2 border-2 px-3 py-2 font-serif transition ${result ? (isAnswer ? "border-green-700 bg-green-50" : "border-ink/15 text-ink/50") : "border-ink/20 hover:border-ink has-[:checked]:border-ink has-[:checked]:bg-terminal-amber/20"}`}>
-                      <input type="radio" name={`q${i}`} value={j} required disabled={!!result} checked={!result && picks[i] === j} onChange={() => pick(i, j)} className="mt-1 accent-[#e1251b]" />
-                      <span>{o}{result && isAnswer && " ✓"}</span>
+                    <label key={j} className={`flex cursor-pointer items-start gap-2 border-2 px-3 py-2 font-serif transition ${look}`}>
+                      <input type="radio" name={`q${i}`} value={j} required disabled={!!result} checked={result ? mine : picks[i] === j} onChange={() => pick(i, j)} className="mt-1 accent-[#e1251b]" />
+                      <span className="flex-1">
+                        {o}
+                        {isAnswer && <b className="ml-1">✓</b>}
+                        {wrongPick && <b className="ml-1">✗</b>}
+                        {mine && revealed && <span className={`ml-2 whitespace-nowrap font-mono text-[10px] uppercase tracking-widest ${isAnswer ? "text-green-800" : "text-accent"}`}>· {labels.quizYourAnswer}</span>}
+                      </span>
                     </label>
                   );
                 })}
@@ -90,14 +103,17 @@ export function StoryQuiz({ postId, questions, signedIn, played, reward, signinH
               {(summary || videoUrl) && <p className="mt-1 font-serif text-ink/70">{labels.quizAnswersInSummary}</p>}
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 {summary && (summary.unlocked ? (
-                  <a href="#summary" className="btn bg-terminal-amber text-ink hover:bg-ink hover:text-white">{labels.quizReadSummary}</a>
+                  <>
+                    <a href="#summary" className="btn bg-terminal-amber text-ink hover:bg-ink hover:text-white">{labels.quizReadSummary}</a>
+                    {summary.pdf && <a href={summary.pdf} className="btn-dark">⬇ {labels.downloadPdf}</a>}
+                  </>
                 ) : (
                   <button formAction={unlockSummary} formNoValidate className="btn bg-terminal-amber text-ink hover:bg-ink hover:text-white">{fill(labels.unlockFor, { n: summary.cost })}</button>
                 ))}
                 {videoUrl && <a href={videoUrl} target="_blank" rel="noopener" className="btn-light">▶ {labels.watchInterview}</a>}
                 {next && <a href={`/story/${next.slug}#quiz`} className="btn-dark">{labels.quizNext} →</a>}
               </div>
-              {summary && !summary.unlocked && <input type="hidden" name="back" value={summary.back} />}
+              {summary && !summary.unlocked && <><input type="hidden" name="back" value={summary.back} /><input type="hidden" name="anchor" value="quiz" /></>}
             </div>
           )}
           {(needAll || state?.error === "answerAll") && <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-accent">{labels.quizAnswerAll}</p>}

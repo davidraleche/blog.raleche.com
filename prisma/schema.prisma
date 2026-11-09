@@ -286,6 +286,7 @@ model QuizAttempt {
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   correct   Int
   earned    Int      @default(0)
+  picks     Int[]    @default([]) // the reader's chosen option per question, to show their answers in red once revealed
   createdAt DateTime @default(now())
 
   @@unique([userId, postId])
