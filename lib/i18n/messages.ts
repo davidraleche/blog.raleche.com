@@ -13,6 +13,7 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  manageCards: "Manage saved cards",
   quizAnswersInSummary: "The answers are in this story's executive summary.",
   quizReadSummary: "Read the summary",
   watchInterview: "Watch the interview",
@@ -349,6 +350,7 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  manageCards: "Gérer mes cartes",
   quizAnswersInSummary: "Les réponses sont dans la synthèse de cet article.",
   quizReadSummary: "Lire la synthèse",
   watchInterview: "Voir l'entretien",
@@ -671,6 +673,7 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  manageCards: "Gestionar tarjetas guardadas",
   quizAnswersInSummary: "Las respuestas están en el resumen ejecutivo de esta historia.",
   quizReadSummary: "Leer el resumen",
   watchInterview: "Ver la entrevista",
@@ -993,6 +996,7 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  manageCards: "管理已保存的卡",
   quizAnswersInSummary: "答案就在本文的高管摘要里。",
   quizReadSummary: "阅读摘要",
   watchInterview: "观看访谈",

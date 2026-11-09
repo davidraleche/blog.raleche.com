@@ -6,7 +6,7 @@ import { FollowButton } from "@/components/FollowButton";
 import { personSlug } from "@/lib/people";
 import { stripe, syncStripeSubscription } from "@/lib/stripe";
 import { signOut } from "@/app/actions/auth";
-import { toggleNewsletter } from "@/app/actions/billing";
+import { toggleNewsletter, openBillingPortal } from "@/app/actions/billing";
 
 export const metadata = { title: "Account" };
 
@@ -38,6 +38,7 @@ export default async function Account({ searchParams }: { searchParams: Promise<
             <Link href="/store" className="btn-dark">{t("getTokens")}</Link>
             <Link href="/account/summaries" className="btn-light">{t("readYourSummaries")}</Link>
             <Link href="/account/invoices" className="btn-light">{t("tabInvoices")}</Link>
+            {stripe && user.stripeCustomerId && <form action={openBillingPortal}><button className="btn-light">{t("manageCards")}</button></form>}
           </div>
         </div>
 

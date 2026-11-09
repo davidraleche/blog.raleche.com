@@ -40,6 +40,8 @@ export async function buyTokens(form: FormData) {
     line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: pack.cents, product_data: { name: `Raleche ${pack.tokens} tokens` } } }],
     metadata,
     payment_intent_data: { metadata },
+    // Offer a "save my card" checkbox, and show cards saved that way on the next purchase. Stripe holds the card.
+    saved_payment_method_options: { payment_method_save: "enabled" },
     invoice_creation: { enabled: true }, // so the purchase shows on the account's Invoices page
     success_url: `${appUrl()}/store?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl()}/store`,
