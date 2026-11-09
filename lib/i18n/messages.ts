@@ -13,6 +13,7 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  homeNav: "Home",
   rateThisStory: "Rate this story",
   likeStory: "I like this story",
   dislikeStory: "I don't like this story",
@@ -405,6 +406,7 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  homeNav: "Accueil",
   rateThisStory: "Notez cet article",
   likeStory: "J'aime cet article",
   dislikeStory: "Je n'aime pas cet article",
@@ -783,6 +785,7 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  homeNav: "Inicio",
   rateThisStory: "Valora esta historia",
   likeStory: "Me gusta esta historia",
   dislikeStory: "No me gusta esta historia",
@@ -1161,6 +1164,7 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  homeNav: "首页",
   rateThisStory: "为本文打分",
   likeStory: "喜欢这篇",
   dislikeStory: "不喜欢这篇",

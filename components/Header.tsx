@@ -53,6 +53,7 @@ export async function Header() {
       </div>
       <nav className="border-t border-ink/10">
         <ul className="mx-auto flex max-w-7xl items-center gap-6 overflow-x-auto px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] [scrollbar-width:none]">
+          <li><Link href="/" className="whitespace-nowrap font-bold hover:text-accent">{t("homeNav")}</Link></li>
           <li><Link href="/play" className="whitespace-nowrap font-bold text-terminal-amber hover:text-accent">{t("play")}</Link></li>
           <li><Link href="/books" className="whitespace-nowrap hover:text-accent">{t("books")}</Link></li>
           <li><Link href="/speakers" className="whitespace-nowrap hover:text-accent">{t("speakers")}</Link></li>
