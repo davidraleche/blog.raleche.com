@@ -61,9 +61,8 @@ export async function PeopleIndex({ by }: { by: "speaker" | "host" }) {
             <div className="rule flex flex-wrap items-baseline justify-between gap-2 pt-3">
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="hed text-4xl">{name}</h2>
-                <FollowButton kind={by} name={name} following={followed.has(name)} signedIn={!!user} back={`${base}#${personSlug(name)}`} labels={labels} size="md" />
+                <FollowButton kind={by} name={name} following={followed.has(name)} signedIn={!!user} back={`${base}#${personSlug(name)}`} labels={{ ...labels, followers: t("followersN", { n: followers.get(name) ?? 0 }) }} followers={followers.get(name) ?? 0} size="md" />
                 <PersonRating kind={by} name={name} up={score(name, 1)} down={score(name, -1)} mine={myRating.get(name) ?? 0} signedIn={!!user} back={`${base}#${personSlug(name)}`} reward={PARTICIPATION_REWARD} earned={paid.has(name)} labels={ratingLabels} size="md" />
-                {(followers.get(name) ?? 0) > 0 && <span className="font-mono text-[11px] uppercase tracking-widest text-ink/50">{t("followersN", { n: followers.get(name)! })}</span>}
               </div>
               {show && <span className="kicker">{show}</span>}
             </div>

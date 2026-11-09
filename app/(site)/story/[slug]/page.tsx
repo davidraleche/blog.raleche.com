@@ -102,6 +102,14 @@ export default async function Story({ params, searchParams }: Props) {
       : [],
   );
   const followLabels = { follow: t("follow"), following: t("followingBtn"), unfollow: t("unfollow") };
+  // Total followers for the speaker and host, shown on their Follow buttons.
+  const followerCounts = raw.speaker || raw.host
+    ? await db.follow.groupBy({ by: ["kind", "name"], where: { OR: [raw.speaker && { kind: "speaker", name: raw.speaker }, raw.host && { kind: "host", name: raw.host }].filter(Boolean) as { kind: string; name: string }[] }, _count: true })
+    : [];
+  const followProps = (kind: string, name: string) => {
+    const n = followerCounts.find((c) => c.kind === kind && c.name === name)?._count ?? 0;
+    return { followers: n, labels: { ...followLabels, followers: t("followersN", { n }) } };
+  };
   // Like / dislike scores for the speaker and host.
   const people = [raw.speaker && ["speaker", raw.speaker], raw.host && ["host", raw.host], ["story", raw.slug]].filter(Boolean) as [string, string][];
   const [ratingCounts, myRatings, ratingPaid] = people.length
@@ -148,22 +156,16 @@ export default async function Story({ params, searchParams }: Props) {
         {post.status !== "published" && <span className="ml-3 bg-terminal-amber px-2 py-0.5 font-mono text-[10px] uppercase">{post.status}</span>}
         <h1 className="hed mt-4 text-5xl sm:text-7xl">{post.title}</h1>
         {post.dek && <p className="mx-auto mt-6 max-w-3xl font-serif text-xl text-ink/75 sm:text-2xl">{post.dek}</p>}
-        {raw.status === "published" && (
-          <div className="mt-4 flex items-center justify-center gap-3">
-            <span className="font-mono text-[11px] uppercase tracking-widest text-ink/50">{t("rateThisStory")}</span>
-            <PersonRating kind="story" name={raw.slug} {...ratingFor("story", raw.slug)} signedIn={!!user} back={`/story/${raw.slug}`} reward={PARTICIPATION_REWARD} labels={storyRatingLabels} size="md" />
-          </div>
-        )}
         <p className="mt-6 font-mono text-[11px] uppercase tracking-widest text-ink/60">
           {t("by")} <span className="text-ink">{post.authorName}</span> · {fmtDate(post.publishedAt)} · {t("minRead", { n: post.readMinutes })}
         </p>
         {(post.speaker || post.host) && (
           <div className="mt-2 flex flex-wrap items-center justify-center gap-x-1 gap-y-2 font-mono text-[11px] uppercase tracking-widest text-ink/60">
             {post.speaker && <Link href={`/speakers#${personSlug(post.speaker)}`} className="text-accent hover:underline">{t("withSpeaker", { name: post.speaker })}</Link>}
-            {raw.speaker && <span className="ml-2 inline-flex items-center gap-1 align-middle"><FollowButton kind="speaker" name={raw.speaker} following={follows.has(`speaker:${raw.speaker}`)} signedIn={!!user} back={`/story/${raw.slug}`} labels={followLabels} /><PersonRating kind="speaker" name={raw.speaker} {...ratingFor("speaker", raw.speaker)} signedIn={!!user} back={`/story/${raw.slug}`} reward={PARTICIPATION_REWARD} labels={ratingLabels} /></span>}
+            {raw.speaker && <span className="ml-2 inline-flex items-center gap-1 align-middle"><FollowButton kind="speaker" name={raw.speaker} following={follows.has(`speaker:${raw.speaker}`)} signedIn={!!user} back={`/story/${raw.slug}`} {...followProps("speaker", raw.speaker)} /><PersonRating kind="speaker" name={raw.speaker} {...ratingFor("speaker", raw.speaker)} signedIn={!!user} back={`/story/${raw.slug}`} reward={PARTICIPATION_REWARD} labels={ratingLabels} /></span>}
             {post.speaker && post.host && " · "}
             {post.host && <Link href={`/hosts#${personSlug(post.host)}`} className="hover:underline">{t("hostedBy", { name: post.host })}{post.show ? `, ${post.show}` : ""}</Link>}
-            {raw.host && <span className="ml-2 inline-flex items-center gap-1 align-middle"><FollowButton kind="host" name={raw.host} following={follows.has(`host:${raw.host}`)} signedIn={!!user} back={`/story/${raw.slug}`} labels={followLabels} /><PersonRating kind="host" name={raw.host} {...ratingFor("host", raw.host)} signedIn={!!user} back={`/story/${raw.slug}`} reward={PARTICIPATION_REWARD} labels={ratingLabels} /></span>}
+            {raw.host && <span className="ml-2 inline-flex items-center gap-1 align-middle"><FollowButton kind="host" name={raw.host} following={follows.has(`host:${raw.host}`)} signedIn={!!user} back={`/story/${raw.slug}`} {...followProps("host", raw.host)} /><PersonRating kind="host" name={raw.host} {...ratingFor("host", raw.host)} signedIn={!!user} back={`/story/${raw.slug}`} reward={PARTICIPATION_REWARD} labels={ratingLabels} /></span>}
           </div>
         )}
         {locale !== "en" && <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-ink/40">{t("machineTranslated")}</p>}
@@ -190,6 +192,12 @@ export default async function Story({ params, searchParams }: Props) {
         <StoryBooks books={bookMentions} people={personMentions} tag={affiliateTag} labels={bookLabels} className="mb-10" />
         {justUnlocked && unlocked && (() => { const fromQuiz = !!quiz && !!quizPlay && quizPlay.correct < quiz.length; return <UnlockCelebration title={t("unlockCelebrateTitle")} detail={t(fromQuiz ? "unlockCelebrateQuiz" : "unlockCelebrateDetail")} target={fromQuiz ? "quiz" : "summary"} />; })()}
         <ExecutiveSummary hasSummary={!!raw.executiveSummary} html={summaryHtml} member={member} unlocked={unlocked} signedIn={!!user} balance={user?.tokenBalance ?? 0} postId={raw.id} back={`/story/${raw.slug}`} t={t} />
+        {raw.status === "published" && (
+          <div id="rate" className="-mt-6 mb-10 flex flex-wrap items-center gap-3 border-b-2 border-ink pb-4">
+            <span className="font-mono text-[11px] uppercase tracking-widest text-ink/60">{t("rateThisStory")}</span>
+            <PersonRating kind="story" name={raw.slug} {...ratingFor("story", raw.slug)} signedIn={!!user} back={`/story/${raw.slug}#rate`} reward={PARTICIPATION_REWARD} labels={storyRatingLabels} size="md" />
+          </div>
+        )}
         <AdSlot name="articleTop" />
 
         {videoId && (
