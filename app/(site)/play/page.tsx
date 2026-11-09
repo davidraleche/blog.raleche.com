@@ -4,6 +4,8 @@ import { getUser } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n/server";
 import { localizePosts } from "@/lib/localize";
 import { QUIZ_REWARD } from "@/lib/tokens";
+import { QuoteWheel, type SpeakerQuote } from "@/components/QuoteWheel";
+import { translateMany } from "@/lib/translate";
 
 export const metadata = { title: "Play", description: "Two-question quizzes on every RALECHE story. Get both right to win tokens.", alternates: { canonical: "/play" } };
 
@@ -23,6 +25,18 @@ export default async function Play() {
   // Unplayed quizzes first, newest first within each group.
   const ordered = [...posts].sort((a, b) => Number(played.has(a.id)) - Number(played.has(b.id)));
 
+  // Quotes for the wheel: complete sentences quoted in each story with a speaker.
+  const quoteSource = await db.post.findMany({ where: { status: "published", speaker: { not: null } }, select: { slug: true, title: true, speaker: true, body: true } });
+  const rawQuotes: SpeakerQuote[] = quoteSource.flatMap((p) =>
+    [...p.body.matchAll(/_?[\u201c"]([^"\u201d\n]{50,220})[\u201d"]_?/g)]
+      .map((m) => m[1].replace(/^[_\s]+|[_\s]+$/g, ""))
+      .filter((q) => /^[A-Z]/.test(q) && /[.!?]$/.test(q))
+      .map((text) => ({ text, speaker: p.speaker!, slug: p.slug, title: p.title })),
+  );
+  const quoteText = await translateMany(locale, rawQuotes.map((q) => q.text));
+  const quotes = rawQuotes.map((q, i) => ({ ...q, text: quoteText[i] ?? q.text }));
+  const wheelLabels = { title: t("quoteWheelTitle"), dek: t("quoteWheelDek"), spin: t("spin"), spinAgain: t("spinAgain"), quote: t("quoteWord"), miss: t("tryAgain"), missDek: t("quoteMissDek"), readStory: t("readFullStory") };
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <p className="kicker">{t("play")}</p>
@@ -33,9 +47,9 @@ export default async function Play() {
       </div>
 
       <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {ordered.map((p) => {
+        {ordered.map((p, i) => {
           const a = played.get(p.id);
-          return (
+          const card = (
             <Link key={p.id} href={`/story/${p.slug}#quiz`} className={`group flex flex-col border-[3px] border-ink transition hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#e1251b] ${a ? "opacity-70" : ""}`}>
               {p.coverImage && (
                 <div className="relative aspect-[40/21] w-full overflow-hidden border-b-[3px] border-ink">
@@ -57,6 +71,7 @@ export default async function Play() {
               </div>
             </Link>
           );
+          return i === 2 || (i === ordered.length - 1 && ordered.length < 3) ? [card, <QuoteWheel key="quote-wheel" quotes={quotes} labels={wheelLabels} />] : card;
         })}
       </div>
     </div>

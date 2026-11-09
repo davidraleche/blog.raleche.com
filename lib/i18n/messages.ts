@@ -13,6 +13,12 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  quoteWheelTitle: "Spin for a quote",
+  quoteWheelDek: "Spin as often as you like. One in two spins lands on a quote from our speakers.",
+  spinAgain: "Spin again",
+  quoteWord: "Quote",
+  tryAgain: "Try again",
+  quoteMissDek: "No quote this time. Spin again, it's free.",
   likePerson: "Like",
   dislikePerson: "Dislike",
   rateEarn: "Like or dislike to earn {n} tokens",
@@ -389,6 +395,12 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  quoteWheelTitle: "Tournez pour une citation",
+  quoteWheelDek: "Tournez autant que vous voulez. Un tour sur deux tombe sur une citation de nos intervenants.",
+  spinAgain: "Rejouer",
+  quoteWord: "Citation",
+  tryAgain: "Réessayez",
+  quoteMissDek: "Pas de citation cette fois. Rejouez, c'est gratuit.",
   likePerson: "J'aime",
   dislikePerson: "Je n'aime pas",
   rateEarn: "Notez pour gagner {n} jetons",
@@ -751,6 +763,12 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  quoteWheelTitle: "Gira para una cita",
+  quoteWheelDek: "Gira cuanto quieras. Uno de cada dos giros cae en una cita de nuestros ponentes.",
+  spinAgain: "Girar otra vez",
+  quoteWord: "Cita",
+  tryAgain: "Otra vez",
+  quoteMissDek: "Esta vez no hay cita. Vuelve a girar, es gratis.",
   likePerson: "Me gusta",
   dislikePerson: "No me gusta",
   rateEarn: "Valora y gana {n} tokens",
@@ -1113,6 +1131,12 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  quoteWheelTitle: "转出名言",
+  quoteWheelDek: "想转几次都行，每两次就有一次会转出嘉宾名言。",
+  spinAgain: "再转一次",
+  quoteWord: "名言",
+  tryAgain: "再试一次",
+  quoteMissDek: "这次没有名言，再转一次吧，免费的。",
   likePerson: "赞",
   dislikePerson: "踩",
   rateEarn: "点赞或踩即得 {n} 代币",
