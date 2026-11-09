@@ -103,7 +103,7 @@ export default async function Story({ params }: Props) {
   const earnedPoll = earnedRefs.some((r) => r.ref?.startsWith("poll:"));
   const earnedComment = earnedRefs.some((r) => r.ref?.startsWith("comment:"));
   const engageLabels = Object.fromEntries(
-    (["pollTitle", "poll_great", "poll_average", "poll_not_great", "pollEarn", "pollThanks", "votesN", "earnedTokens", "signInToVote", "commentsEarn", "commentPlaceholder", "postComment", "commentHeld", "commentRules"] as const).map((k) => [k, t(k, { n: "{n}" })]),
+    (["pollTitle", "poll_great", "poll_average", "poll_not_great", "pollEarn", "pollThanks", "votesN", "earnedTokens", "signInToVote", "commentsEarn", "commentPlaceholder", "postComment", "commentHeld", "commentRules", "pollCongrats", "pollTapToVote"] as const).map((k) => [k, t(k, { n: "{n}" })]),
   );
   const body = locked ? raw.body.split(/\n\n/).slice(0, 3).join("\n\n") : raw.body;
   const rawRelated = await db.post.findMany({

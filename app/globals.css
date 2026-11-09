@@ -36,3 +36,18 @@ body { @apply bg-paper text-ink font-sans antialiased; }
 .wheel-bulb { animation: wheel-twinkle 1s ease-in-out infinite; }
 .wheel-bulb-fast { animation: wheel-twinkle 0.25s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .wheel-bulb, .wheel-bulb-fast { animation: none; } }
+
+/* Story poll: glow, twinkling sparkles, star pop */
+@keyframes poll-glow { 0%, 100% { box-shadow: 6px 6px 0 #e1251b, 0 0 0 0 rgba(245,166,35,0.0); } 50% { box-shadow: 6px 6px 0 #e1251b, 0 0 28px 6px rgba(245,166,35,0.55); } }
+@keyframes sparkle { 0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); } 50% { opacity: 1; transform: scale(1.15) rotate(25deg); } }
+@keyframes star-pop { 0% { transform: scale(1); } 40% { transform: scale(1.35) rotate(-8deg); } 100% { transform: scale(1); } }
+@keyframes congrats-in { 0% { opacity: 0; transform: translateY(8px) scale(0.96); } 100% { opacity: 1; transform: none; } }
+.poll-glow { animation: poll-glow 1.8s ease-in-out infinite; }
+.sparkle { animation: sparkle 1.6s ease-in-out infinite; }
+.poll-option:hover .poll-star { animation: star-pop 0.5s ease-out; }
+.poll-option:hover .poll-star:nth-child(2) { animation-delay: 0.05s; }
+.poll-option:hover .poll-star:nth-child(3) { animation-delay: 0.1s; }
+.poll-option:hover .poll-star:nth-child(4) { animation-delay: 0.15s; }
+.poll-option:hover .poll-star:nth-child(5) { animation-delay: 0.2s; }
+.congrats-in { animation: congrats-in 0.5s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .poll-glow, .sparkle, .poll-option:hover .poll-star, .congrats-in { animation: none; } .sparkle { opacity: 0.8; } }

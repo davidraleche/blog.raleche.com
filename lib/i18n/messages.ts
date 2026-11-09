@@ -13,6 +13,8 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  pollCongrats: "Congratulations! Your vote counts.",
+  pollTapToVote: "Tap to vote",
   commentLinksBlocked: "Links, emails and phone numbers aren't allowed in comments.",
   commentTooLong: "Keep it under 1,000 characters.",
   commentDuplicate: "You already posted that.",
@@ -362,6 +364,8 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  pollCongrats: "Bravo ! Votre vote compte.",
+  pollTapToVote: "Touchez pour voter",
   commentLinksBlocked: "Les liens, e-mails et numéros de téléphone ne sont pas autorisés.",
   commentTooLong: "Restez sous 1 000 caractères.",
   commentDuplicate: "Vous avez déjà publié ce message.",
@@ -697,6 +701,8 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  pollCongrats: "¡Enhorabuena! Tu voto cuenta.",
+  pollTapToVote: "Toca para votar",
   commentLinksBlocked: "No se permiten enlaces, correos ni teléfonos en los comentarios.",
   commentTooLong: "Máximo 1.000 caracteres.",
   commentDuplicate: "Ya publicaste eso.",
@@ -1032,6 +1038,8 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  pollCongrats: "恭喜！你的投票已记录。",
+  pollTapToVote: "点击投票",
   commentLinksBlocked: "评论中不允许包含链接、邮箱或电话号码。",
   commentTooLong: "请控制在 1000 字以内。",
   commentDuplicate: "你已经发过这条评论。",
