@@ -5,7 +5,7 @@ import { ratePerson, type RatingState } from "@/app/actions/ratings";
 
 /** 👍 / 👎 with running scores next to a speaker's or host's Follow button. Every rating gets a celebration. */
 export function PersonRating({ kind, name, up, down, mine, signedIn, back, reward, earned, labels, size = "sm" }: {
-  kind: "speaker" | "host"; name: string; up: number; down: number; mine: number; signedIn: boolean; back: string;
+  kind: "speaker" | "host" | "story"; name: string; up: number; down: number; mine: number; signedIn: boolean; back: string;
   reward: number; earned: boolean; labels: { like: string; dislike: string; earn: string; plus: string }; size?: "sm" | "md";
 }) {
   const [state, action, pending] = useActionState<RatingState, FormData>(ratePerson, null);

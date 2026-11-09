@@ -17,7 +17,7 @@ export async function ratePerson(_: RatingState, form: FormData): Promise<Rating
   const name = String(form.get("name") ?? "").trim().slice(0, 120);
   const value = Number(form.get("value")) === -1 ? -1 : 1;
   const back = String(form.get("back") || "/");
-  if (!["speaker", "host"].includes(kind) || !name) return null;
+  if (!["speaker", "host", "story"].includes(kind) || !name) return null;
   const user = await requireUser(back);
 
   const key = { userId_kind_name: { userId: user.id, kind, name } };
@@ -31,7 +31,8 @@ export async function ratePerson(_: RatingState, form: FormData): Promise<Rating
     now = value;
   }
   const earned = now !== 0 && (await credit(user.id, PARTICIPATION_REWARD, "rating", `rating:${user.id}:${kind}:${name}`)) ? PARTICIPATION_REWARD : 0;
-  if (now !== 0) after(() => logActivity({ kind: "vote", userId: user.id, detail: `${now > 0 ? "Liked" : "Disliked"} ${kind} ${name}${earned ? ` (+${earned} tokens)` : ""}` }));
+  const storyId = kind === "story" ? (await db.post.findUnique({ where: { slug: name }, select: { id: true } }))?.id ?? null : null;
+  if (now !== 0) after(() => logActivity({ kind: "vote", userId: user.id, postId: storyId, detail: `${now > 0 ? "Liked" : "Disliked"} ${kind === "story" ? "the story" : `${kind} ${name}`}${earned ? ` (+${earned} tokens)` : ""}` }));
 
   const [up, down] = await Promise.all([
     db.personRating.count({ where: { kind, name, value: 1 } }),

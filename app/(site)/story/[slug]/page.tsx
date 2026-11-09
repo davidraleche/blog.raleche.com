@@ -101,7 +101,7 @@ export default async function Story({ params }: Props) {
   );
   const followLabels = { follow: t("follow"), following: t("followingBtn"), unfollow: t("unfollow") };
   // Like / dislike scores for the speaker and host.
-  const people = [raw.speaker && ["speaker", raw.speaker], raw.host && ["host", raw.host]].filter(Boolean) as [string, string][];
+  const people = [raw.speaker && ["speaker", raw.speaker], raw.host && ["host", raw.host], ["story", raw.slug]].filter(Boolean) as [string, string][];
   const [ratingCounts, myRatings, ratingPaid] = people.length
     ? await Promise.all([
         db.personRating.groupBy({ by: ["kind", "name", "value"], where: { OR: people.map(([kind, name]) => ({ kind, name })) }, _count: true }),
@@ -116,6 +116,7 @@ export default async function Story({ params }: Props) {
     earned: ratingPaid.some((r) => r.ref === `rating:${user?.id}:${kind}:${name}`),
   });
   const ratingLabels = { like: t("likePerson"), dislike: t("dislikePerson"), earn: t("rateEarn", { n: PARTICIPATION_REWARD }), plus: t("earnedTokens", { n: "{n}" }) };
+  const storyRatingLabels = { ...ratingLabels, like: t("likeStory"), dislike: t("dislikeStory") };
   const reportedIds = new Set(user ? (await db.commentReport.findMany({ where: { userId: user.id, comment: { postId: raw.id } }, select: { commentId: true } })).map((r) => r.commentId) : []);
   const voteCounts = Object.fromEntries(voteGroups.map((g) => [g.choice, g._count]));
   const earnedPoll = earnedRefs.some((r) => r.ref?.startsWith("poll:"));
@@ -145,6 +146,12 @@ export default async function Story({ params }: Props) {
         {post.status !== "published" && <span className="ml-3 bg-terminal-amber px-2 py-0.5 font-mono text-[10px] uppercase">{post.status}</span>}
         <h1 className="hed mt-4 text-5xl sm:text-7xl">{post.title}</h1>
         {post.dek && <p className="mx-auto mt-6 max-w-3xl font-serif text-xl text-ink/75 sm:text-2xl">{post.dek}</p>}
+        {raw.status === "published" && (
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <span className="font-mono text-[11px] uppercase tracking-widest text-ink/50">{t("rateThisStory")}</span>
+            <PersonRating kind="story" name={raw.slug} {...ratingFor("story", raw.slug)} signedIn={!!user} back={`/story/${raw.slug}`} reward={PARTICIPATION_REWARD} labels={storyRatingLabels} size="md" />
+          </div>
+        )}
         <p className="mt-6 font-mono text-[11px] uppercase tracking-widest text-ink/60">
           {t("by")} <span className="text-ink">{post.authorName}</span> · {fmtDate(post.publishedAt)} · {t("minRead", { n: post.readMinutes })}
         </p>

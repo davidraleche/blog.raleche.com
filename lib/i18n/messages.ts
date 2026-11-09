@@ -13,6 +13,9 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  rateThisStory: "Rate this story",
+  likeStory: "I like this story",
+  dislikeStory: "I don't like this story",
   quoteWheelShort: "Free spins. One in two lands on a quote from our speakers.",
   quoteWheelTitle: "Spin for a quote",
   quoteWheelDek: "Spin as often as you like. One in two spins lands on a quote from our speakers.",
@@ -23,7 +26,7 @@ const en = {
   likePerson: "Like",
   dislikePerson: "Dislike",
   rateEarn: "Like or dislike to earn {n} tokens",
-  earnRating: "Like or dislike a speaker or host: {n} tokens",
+  earnRating: "Like or dislike a story, speaker or host: {n} tokens each",
   txn_rating: "Rated a speaker or host",
   spinOncePerAccount: "It's one spin a day per account, so the {n} tokens from your earlier spin can't be added.",
   pollCongrats: "Congratulations! Your vote counts.",
@@ -396,6 +399,9 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  rateThisStory: "Notez cet article",
+  likeStory: "J'aime cet article",
+  dislikeStory: "Je n'aime pas cet article",
   quoteWheelShort: "Tours gratuits. Un sur deux tombe sur une citation de nos intervenants.",
   quoteWheelTitle: "Tournez pour une citation",
   quoteWheelDek: "Tournez autant que vous voulez. Un tour sur deux tombe sur une citation de nos intervenants.",
@@ -406,7 +412,7 @@ const fr: Messages = {
   likePerson: "J'aime",
   dislikePerson: "Je n'aime pas",
   rateEarn: "Notez pour gagner {n} jetons",
-  earnRating: "Aimer ou non un intervenant ou un animateur : {n} jetons",
+  earnRating: "Aimer ou non un article, un intervenant ou un animateur : {n} jetons chacun",
   txn_rating: "Note d'un intervenant",
   spinOncePerAccount: "C'est un tour par jour et par compte : les {n} jetons de votre tour précédent ne peuvent pas être ajoutés.",
   pollCongrats: "Bravo ! Votre vote compte.",
@@ -765,6 +771,9 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  rateThisStory: "Valora esta historia",
+  likeStory: "Me gusta esta historia",
+  dislikeStory: "No me gusta esta historia",
   quoteWheelShort: "Giros gratis. Uno de cada dos cae en una cita de nuestros ponentes.",
   quoteWheelTitle: "Gira para una cita",
   quoteWheelDek: "Gira cuanto quieras. Uno de cada dos giros cae en una cita de nuestros ponentes.",
@@ -775,7 +784,7 @@ const es: Messages = {
   likePerson: "Me gusta",
   dislikePerson: "No me gusta",
   rateEarn: "Valora y gana {n} tokens",
-  earnRating: "Valorar a un ponente o presentador: {n} tokens",
+  earnRating: "Valorar una historia, un ponente o un presentador: {n} tokens cada uno",
   txn_rating: "Valoraste a un ponente",
   spinOncePerAccount: "Es un giro al día por cuenta, así que los {n} tokens de tu giro anterior no se pueden añadir.",
   pollCongrats: "¡Enhorabuena! Tu voto cuenta.",
@@ -1134,6 +1143,9 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  rateThisStory: "为本文打分",
+  likeStory: "喜欢这篇",
+  dislikeStory: "不喜欢这篇",
   quoteWheelShort: "免费转，每两次就有一次转出嘉宾名言。",
   quoteWheelTitle: "转出名言",
   quoteWheelDek: "想转几次都行，每两次就有一次会转出嘉宾名言。",
@@ -1144,7 +1156,7 @@ const zh: Messages = {
   likePerson: "赞",
   dislikePerson: "踩",
   rateEarn: "点赞或踩即得 {n} 代币",
-  earnRating: "为嘉宾或主持人点赞或踩：{n} 代币",
+  earnRating: "为文章、嘉宾或主持人点赞或踩：每次 {n} 代币",
   txn_rating: "为嘉宾评分",
   spinOncePerAccount: "每个账号每天只能转一次，所以之前那次转到的 {n} 代币无法再添加。",
   pollCongrats: "恭喜！你的投票已记录。",
