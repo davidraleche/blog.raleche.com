@@ -85,6 +85,7 @@ export async function fetchSourceArticle(source: string, slug: string) {
 export async function importFromSource(source = process.env.IMPORT_SOURCE || "https://tts42.com", only?: string) {
   const slugs = only ? [only] : await listSourceArticles(source);
   let created = 0, updated = 0;
+  const postIds: string[] = [];
   const errors: string[] = [];
   for (const slug of slugs) {
     try {
@@ -105,11 +106,13 @@ export async function importFromSource(source = process.env.IMPORT_SOURCE || "ht
           where: { id: existing.id },
           data: { ...data, executiveSummary: existing.executiveSummary || a.executiveSummary, speaker: existing.speaker ?? a.speaker, host: existing.host ?? a.host, show: existing.show ?? a.show },
         });
+        postIds.push(existing.id);
         updated++;
       } else {
-        await db.post.create({
+        const made = await db.post.create({
           data: { ...data, ...people, slug, executiveSummary: a.executiveSummary, status: "published", source: "tts42", sourceUrl: a.sourceUrl, authorName: "Tech Team Strategy" },
         });
+        postIds.push(made.id);
         created++;
       }
     } catch (e) {
@@ -122,7 +125,7 @@ export async function importFromSource(source = process.env.IMPORT_SOURCE || "ht
     if (newest) await db.post.update({ where: { id: newest.id }, data: { featured: true } });
   }
   await db.importRun.create({ data: { source, created, updated, errors: errors.join("\n") } });
-  return { created, updated, errors, total: slugs.length };
+  return { created, updated, errors, total: slugs.length, postIds };
 }
 
 /** One-time switch from the old sections: re-tag every post into the new ones and remove the old sections. Also fills missing speakers/hosts. */

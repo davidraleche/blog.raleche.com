@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
@@ -13,6 +14,7 @@ import { translateHtml, translateMany } from "@/lib/translate";
 import { messages, isLocale, type Locale } from "@/lib/i18n/messages";
 import { credit } from "@/lib/tokens";
 import { generateQuiz, isValidQuiz } from "@/lib/quiz";
+import { prepareStories } from "@/lib/prepare";
 import { saveMentions, isValidMentions } from "@/lib/books";
 import { extractMentions } from "@/lib/mentions-ai";
 
@@ -231,6 +233,7 @@ export async function runImport() {
   await requireAdmin();
   const r = await importFromSource();
   revalidatePath("/", "layout");
+  after(() => prepareStories(r.postIds));
   redirect(`/admin/import?created=${r.created}&updated=${r.updated}&errors=${r.errors.length}`);
 }
 
@@ -324,6 +327,14 @@ export async function regenerateQuiz(form: FormData) {
   await db.quiz.upsert({ where: { postId: post.id }, create: { postId: post.id, questions, source: "ai" }, update: { questions, source: "ai" } });
   revalidatePath("/admin/quizzes");
   redirect(`/admin/quizzes?saved=${post.id}`);
+}
+
+/** Checks every published story: quiz exists, every answer is in the executive summary, translations are ready. Runs in the background. */
+export async function prepareAllStories() {
+  await requireAdmin();
+  const posts = await db.post.findMany({ where: { status: "published" }, orderBy: { publishedAt: "desc" }, select: { id: true } });
+  after(() => prepareStories(posts.map((p) => p.id), { recheck: true }));
+  redirect(`/admin/quizzes?preparing=${posts.length}`);
 }
 
 /* ---------- Books ---------- */

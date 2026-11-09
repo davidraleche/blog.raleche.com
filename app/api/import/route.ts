@@ -1,6 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { importFromSource } from "@/lib/importer";
+import { prepareStories } from "@/lib/prepare";
 
 /** Lets tts42.com push one article here: POST { slug } with the shared secret. Re-uses the sitemap importer for that single article. */
 export async function POST(req: Request) {
@@ -14,5 +16,7 @@ export async function POST(req: Request) {
   const r = await importFromSource(undefined, slug);
   if (r.errors.length) return Response.json({ error: r.errors[0] }, { status: 502 });
   revalidatePath("/", "layout");
-  return Response.json({ ok: true, created: r.created, updated: r.updated, url: `${process.env.APP_URL ?? "https://blog.raleche.com"}/story/${slug}` });
+  // Quiz (answers checked against the executive summary) and FR/ES/ZH translations are prepared right after the response.
+  after(() => prepareStories(r.postIds));
+  return Response.json({ ok: true, created: r.created, updated: r.updated, preparing: ["quiz", "fr", "es", "zh"], url: `${process.env.APP_URL ?? "https://blog.raleche.com"}/story/${slug}` });
 }

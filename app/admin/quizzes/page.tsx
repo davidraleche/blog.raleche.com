@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { PageTitle, Badge } from "@/components/admin/ui";
-import { saveQuiz, regenerateQuiz } from "../actions";
+import { saveQuiz, regenerateQuiz, prepareAllStories } from "../actions";
 import { isValidQuiz } from "@/lib/quiz";
 
-export default async function Quizzes({ searchParams }: { searchParams: Promise<{ post?: string; saved?: string; error?: string }> }) {
+export default async function Quizzes({ searchParams }: { searchParams: Promise<{ post?: string; saved?: string; error?: string; preparing?: string }> }) {
   const sp = await searchParams;
   const [posts, attempts] = await Promise.all([
     db.post.findMany({ where: { status: "published" }, select: { id: true, slug: true, title: true, quiz: true }, orderBy: { publishedAt: "desc" } }),
@@ -14,6 +14,8 @@ export default async function Quizzes({ searchParams }: { searchParams: Promise<
   return (
     <div>
       <PageTitle title="Quizzes" sub="2 questions per article · both right = 10 tokens · one try per reader" />
+      {sp.preparing && <p className="term-panel mb-4 p-3 text-terminal-amber">Checking {sp.preparing} stories in the background: quizzes, answers in the executive summary, and French, Spanish and Mandarin translations. Reload in a few minutes.</p>}
+      <form action={prepareAllStories} className="mb-4"><button className="text-terminal-up hover:underline">Check and prepare all stories</button> <span className="text-terminal-dim">(adds missing quizzes, rewrites AI quizzes whose answers are not in the executive summary, warms the translations)</span></form>
       {sp.error && <p className="term-panel mb-4 border-terminal-down p-3 text-terminal-down">Not saved: {sp.error === "json" ? "that isn't valid JSON." : sp.error === "shape" ? "it needs exactly 2 questions, each with 4 options and an answer from 0 to 3." : sp.error}</p>}
       <div className="space-y-4">
         {posts.map((p) => {
