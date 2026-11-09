@@ -4,7 +4,8 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getUser, canReadSummaries } from "@/lib/auth";
 import { renderMarkdown } from "@/lib/markdown";
-import { unlockSummary, deleteOwnComment } from "@/app/actions/tokens";
+import { unlockSummary, deleteOwnComment, reportComment } from "@/app/actions/tokens";
+import { formStamp } from "@/lib/comment-guard";
 import { StoryPoll, CommentForm } from "@/components/StoryEngage";
 import { StoryQuiz } from "@/components/StoryQuiz";
 import { FollowButton } from "@/components/FollowButton";
@@ -64,7 +65,7 @@ export default async function Story({ params }: Props) {
   const [voteGroups, myVote, comments, earnedRefs] = await Promise.all([
     db.pollVote.groupBy({ by: ["choice"], where: { postId: raw.id }, _count: true }),
     user ? db.pollVote.findUnique({ where: { userId_postId: { userId: user.id, postId: raw.id } }, select: { choice: true } }) : null,
-    db.comment.findMany({ where: { postId: raw.id, hidden: false }, include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: "desc" }, take: 100 }),
+    db.comment.findMany({ where: { postId: raw.id, OR: [{ hidden: false }, ...(user ? [{ userId: user.id, heldReason: { not: null } }] : [])] }, include: { user: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 100 }),
     user ? db.tokenTxn.findMany({ where: { ref: { in: [`poll:${user.id}:${raw.id}`, `comment:${user.id}:${raw.id}`] } }, select: { ref: true } }) : [],
   ]);
   // Quiz: questions (translated, answers never sent to the browser), this reader's play, and where to go next.
@@ -97,11 +98,12 @@ export default async function Story({ params }: Props) {
       : [],
   );
   const followLabels = { follow: t("follow"), following: t("followingBtn"), unfollow: t("unfollow") };
+  const reportedIds = new Set(user ? (await db.commentReport.findMany({ where: { userId: user.id, comment: { postId: raw.id } }, select: { commentId: true } })).map((r) => r.commentId) : []);
   const voteCounts = Object.fromEntries(voteGroups.map((g) => [g.choice, g._count]));
   const earnedPoll = earnedRefs.some((r) => r.ref?.startsWith("poll:"));
   const earnedComment = earnedRefs.some((r) => r.ref?.startsWith("comment:"));
   const engageLabels = Object.fromEntries(
-    (["pollTitle", "poll_great", "poll_average", "poll_not_great", "pollEarn", "pollThanks", "votesN", "earnedTokens", "signInToVote", "commentsEarn", "commentPlaceholder", "postComment"] as const).map((k) => [k, t(k, { n: "{n}" })]),
+    (["pollTitle", "poll_great", "poll_average", "poll_not_great", "pollEarn", "pollThanks", "votesN", "earnedTokens", "signInToVote", "commentsEarn", "commentPlaceholder", "postComment", "commentHeld", "commentRules"] as const).map((k) => [k, t(k, { n: "{n}" })]),
   );
   const body = locked ? raw.body.split(/\n\n/).slice(0, 3).join("\n\n") : raw.body;
   const rawRelated = await db.post.findMany({
@@ -147,6 +149,17 @@ export default async function Story({ params }: Props) {
       )}
 
       <div className="mx-auto mt-10 max-w-3xl px-4">
+        {quiz && raw.status === "published" && (
+          <StoryQuiz
+            className="mb-10"
+            postId={raw.id} questions={quizQuestions} signedIn={!!user} reward={QUIZ_REWARD}
+            played={quizPlay ? { correct: quizPlay.correct, answers: quizPlay.correct === quiz.length ? quiz.map((q) => q.answer) : [] } : null}
+            summary={raw.executiveSummary ? { unlocked: member, cost: UNLOCK_COST, back: `/story/${raw.slug}` } : null}
+            videoUrl={raw.body.match(/https:\/\/www\.youtube\.com\/watch\?v=[\w-]+/)?.[0] ?? null}
+            signinHref={`/signin?next=${encodeURIComponent(`/story/${raw.slug}#quiz`)}`} next={quizNextStory} labels={quizLabels}
+          />
+        )}
+        <StoryBooks books={bookMentions} people={personMentions} tag={affiliateTag} labels={bookLabels} className="mb-10" />
         <ExecutiveSummary hasSummary={!!raw.executiveSummary} html={summaryHtml} member={member} unlocked={unlocked} signedIn={!!user} balance={user?.tokenBalance ?? 0} postId={raw.id} back={`/story/${raw.slug}`} t={t} />
         <AdSlot name="articleTop" />
 
@@ -184,21 +197,11 @@ export default async function Story({ params }: Props) {
 
         {raw.status === "published" && (
           <>
-            <StoryBooks books={bookMentions} people={personMentions} tag={affiliateTag} labels={bookLabels} />
-            {quiz && (
-              <StoryQuiz
-                postId={raw.id} questions={quizQuestions} signedIn={!!user} reward={QUIZ_REWARD}
-                played={quizPlay ? { correct: quizPlay.correct, answers: quizPlay.correct === quiz.length ? quiz.map((q) => q.answer) : [] } : null}
-                summary={raw.executiveSummary ? { unlocked: member, cost: UNLOCK_COST, back: `/story/${raw.slug}` } : null}
-                videoUrl={raw.body.match(/https:\/\/www\.youtube\.com\/watch\?v=[\w-]+/)?.[0] ?? null}
-                signinHref={`/signin?next=${encodeURIComponent(`/story/${raw.slug}#quiz`)}`} next={quizNextStory} labels={quizLabels}
-              />
-            )}
             <StoryPoll postId={raw.id} signedIn={!!user} mine={myVote?.choice ?? null} counts={voteCounts} earned={earnedPoll} reward={PARTICIPATION_REWARD} signinHref={`/signin?next=${encodeURIComponent(`/story/${raw.slug}#poll`)}`} labels={engageLabels} />
             <section id="comments" className="mt-12">
               <h2 className="hed rule pt-3 text-3xl">{t("commentsTitle")} {comments.length > 0 && <span className="font-mono text-base text-ink/50">({comments.length})</span>}</h2>
               {user ? (
-                <CommentForm postId={raw.id} earned={earnedComment} reward={PARTICIPATION_REWARD} labels={engageLabels} />
+                <CommentForm postId={raw.id} earned={earnedComment} reward={PARTICIPATION_REWARD} stamp={formStamp()} labels={engageLabels} />
               ) : (
                 <p className="mt-4 font-serif text-ink/70">
                   <Link href={`/signin?next=${encodeURIComponent(`/story/${raw.slug}#comments`)}`} className="btn-dark">{t("signInToComment")}</Link>
@@ -210,13 +213,19 @@ export default async function Story({ params }: Props) {
                 {comments.map((c) => (
                   <li key={c.id} className="border-l-[3px] border-ink pl-4">
                     <div className="flex flex-wrap items-baseline gap-x-3 font-mono text-[11px] uppercase tracking-widest">
-                      <span className="font-bold">{c.user.name || c.user.email?.split("@")[0] || "Reader"}</span>
+                      <span className="font-bold">{c.user.name?.trim() || "Reader"}</span>
                       <span className="text-ink/50">{fmtDate(c.createdAt)}</span>
+                      {c.hidden && <span className="bg-terminal-amber px-1.5 text-ink">{t("commentPendingBadge")}</span>}
                       {(user?.id === c.userId || user?.role === "ADMIN") && (
                         <form action={deleteOwnComment} className="inline"><input type="hidden" name="id" value={c.id} /><button className="text-accent hover:underline">{t("deleteComment")}</button></form>
                       )}
+                      {user && user.id !== c.userId && (
+                        reportedIds.has(c.id)
+                          ? <span className="text-ink/40">{t("reported")}</span>
+                          : <form action={reportComment} className="inline"><input type="hidden" name="id" value={c.id} /><button className="text-ink/40 hover:text-accent hover:underline">{t("reportComment")}</button></form>
+                      )}
                     </div>
-                    <p className="mt-1 whitespace-pre-line font-serif text-lg">{c.body}</p>
+                    <p className={`mt-1 whitespace-pre-line break-words font-serif text-lg ${c.hidden ? "text-ink/50" : ""}`}>{c.body}</p>
                   </li>
                 ))}
               </ul>

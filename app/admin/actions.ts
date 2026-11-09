@@ -12,7 +12,7 @@ import { stripe } from "@/lib/stripe";
 import { AD_KEYS } from "@/lib/ads";
 import { translateHtml, translateMany } from "@/lib/translate";
 import { messages, isLocale, type Locale } from "@/lib/i18n/messages";
-import { credit } from "@/lib/tokens";
+import { credit, PARTICIPATION_REWARD } from "@/lib/tokens";
 import { generateQuiz, isValidQuiz } from "@/lib/quiz";
 import { prepareStories } from "@/lib/prepare";
 import { saveMentions, isValidMentions } from "@/lib/books";
@@ -298,8 +298,17 @@ export async function setMemberLanguage(form: FormData) {
 export async function moderateComment(form: FormData) {
   await requireAdmin();
   const id = str(form, "id");
-  if (str(form, "op") === "delete") await db.comment.delete({ where: { id } });
-  else await db.comment.update({ where: { id }, data: { hidden: str(form, "op") === "hide" } });
+  const op = str(form, "op");
+  if (op === "delete") await db.comment.delete({ where: { id } });
+  else if (op === "hide") await db.comment.update({ where: { id }, data: { hidden: true, heldReason: "hidden by admin" } });
+  else {
+    // Approve: make it public and pay the comment reward if it hasn't been paid.
+    const c = await db.comment.update({ where: { id }, data: { hidden: false, heldReason: null } });
+    if (!c.rewarded) {
+      await credit(c.userId, PARTICIPATION_REWARD, "comment", `comment:${c.userId}:${c.postId}`);
+      await db.comment.update({ where: { id }, data: { rewarded: true } });
+    }
+  }
   revalidatePath("/admin/comments");
 }
 
@@ -380,4 +389,15 @@ export async function reextractMentions(form: FormData) {
   await saveMentions(post.id, m);
   revalidatePath("/admin/books");
   redirect(`/admin/books?saved=${post.id}#articles`);
+}
+
+export async function setCommentBan(form: FormData) {
+  const admin = await requireAdmin();
+  const id = str(form, "userId");
+  if (id === admin.id) return;
+  const banned = str(form, "banned") === "1";
+  await db.user.update({ where: { id }, data: { commentBanned: banned } });
+  // Banning also takes their comments down.
+  if (banned) await db.comment.updateMany({ where: { userId: id, hidden: false }, data: { hidden: true, heldReason: "commenter banned" } });
+  revalidatePath("/admin/comments");
 }

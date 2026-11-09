@@ -102,9 +102,11 @@ export async function importFromSource(source = process.env.IMPORT_SOURCE || "ht
       if (existing) {
         // Keep admin edits to the executive summary; only fill it if empty.
         // Keep admin edits to the people fields too.
+        // Keep covers hosted on this site (replacements for the source's image).
+        const ownCover = existing.coverImage?.startsWith("/") || (!!process.env.APP_URL && existing.coverImage?.startsWith(process.env.APP_URL));
         await db.post.update({
           where: { id: existing.id },
-          data: { ...data, executiveSummary: existing.executiveSummary || a.executiveSummary, speaker: existing.speaker ?? a.speaker, host: existing.host ?? a.host, show: existing.show ?? a.show },
+          data: { ...data, coverImage: ownCover ? existing.coverImage : data.coverImage, executiveSummary: existing.executiveSummary || a.executiveSummary, speaker: existing.speaker ?? a.speaker, host: existing.host ?? a.host, show: existing.show ?? a.show },
         });
         postIds.push(existing.id);
         updated++;

@@ -31,6 +31,8 @@ model User {
   comments         Comment[]
   quizAttempts     QuizAttempt[]
   follows          Follow[]
+  commentBanned    Boolean   @default(false)
+  commentReports   CommentReport[]
 }
 
 model Session {
@@ -234,10 +236,25 @@ model Comment {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   postId    String
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  body      String
-  hidden    Boolean  @default(false)
-  createdAt DateTime @default(now())
+  body       String
+  hidden     Boolean  @default(false)
+  heldReason String?  // set while waiting for review (hidden until an admin approves)
+  reports    Int      @default(0)
+  rewarded   Boolean  @default(false) // tokens are paid once the comment is public
+  createdAt  DateTime @default(now())
+  reportsBy  CommentReport[]
   @@index([postId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model CommentReport {
+  id        String   @id @default(cuid())
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([commentId, userId])
 }
 
 /// Two multiple-choice questions about an article: [{ q, options[4], answer }].

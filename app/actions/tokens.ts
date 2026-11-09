@@ -9,6 +9,7 @@ import { getI18n, getLocale } from "@/lib/i18n/server";
 import { today } from "@/lib/utils";
 import { credit, drawPrize, findPack, unlockWithTokens, PARTICIPATION_REWARD, POLL_CHOICES, QUIZ_REWARD } from "@/lib/tokens";
 import { getQuiz } from "@/lib/quiz";
+import { checkComment, MAX_COMMENT } from "@/lib/comment-guard";
 
 const appUrl = () => process.env.APP_URL || "http://localhost:3000";
 const SPIN_COOKIE = "wheel_spin";
@@ -116,7 +117,7 @@ export async function claimSpin(): Promise<{ prize: number; balance: number } | 
 }
 
 /* ---------- Article poll and comments ---------- */
-export type ParticipationState = { ok?: boolean; earned?: number; error?: string } | null;
+export type ParticipationState = { ok?: boolean; earned?: number; error?: string; held?: boolean } | null;
 
 async function storyFor(postId: string) {
   return db.post.findFirst({ where: { id: postId, status: "published" }, select: { id: true, slug: true } });
@@ -137,18 +138,45 @@ export async function votePoll(_: ParticipationState, form: FormData): Promise<P
 export async function addComment(_: ParticipationState, form: FormData): Promise<ParticipationState> {
   const { t } = await getI18n();
   const postId = String(form.get("postId"));
-  const body = String(form.get("body") ?? "").trim().slice(0, 2000);
   const post = await storyFor(postId);
   if (!post) return { error: "invalid" };
   const user = await requireUser(`/story/${post.slug}#comments`);
-  if (body.length < 2) return { error: t("commentTooShort") };
-  // Light flood control: at most 5 comments a minute per account.
-  const recent = await db.comment.count({ where: { userId: user.id, createdAt: { gt: new Date(Date.now() - 60e3) } } });
-  if (recent >= 5) return { error: t("commentSlowDown") };
-  await db.comment.create({ data: { userId: user.id, postId, body } });
+  const check = await checkComment({
+    user, postId,
+    raw: String(form.get("body") ?? "").slice(0, MAX_COMMENT * 2),
+    honeypot: String(form.get("website") ?? ""),
+    stamp: String(form.get("stamp") ?? ""),
+  });
+  if (!check.ok) {
+    if (check.silent) return { ok: true, earned: 0 }; // bots get no hint
+    const msg = { tooShort: t("commentTooShort"), tooLong: t("commentTooLong"), links: t("commentLinksBlocked"), slowDown: t("commentSlowDown"), limit: t("commentLimit"), duplicate: t("commentDuplicate"), blocked: t("commentBlocked") }[check.error];
+    return { error: msg };
+  }
+  const held = !!check.hold;
+  const comment = await db.comment.create({ data: { userId: user.id, postId, body: check.body, hidden: held, heldReason: check.hold, rewarded: !held } });
+  if (held) {
+    console.warn(`[comments] held ${comment.id} for review: ${check.hold}`);
+    revalidatePath(`/story/${post.slug}`);
+    return { ok: true, earned: 0, held: true };
+  }
   const earned = (await credit(user.id, PARTICIPATION_REWARD, "comment", `comment:${user.id}:${postId}`)) ? PARTICIPATION_REWARD : 0;
   revalidatePath(`/story/${post.slug}`);
   return { ok: true, earned };
+}
+
+/** Readers flag a comment; 3 reports hide it until an admin looks. */
+export async function reportComment(form: FormData) {
+  const user = await requireUser();
+  const c = await db.comment.findUnique({ where: { id: String(form.get("id")) }, include: { post: { select: { slug: true } } } });
+  if (!c || c.userId === user.id) return;
+  try {
+    await db.commentReport.create({ data: { commentId: c.id, userId: user.id } });
+  } catch {
+    return; // already reported by this reader
+  }
+  const updated = await db.comment.update({ where: { id: c.id }, data: { reports: { increment: 1 } } });
+  if (updated.reports >= 3 && !updated.hidden) await db.comment.update({ where: { id: c.id }, data: { hidden: true, heldReason: `reported by ${updated.reports} readers` } });
+  revalidatePath(`/story/${c.post.slug}`);
 }
 
 export async function deleteOwnComment(form: FormData) {

@@ -7,10 +7,10 @@ import { submitQuiz, unlockSummary, type QuizResult } from "@/app/actions/tokens
 type Q = { q: string; options: string[] };
 const fill = (s: string, vars: Record<string, string | number>) => s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
 
-export function StoryQuiz({ postId, questions, signedIn, played, reward, signinHref, next, summary, videoUrl, labels }: {
+export function StoryQuiz({ postId, questions, signedIn, played, reward, signinHref, next, summary, videoUrl, labels, className = "mt-12" }: {
   postId: string; questions: Q[]; signedIn: boolean; played: { correct: number; answers: number[] } | null; reward: number; signinHref: string;
   next: { slug: string; title: string } | null; summary: { unlocked: boolean; cost: number; back: string } | null; videoUrl: string | null;
-  labels: Record<string, string>;
+  labels: Record<string, string>; className?: string;
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<QuizResult, FormData>(submitQuiz, null);
@@ -47,7 +47,7 @@ export function StoryQuiz({ postId, questions, signedIn, played, reward, signinH
   }, [state, router]);
 
   return (
-    <section id="quiz" className="mt-12 border-[3px] border-ink">
+    <section id="quiz" className={`${className} scroll-mt-24 border-[3px] border-ink`}>
       <div className="flex flex-wrap items-center justify-between gap-2 bg-ink px-5 py-3 text-white">
         <span className="font-mono text-[11px] uppercase tracking-[0.2em]">{labels.quizTitle}</span>
         <span className="bg-terminal-amber px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest text-ink">+{reward}</span>

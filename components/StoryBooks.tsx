@@ -6,12 +6,12 @@ type Book = { id: string; slug: string; title: string; author: string; asin: str
 type BookMention = { id: string; who: string; relation: string; note: string; book: Book };
 type PersonMention = { id: string; name: string; who: string; stance: string; note: string };
 
-export function StoryBooks({ books, people, tag, labels }: { books: BookMention[]; people: PersonMention[]; tag: string | null; labels: Record<string, string> }) {
+export function StoryBooks({ books, people, tag, labels, className = "mt-12" }: { books: BookMention[]; people: PersonMention[]; tag: string | null; labels: Record<string, string>; className?: string }) {
   if (!books.length && !people.length) return null;
   const admired = people.filter((p) => p.stance === "admires");
   const criticized = people.filter((p) => p.stance === "criticizes");
   return (
-    <section id="books" className="mt-12 border-[3px] border-ink">
+    <section id="books" className={`${className} scroll-mt-24 border-[3px] border-ink`}>
       {books.length > 0 && (
         <>
           <div className="flex items-center justify-between bg-ink px-5 py-3 text-white">

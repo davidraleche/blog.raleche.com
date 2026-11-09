@@ -57,7 +57,7 @@ export function StoryPoll({ postId, signedIn, mine, counts, earned, reward, sign
   );
 }
 
-export function CommentForm({ postId, earned, reward, labels }: { postId: string; earned: boolean; reward: number; labels: L }) {
+export function CommentForm({ postId, earned, reward, stamp, labels }: { postId: string; earned: boolean; reward: number; stamp: string; labels: L }) {
   const [state, action, pending] = useActionState(addComment, null);
   const ref = useRef<HTMLFormElement>(null);
   useReward(state);
@@ -65,11 +65,18 @@ export function CommentForm({ postId, earned, reward, labels }: { postId: string
   return (
     <form ref={ref} action={action} className="mt-5">
       <input type="hidden" name="postId" value={postId} />
-      <textarea name="body" required minLength={2} maxLength={2000} rows={3} placeholder={labels.commentPlaceholder} className="input min-h-[96px] w-full" />
+      <input type="hidden" name="stamp" value={stamp} />
+      {/* Honeypot: invisible to people, bots fill it in. */}
+      <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+        <label>Website <input type="text" name="website" tabIndex={-1} autoComplete="off" defaultValue="" /></label>
+      </div>
+      <textarea name="body" required minLength={2} maxLength={1000} rows={3} placeholder={labels.commentPlaceholder} className="input min-h-[96px] w-full" />
+      <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-ink/40">{labels.commentRules}</p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <button disabled={pending} className="btn-dark">{labels.postComment}</button>
         {!earned && <span className="font-mono text-[11px] uppercase tracking-widest text-ink/60">{fill(labels.commentsEarn, reward)}</span>}
         {state?.earned ? <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-accent">{fill(labels.earnedTokens, state.earned)}</span> : null}
+        {state?.held && <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-ink">{labels.commentHeld}</span>}
         {state?.error && state.error !== "invalid" && <span className="font-mono text-[11px] uppercase tracking-widest text-accent">{state.error}</span>}
       </div>
     </form>

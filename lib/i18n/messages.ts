@@ -13,6 +13,16 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  commentLinksBlocked: "Links, emails and phone numbers aren't allowed in comments.",
+  commentTooLong: "Keep it under 1,000 characters.",
+  commentDuplicate: "You already posted that.",
+  commentLimit: "You've reached today's comment limit. Try again tomorrow.",
+  commentBlocked: "Commenting is turned off for your account.",
+  commentHeld: "Thanks! Your comment will appear once it's reviewed.",
+  commentPendingBadge: "Waiting for review",
+  reportComment: "Report",
+  reported: "Reported",
+  commentRules: "Be respectful. No links. Comments from new accounts are reviewed before they appear.",
   signInToSubmit: "Sign in to check my answers",
   quizKeptNote: "Free account. Your answers are kept while you sign in.",
   manageCards: "Manage saved cards",
@@ -352,6 +362,16 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  commentLinksBlocked: "Les liens, e-mails et numéros de téléphone ne sont pas autorisés.",
+  commentTooLong: "Restez sous 1 000 caractères.",
+  commentDuplicate: "Vous avez déjà publié ce message.",
+  commentLimit: "Limite de commentaires atteinte pour aujourd'hui.",
+  commentBlocked: "Les commentaires sont désactivés pour votre compte.",
+  commentHeld: "Merci ! Votre commentaire apparaîtra après vérification.",
+  commentPendingBadge: "En attente de vérification",
+  reportComment: "Signaler",
+  reported: "Signalé",
+  commentRules: "Restez courtois. Pas de liens. Les commentaires des nouveaux comptes sont vérifiés avant publication.",
   signInToSubmit: "Se connecter pour vérifier",
   quizKeptNote: "Compte gratuit. Vos réponses sont conservées pendant la connexion.",
   manageCards: "Gérer mes cartes",
@@ -677,6 +697,16 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  commentLinksBlocked: "No se permiten enlaces, correos ni teléfonos en los comentarios.",
+  commentTooLong: "Máximo 1.000 caracteres.",
+  commentDuplicate: "Ya publicaste eso.",
+  commentLimit: "Has alcanzado el límite de comentarios de hoy.",
+  commentBlocked: "Los comentarios están desactivados para tu cuenta.",
+  commentHeld: "¡Gracias! Tu comentario aparecerá tras revisarlo.",
+  commentPendingBadge: "Pendiente de revisión",
+  reportComment: "Denunciar",
+  reported: "Denunciado",
+  commentRules: "Sé respetuoso. Sin enlaces. Los comentarios de cuentas nuevas se revisan antes de publicarse.",
   signInToSubmit: "Inicia sesión para comprobar",
   quizKeptNote: "Cuenta gratuita. Tus respuestas se guardan mientras inicias sesión.",
   manageCards: "Gestionar tarjetas guardadas",
@@ -1002,6 +1032,16 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  commentLinksBlocked: "评论中不允许包含链接、邮箱或电话号码。",
+  commentTooLong: "请控制在 1000 字以内。",
+  commentDuplicate: "你已经发过这条评论。",
+  commentLimit: "今天的评论次数已达上限。",
+  commentBlocked: "你的账号已被禁止评论。",
+  commentHeld: "谢谢！你的评论审核通过后将显示。",
+  commentPendingBadge: "等待审核",
+  reportComment: "举报",
+  reported: "已举报",
+  commentRules: "请文明发言，禁止发链接。新账号的评论需审核后显示。",
   signInToSubmit: "登录后提交答案",
   quizKeptNote: "免费注册。登录期间你的答案会被保留。",
   manageCards: "管理已保存的卡",
