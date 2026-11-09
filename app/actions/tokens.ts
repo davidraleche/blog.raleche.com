@@ -12,6 +12,7 @@ import { getQuiz } from "@/lib/quiz";
 import { after } from "next/server";
 import { logActivity } from "@/lib/activity";
 import { checkComment, MAX_COMMENT } from "@/lib/comment-guard";
+import { parseThen, safeNext } from "@/lib/checkout-intent";
 
 const appUrl = () => process.env.APP_URL || "http://localhost:3000";
 const SPIN_COOKIE = "wheel_spin";
@@ -25,7 +26,10 @@ async function markSpun(day: string) {
 export async function buyTokens(form: FormData) {
   const pack = findPack(String(form.get("pack")));
   if (!pack) redirect("/store");
-  const user = await requireUser("/store");
+  // From the "not enough tokens" popup: where to come back to, and what to unlock once paid.
+  const next = safeNext(form.get("next"));
+  const then = next && parseThen(form.get("then")) ? String(form.get("then")) : null;
+  const user = await requireUser(next ?? "/store");
 
   if (!stripe) {
     // Local demo mode: no Stripe keys, credit immediately.
@@ -37,7 +41,7 @@ export async function buyTokens(form: FormData) {
   let url: string | null = null;
   try {
     const customerId = await ensureStripeCustomer(user);
-    const metadata = { kind: "tokens", userId: user.id, tokens: String(pack.tokens), pack: pack.id };
+    const metadata = { kind: "tokens", userId: user.id, tokens: String(pack.tokens), pack: pack.id, ...(next ? { next } : {}), ...(then ? { then } : {}) };
     const session = await stripe.checkout.sessions.create({
       locale: await getLocale(),
       mode: "payment",
@@ -48,8 +52,8 @@ export async function buyTokens(form: FormData) {
       // Offer a "save my card" checkbox, and show cards saved that way on the next purchase. Stripe holds the card.
       saved_payment_method_options: { payment_method_save: "enabled" },
       invoice_creation: { enabled: true }, // so the purchase shows on the account's Invoices page
-      success_url: `${appUrl()}/store?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl()}/store`,
+      success_url: next ? `${appUrl()}/api/checkout/return?session_id={CHECKOUT_SESSION_ID}` : `${appUrl()}/store?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl()}${next ?? "/store"}`,
     });
     url = session.url;
   } catch (e) {
@@ -66,11 +70,13 @@ export async function unlockSummary(form: FormData) {
   const user = await requireUser(back);
   const result = await unlockWithTokens(user.id, postId);
   if (result === "ok") after(() => logActivity({ kind: "unlock", userId: user.id, postId, detail: "Unlocked the executive summary (100 tokens)" }));
-  if (result === "insufficient") redirect(`/store?need=1&next=${encodeURIComponent(back)}`);
+  const anchor = String(form.get("anchor") || "") === "quiz" ? "#quiz" : "#summary";
+  // Not enough tokens: stay on the page and open the top-up popup there.
+  const plain = back.startsWith("/") && !back.includes("?") && !back.includes("#");
+  if (result === "insufficient") redirect(plain ? `${back}?topup=${anchor.slice(1)}${anchor}` : `/store?need=1&next=${encodeURIComponent(back)}`);
   revalidatePath(back);
   // A fresh unlock gets a celebration on the page, then lands on the quiz answers or the summary.
-  const anchor = String(form.get("anchor") || "") === "quiz" ? "#quiz" : "#summary";
-  redirect(result === "ok" && back.startsWith("/") && !back.includes("?") && !back.includes("#") ? `${back}?unlocked=1${anchor}` : back);
+  redirect(result === "ok" && plain ? `${back}?unlocked=1${anchor}` : back);
 }
 
 /* ---------- Daily wheel ---------- */

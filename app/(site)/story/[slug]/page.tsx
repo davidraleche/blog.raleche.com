@@ -26,9 +26,11 @@ import { AdSlot } from "@/components/Ads";
 import { personSlug } from "@/lib/people";
 import { ViewPing } from "./ViewPing";
 import { UnlockCelebration } from "@/components/UnlockCelebration";
+import { TopUpDialog } from "@/components/TopUpDialog";
+import { topUpLabels, topUpPacks } from "@/lib/topup";
 import { JsonLd, articleJsonLd } from "@/lib/seo";
 
-type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ unlocked?: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ unlocked?: string; topup?: string }> };
 
 async function load(slug: string) {
   return db.post.findUnique({ where: { slug }, include: { category: true } });
@@ -58,7 +60,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function Story({ params, searchParams }: Props) {
   const { slug } = await params;
-  const justUnlocked = (await searchParams)?.unlocked === "1";
+  const sp = (await searchParams) ?? {};
+  const justUnlocked = sp.unlocked === "1";
   const [raw, user, { locale, t, date: fmtDate }] = await Promise.all([load(slug), getUser(), getI18n()]);
   if (!raw || (raw.status !== "published" && user?.role !== "ADMIN")) notFound();
 
@@ -190,6 +193,9 @@ export default async function Story({ params, searchParams }: Props) {
           />
         )}
         <StoryBooks books={bookMentions} people={personMentions} tag={affiliateTag} labels={bookLabels} className="mb-10" />
+        {user && !member && raw.executiveSummary && (sp.topup === "quiz" || sp.topup === "summary") && (
+          <TopUpDialog packs={topUpPacks()} balance={user.tokenBalance} cost={UNLOCK_COST} next={`/story/${raw.slug}`} then={`unlock:${raw.id}:${sp.topup}`} labels={topUpLabels(t)} />
+        )}
         {justUnlocked && unlocked && (() => { const fromQuiz = !!quiz && !!quizPlay && quizPlay.correct < quiz.length; return <UnlockCelebration title={t("unlockCelebrateTitle")} detail={t(fromQuiz ? "unlockCelebrateQuiz" : "unlockCelebrateDetail")} target={fromQuiz ? "quiz" : "summary"} />; })()}
         <ExecutiveSummary hasSummary={!!raw.executiveSummary} html={summaryHtml} member={member} unlocked={unlocked} signedIn={!!user} balance={user?.tokenBalance ?? 0} postId={raw.id} back={`/story/${raw.slug}`} t={t} />
         {raw.status === "published" && (

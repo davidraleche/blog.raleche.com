@@ -11,7 +11,7 @@ export async function buyMemo(form: FormData) {
   const memoId = String(form.get("memoId"));
   const user = await requireUser("/memos");
   const result = await buyMemoWithTokens(user.id, memoId);
-  if (result === "insufficient") redirect(`/store?need=1&next=${encodeURIComponent("/memos")}`);
+  if (result === "insufficient") redirect(`/memos?topup=${encodeURIComponent(memoId)}`); // top-up popup on the page
   if (result === "unavailable") redirect("/memos?error=unavailable");
   if (result === "ok") {
     const memo = await db.memo.findUnique({ where: { id: memoId }, select: { title: true, priceTokens: true } });

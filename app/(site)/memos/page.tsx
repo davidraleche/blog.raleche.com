@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 import { memoListSelect } from "@/lib/memos";
 import { buyMemo } from "@/app/actions/memos";
+import { TopUpDialog } from "@/components/TopUpDialog";
+import { topUpLabels, topUpPacks } from "@/lib/topup";
 import { BCP47 } from "@/lib/i18n/messages";
 
 export const metadata = {
@@ -13,9 +15,9 @@ export const metadata = {
   alternates: { canonical: "/memos" },
 };
 
-export default async function Memos({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function Memos({ searchParams }: { searchParams: Promise<{ error?: string; topup?: string }> }) {
   const { locale, t } = await getI18n();
-  const { error } = await searchParams;
+  const { error, topup } = await searchParams;
   const user = await getUser();
   const [rawMemos, owned] = await Promise.all([
     db.memo.findMany({ where: { active: true }, select: memoListSelect, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }),
@@ -38,6 +40,10 @@ export default async function Memos({ searchParams }: { searchParams: Promise<{ 
         )}
       </div>
 
+      {(() => {
+        const want = user && topup ? memos.find((m) => m.id === topup && !ownedIds.has(m.id) && m.fileSize) : null;
+        return want && user ? <TopUpDialog packs={topUpPacks()} balance={user.tokenBalance} cost={want.priceTokens} next="/memos" then={`memo:${want.id}`} labels={topUpLabels(t)} /> : null;
+      })()}
       {error === "unavailable" && <p className="mx-auto mt-8 max-w-2xl border-l-4 border-accent bg-accent/5 px-4 py-3 text-sm">{t("memoUnavailable")}</p>}
 
       {memos.length ? (
