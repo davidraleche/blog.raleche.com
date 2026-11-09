@@ -46,7 +46,7 @@ export default async function Memos({ searchParams }: { searchParams: Promise<{ 
             const mine = ownedIds.has(m.id);
             const onSale = !!m.fileSize;
             return (
-              <div key={m.id} className="flex flex-col border-[3px] border-ink">
+              <div key={m.id} id={m.slug} className="flex scroll-mt-24 flex-col border-[3px] border-ink target:ring-4 target:ring-accent">
                 {m.post?.coverImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={m.post.coverImage} alt="" className="aspect-[1200/630] w-full border-b-[3px] border-ink object-cover" loading="lazy" />
