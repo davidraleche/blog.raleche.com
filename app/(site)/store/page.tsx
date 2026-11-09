@@ -11,7 +11,7 @@ import { money } from "@/lib/utils";
 
 export const metadata = { title: "Token store", description: "Buy RALECHE tokens to unlock executive summaries. $1 = 100 tokens.", alternates: { canonical: "/store" } };
 
-export default async function Store({ searchParams }: { searchParams: Promise<{ session_id?: string; added?: string; need?: string; next?: string }> }) {
+export default async function Store({ searchParams }: { searchParams: Promise<{ session_id?: string; added?: string; need?: string; next?: string; unavailable?: string }> }) {
   const { locale, t, date } = await getI18n();
   const sp = await searchParams;
 
@@ -42,6 +42,7 @@ export default async function Store({ searchParams }: { searchParams: Promise<{ 
           {t("tokensAdded", { n: fmt(added) })} {next && <Link href={next} className="ml-2 underline">{t("unlockedBadge")} →</Link>}
         </p>
       )}
+      {sp.unavailable && <p className="mx-auto mt-8 max-w-2xl border-[3px] border-accent px-5 py-4 text-center font-serif text-lg">{t("paymentsUnavailable")}</p>}
       {sp.need && !added && <p className="mx-auto mt-8 max-w-2xl border-[3px] border-accent px-5 py-4 text-center font-serif text-lg">{t("needMoreTokens")}</p>}
 
       {user && (

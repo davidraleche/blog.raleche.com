@@ -34,22 +34,29 @@ export async function buyTokens(form: FormData) {
     redirect(`/store?added=${pack.tokens}`);
   }
 
-  const customerId = await ensureStripeCustomer(user);
-  const metadata = { kind: "tokens", userId: user.id, tokens: String(pack.tokens), pack: pack.id };
-  const session = await stripe.checkout.sessions.create({
-    locale: await getLocale(),
-    mode: "payment",
-    customer: customerId,
-    line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: pack.cents, product_data: { name: `Raleche ${pack.tokens} tokens` } } }],
-    metadata,
-    payment_intent_data: { metadata },
-    // Offer a "save my card" checkbox, and show cards saved that way on the next purchase. Stripe holds the card.
-    saved_payment_method_options: { payment_method_save: "enabled" },
-    invoice_creation: { enabled: true }, // so the purchase shows on the account's Invoices page
-    success_url: `${appUrl()}/store?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl()}/store`,
-  });
-  redirect(session.url!);
+  let url: string | null = null;
+  try {
+    const customerId = await ensureStripeCustomer(user);
+    const metadata = { kind: "tokens", userId: user.id, tokens: String(pack.tokens), pack: pack.id };
+    const session = await stripe.checkout.sessions.create({
+      locale: await getLocale(),
+      mode: "payment",
+      customer: customerId,
+      line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: pack.cents, product_data: { name: `Raleche ${pack.tokens} tokens` } } }],
+      metadata,
+      payment_intent_data: { metadata },
+      // Offer a "save my card" checkbox, and show cards saved that way on the next purchase. Stripe holds the card.
+      saved_payment_method_options: { payment_method_save: "enabled" },
+      invoice_creation: { enabled: true }, // so the purchase shows on the account's Invoices page
+      success_url: `${appUrl()}/store?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl()}/store`,
+    });
+    url = session.url;
+  } catch (e) {
+    // Stripe refused (e.g. the live account isn't activated yet): tell the buyer instead of crashing the page.
+    console.error("[store] checkout failed:", (e as Error)?.message);
+  }
+  redirect(url ?? "/store?unavailable=1");
 }
 
 /* ---------- Executive summaries ---------- */
