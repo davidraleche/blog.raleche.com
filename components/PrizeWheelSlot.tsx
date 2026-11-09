@@ -15,9 +15,9 @@ export async function PrizeWheelSlot() {
 
   let canSpin: boolean;
   if (user) canSpin = !(await db.wheelSpin.findUnique({ where: { userId_day: { userId: user.id, day } }, select: { id: true } }));
-  else canSpin = !(pendingOpen && pending!.day === day);
+  else canSpin = !(pendingOpen && pending!.day === day) && jar.get("wheel_day")?.value !== day;
 
-  const keys = ["wheelTitle", "wheelDek", "spin", "youWon", "youWonOne", "addedToBalance", "signInToCollect", "collectPrize", "prizeCollected", "comeBackTomorrow", "alreadySpun", "dailySpin", "close", "soundOn", "soundOff", "tokensLabel"] as const;
+  const keys = ["wheelTitle", "wheelDek", "spin", "youWon", "youWonOne", "addedToBalance", "signInToCollect", "collectPrize", "prizeCollected", "comeBackTomorrow", "alreadySpun", "spinOncePerAccount", "dailySpin", "close", "soundOn", "soundOff", "tokensLabel"] as const;
   // Keep {n} placeholders for the browser to fill in.
   const labels = Object.fromEntries(keys.map((k) => [k, t(k, { n: "{n}" })])) as WheelLabels;
 

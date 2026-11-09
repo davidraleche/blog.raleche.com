@@ -401,3 +401,11 @@ export async function setCommentBan(form: FormData) {
   if (banned) await db.comment.updateMany({ where: { userId: id, hidden: false }, data: { hidden: true, heldReason: "commenter banned" } });
   revalidatePath("/admin/comments");
 }
+
+/* ---------- Activity alerts ---------- */
+export async function setAdminAlerts(form: FormData) {
+  await requireAdmin();
+  const value = str(form, "value") === "off" ? "off" : "on";
+  await db.setting.upsert({ where: { key: "adminAlerts" }, create: { key: "adminAlerts", value }, update: { value } });
+  revalidatePath("/admin/activity");
+}

@@ -2,6 +2,7 @@ import "server-only";
 import crypto from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "./db";
+import { logActivity } from "./activity";
 
 import { WHEEL, TOKEN_PACKS, UNLOCK_COST } from "./token-config";
 export * from "./token-config";
@@ -63,5 +64,7 @@ export async function creditTokenCheckout(session: { id: string; payment_status:
   const tokens = Number(md.tokens);
   if (!md.userId || !Number.isInteger(tokens) || tokens <= 0) return false;
   if (!(await db.user.findUnique({ where: { id: md.userId }, select: { id: true } }))) return false;
-  return credit(md.userId, tokens, "purchase", `stripe:${session.id}`, `${tokens} tokens`);
+  const ok = await credit(md.userId, tokens, "purchase", `stripe:${session.id}`, `${tokens} tokens`);
+  if (ok) await logActivity({ kind: "purchase", userId: md.userId, detail: `Bought ${tokens} tokens for $${(tokens / 100).toFixed(2)}` });
+  return ok;
 }

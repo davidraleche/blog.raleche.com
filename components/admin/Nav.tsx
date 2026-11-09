@@ -7,6 +7,8 @@ const ITEMS = [
   ["/admin/posts", "Posts", "F2"],
   ["/admin/categories", "Categories", "F3"],
   ["/admin/members", "Members", "F4"],
+  ["/admin/activity", "Activity", "A"],
+  ["/admin/visitors", "Visitors", "V"],
   ["/admin/tokens", "Tokens", "T"],
   ["/admin/comments", "Comments", "C"],
   ["/admin/quizzes", "Quizzes", "Q"],

@@ -33,6 +33,8 @@ model User {
   follows          Follow[]
   commentBanned    Boolean   @default(false)
   commentReports   CommentReport[]
+  activities       Activity[]
+  pageViews        PageView[]
 }
 
 model Session {
@@ -327,4 +329,38 @@ model PersonMention {
   note   String @default("")
   @@index([postId])
   @@index([name])
+}
+
+/// Everything readers do that the admin wants to know about: comments, votes, spins, quizzes, purchases, unlocks, follows.
+model Activity {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  kind      String   // comment | vote | spin | quiz | purchase | unlock | follow | signup
+  postId    String?
+  detail    String   @default("")
+  emailed   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([kind, createdAt])
+}
+
+/// One page view. visitorId is a first-party cookie (1 year); sessionId groups a visit (30 minutes of inactivity ends it).
+model PageView {
+  id        String   @id @default(cuid())
+  visitorId String
+  sessionId String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  path      String
+  title     String   @default("")
+  referrer  String?
+  landing   Boolean  @default(false) // first page of the visit
+  seconds   Int      @default(0)     // time on the page, reported when the reader leaves it
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+  @@index([sessionId, createdAt])
+  @@index([userId, createdAt])
+  @@index([path, createdAt])
 }

@@ -5,7 +5,7 @@ import confetti from "canvas-confetti";
 import { spinWheel, claimSpin } from "@/app/actions/tokens";
 
 export type WheelLabels = Record<
-  "wheelTitle" | "wheelDek" | "spin" | "youWon" | "youWonOne" | "addedToBalance" | "signInToCollect" | "collectPrize" | "prizeCollected" | "comeBackTomorrow" | "alreadySpun" | "dailySpin" | "close" | "soundOn" | "soundOff" | "tokensLabel",
+  "wheelTitle" | "wheelDek" | "spin" | "youWon" | "youWonOne" | "addedToBalance" | "signInToCollect" | "collectPrize" | "prizeCollected" | "comeBackTomorrow" | "alreadySpun" | "spinOncePerAccount" | "dailySpin" | "close" | "soundOn" | "soundOff" | "tokensLabel",
   string
 >;
 
@@ -83,6 +83,14 @@ export function PrizeWheel({ signedIn, canSpin, claimPending, labels }: { signed
     if (!signedIn || !claimPending) return;
     claimSpin().then((r) => {
       if (!r) return;
+      if (r.status === "already") {
+        setPrize(0);
+        setPhase("done");
+        setMessage({ headline: fill(labels.alreadySpun, r.todaysPrize), detail: `${fill(labels.spinOncePerAccount, r.prize)} ${labels.comeBackTomorrow}` });
+        setOpen(true);
+        setAvailable(false);
+        return;
+      }
       setPrize(r.prize);
       setPhase("won");
       setMessage({ headline: fill(labels.prizeCollected, r.prize), detail: fill(labels.addedToBalance, r.balance.toLocaleString()) });
@@ -176,8 +184,8 @@ export function PrizeWheel({ signedIn, canSpin, claimPending, labels }: { signed
             </div>
 
             <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.25em] text-[#ffd76a]">{labels.dailySpin}</p>
-            <h2 className="hed mt-1 text-5xl text-white drop-shadow-[0_2px_0_rgba(0,0,0,0.35)]">{phase === "won" && message ? message.headline : labels.wheelTitle}</h2>
-            <p className="mt-2 font-serif text-white/85">{phase === "won" && message ? message.detail : labels.wheelDek}</p>
+            <h2 className="hed mt-1 text-5xl text-white drop-shadow-[0_2px_0_rgba(0,0,0,0.35)]">{(phase === "won" || phase === "done") && message ? message.headline : labels.wheelTitle}</h2>
+            <p className="mt-2 font-serif text-white/85">{(phase === "won" || phase === "done") && message ? message.detail : labels.wheelDek}</p>
 
             <div className="relative mx-auto mt-6 aspect-square w-full max-w-[320px]">
               {/* Gold pointer */}

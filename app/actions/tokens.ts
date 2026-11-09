@@ -9,10 +9,17 @@ import { getI18n, getLocale } from "@/lib/i18n/server";
 import { today } from "@/lib/utils";
 import { credit, drawPrize, findPack, unlockWithTokens, PARTICIPATION_REWARD, POLL_CHOICES, QUIZ_REWARD } from "@/lib/tokens";
 import { getQuiz } from "@/lib/quiz";
+import { after } from "next/server";
+import { logActivity } from "@/lib/activity";
 import { checkComment, MAX_COMMENT } from "@/lib/comment-guard";
 
 const appUrl = () => process.env.APP_URL || "http://localhost:3000";
 const SPIN_COOKIE = "wheel_spin";
+const SPUN_COOKIE = "wheel_day"; // this browser already spun today (signed in or not)
+
+async function markSpun(day: string) {
+  (await cookies()).set(SPUN_COOKIE, day, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 2 * 86400 });
+}
 
 /* ---------- Store ---------- */
 export async function buyTokens(form: FormData) {
@@ -56,6 +63,7 @@ export async function unlockSummary(form: FormData) {
   const back = String(form.get("back") || "/");
   const user = await requireUser(back);
   const result = await unlockWithTokens(user.id, postId);
+  if (result === "ok") after(() => logActivity({ kind: "unlock", userId: user.id, postId, detail: "Unlocked the executive summary (100 tokens)" }));
   if (result === "insufficient") redirect(`/store?need=1&next=${encodeURIComponent(back)}`);
   revalidatePath(back);
   redirect(back);
@@ -69,17 +77,19 @@ export async function spinWheel(): Promise<SpinResult> {
   const day = today();
   if (user) {
     const done = await db.wheelSpin.findUnique({ where: { userId_day: { userId: user.id, day } } });
-    if (done) return { prize: done.prize, credited: true, already: true, balance: user.tokenBalance };
+    if (done) { await markSpun(day); return { prize: done.prize, credited: true, already: true, balance: user.tokenBalance }; }
     const prize = drawPrize();
     try {
       const spin = await db.wheelSpin.create({ data: { userId: user.id, day, prize, claimedAt: new Date() } });
       await credit(user.id, prize, "wheel", `spin:${spin.id}`);
+      after(() => logActivity({ kind: "spin", userId: user.id, detail: `Spun the wheel and won ${prize} token${prize === 1 ? "" : "s"}` }));
     } catch {
       // Two spins raced; the other one counted.
       const s = await db.wheelSpin.findUniqueOrThrow({ where: { userId_day: { userId: user.id, day } } });
       return { prize: s.prize, credited: true, already: true };
     }
     const balance = (await db.user.findUnique({ where: { id: user.id }, select: { tokenBalance: true } }))?.tokenBalance;
+    await markSpun(day);
     revalidatePath("/", "layout");
     return { prize, credited: true, balance };
   }
@@ -91,12 +101,15 @@ export async function spinWheel(): Promise<SpinResult> {
     if (s && s.day === day) return { prize: s.prize, credited: false, already: true };
   }
   const spin = await db.wheelSpin.create({ data: { day, prize: drawPrize() } });
+  await markSpun(day);
   jar.set(SPIN_COOKIE, spin.id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 3 * 864e2 });
   return { prize: spin.prize, credited: false };
 }
 
 /** After signing in, move a signed-out spin onto the account. One wheel prize per account per day. */
-export async function claimSpin(): Promise<{ prize: number; balance: number } | null> {
+export type ClaimResult = { status: "collected"; prize: number; balance: number } | { status: "already"; prize: number; todaysPrize: number } | null;
+
+export async function claimSpin(): Promise<ClaimResult> {
   const user = await getUser();
   const jar = await cookies();
   const id = jar.get(SPIN_COOKIE)?.value;
@@ -108,12 +121,15 @@ export async function claimSpin(): Promise<{ prize: number; balance: number } | 
   try {
     await db.wheelSpin.update({ where: { id, userId: null }, data: { userId: user.id, claimedAt: new Date() } });
   } catch {
-    return null; // this account already spun that day
+    // One prize per account per day: this account already spun on that day. Tell them instead of failing silently.
+    const todays = await db.wheelSpin.findUnique({ where: { userId_day: { userId: user.id, day: spin.day } } });
+    return { status: "already", prize: spin.prize, todaysPrize: todays?.prize ?? 0 };
   }
   await credit(user.id, spin.prize, "wheel", `spin:${spin.id}`);
+  after(() => logActivity({ kind: "spin", userId: user.id, detail: `Spun the wheel before signing in, won ${spin.prize} token${spin.prize === 1 ? "" : "s"}, then signed in to collect` }));
   revalidatePath("/", "layout");
   const balance = (await db.user.findUnique({ where: { id: user.id }, select: { tokenBalance: true } }))?.tokenBalance ?? 0;
-  return { prize: spin.prize, balance };
+  return { status: "collected", prize: spin.prize, balance };
 }
 
 /* ---------- Article poll and comments ---------- */
@@ -131,6 +147,8 @@ export async function votePoll(_: ParticipationState, form: FormData): Promise<P
   const user = await requireUser(`/story/${post.slug}#poll`);
   await db.pollVote.upsert({ where: { userId_postId: { userId: user.id, postId } }, create: { userId: user.id, postId, choice }, update: { choice } });
   const earned = (await credit(user.id, PARTICIPATION_REWARD, "poll", `poll:${user.id}:${postId}`)) ? PARTICIPATION_REWARD : 0;
+  const label = ({ great: "Great", average: "Average", not_great: "Not great" } as Record<string, string>)[choice] ?? choice;
+  after(() => logActivity({ kind: "vote", userId: user.id, postId, detail: `Voted "${label}"${earned ? ` (+${earned} tokens)` : " (changed vote)"}` }));
   revalidatePath(`/story/${post.slug}`);
   return { ok: true, earned };
 }
@@ -156,10 +174,12 @@ export async function addComment(_: ParticipationState, form: FormData): Promise
   const comment = await db.comment.create({ data: { userId: user.id, postId, body: check.body, hidden: held, heldReason: check.hold, rewarded: !held } });
   if (held) {
     console.warn(`[comments] held ${comment.id} for review: ${check.hold}`);
+    after(() => logActivity({ kind: "comment", userId: user.id, postId, detail: `HELD FOR REVIEW (${check.hold}): "${check.body.slice(0, 300)}"` }));
     revalidatePath(`/story/${post.slug}`);
     return { ok: true, earned: 0, held: true };
   }
   const earned = (await credit(user.id, PARTICIPATION_REWARD, "comment", `comment:${user.id}:${postId}`)) ? PARTICIPATION_REWARD : 0;
+  after(() => logActivity({ kind: "comment", userId: user.id, postId, detail: `"${check.body.slice(0, 300)}"` }));
   revalidatePath(`/story/${post.slug}`);
   return { ok: true, earned };
 }
@@ -216,6 +236,7 @@ export async function submitQuiz(_: QuizResult, form: FormData): Promise<QuizRes
     return { correct: p.correct, earned: p.earned, answers: reveal(p.correct), already: true };
   }
   if (won) await credit(user.id, QUIZ_REWARD, "quiz", `quiz:${user.id}:${postId}`);
+  after(() => logActivity({ kind: "quiz", userId: user.id, postId, detail: `${correct} of ${quiz.length} right${won ? ` (+${QUIZ_REWARD} tokens)` : ""}` }));
   revalidatePath(`/story/${post.slug}`);
   return { correct, earned: won ? QUIZ_REWARD : 0, answers: reveal(correct) };
 }
@@ -229,7 +250,10 @@ export async function toggleFollow(form: FormData) {
   const user = await requireUser(back);
   const key = { userId_kind_name: { userId: user.id, kind, name } };
   if (await db.follow.findUnique({ where: key })) await db.follow.delete({ where: key });
-  else await db.follow.create({ data: { userId: user.id, kind, name } }).catch(() => null);
+  else {
+    await db.follow.create({ data: { userId: user.id, kind, name } }).catch(() => null);
+    after(() => logActivity({ kind: "follow", userId: user.id, detail: `Followed ${kind} ${name}` }));
+  }
   revalidatePath(back.split("#")[0]);
   revalidatePath("/account");
 }

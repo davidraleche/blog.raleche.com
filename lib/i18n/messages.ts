@@ -13,6 +13,7 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  spinOncePerAccount: "It's one spin a day per account, so the {n} tokens from your earlier spin can't be added.",
   pollCongrats: "Congratulations! Your vote counts.",
   pollTapToVote: "Tap to vote",
   commentLinksBlocked: "Links, emails and phone numbers aren't allowed in comments.",
@@ -364,6 +365,7 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  spinOncePerAccount: "C'est un tour par jour et par compte : les {n} jetons de votre tour précédent ne peuvent pas être ajoutés.",
   pollCongrats: "Bravo ! Votre vote compte.",
   pollTapToVote: "Touchez pour voter",
   commentLinksBlocked: "Les liens, e-mails et numéros de téléphone ne sont pas autorisés.",
@@ -701,6 +703,7 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  spinOncePerAccount: "Es un giro al día por cuenta, así que los {n} tokens de tu giro anterior no se pueden añadir.",
   pollCongrats: "¡Enhorabuena! Tu voto cuenta.",
   pollTapToVote: "Toca para votar",
   commentLinksBlocked: "No se permiten enlaces, correos ni teléfonos en los comentarios.",
@@ -1038,6 +1041,7 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  spinOncePerAccount: "每个账号每天只能转一次，所以之前那次转到的 {n} 代币无法再添加。",
   pollCongrats: "恭喜！你的投票已记录。",
   pollTapToVote: "点击投票",
   commentLinksBlocked: "评论中不允许包含链接、邮箱或电话号码。",
