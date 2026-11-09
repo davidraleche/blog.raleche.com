@@ -13,6 +13,7 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  quoteWheelShort: "Free spins. One in two lands on a quote from our speakers.",
   quoteWheelTitle: "Spin for a quote",
   quoteWheelDek: "Spin as often as you like. One in two spins lands on a quote from our speakers.",
   spinAgain: "Spin again",
@@ -395,6 +396,7 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  quoteWheelShort: "Tours gratuits. Un sur deux tombe sur une citation de nos intervenants.",
   quoteWheelTitle: "Tournez pour une citation",
   quoteWheelDek: "Tournez autant que vous voulez. Un tour sur deux tombe sur une citation de nos intervenants.",
   spinAgain: "Rejouer",
@@ -763,6 +765,7 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  quoteWheelShort: "Giros gratis. Uno de cada dos cae en una cita de nuestros ponentes.",
   quoteWheelTitle: "Gira para una cita",
   quoteWheelDek: "Gira cuanto quieras. Uno de cada dos giros cae en una cita de nuestros ponentes.",
   spinAgain: "Girar otra vez",
@@ -1131,6 +1134,7 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  quoteWheelShort: "免费转，每两次就有一次转出嘉宾名言。",
   quoteWheelTitle: "转出名言",
   quoteWheelDek: "想转几次都行，每两次就有一次会转出嘉宾名言。",
   spinAgain: "再转一次",

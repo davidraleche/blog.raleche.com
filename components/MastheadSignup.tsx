@@ -6,8 +6,8 @@ import { NewsletterForm } from "./NewsletterForm";
 export function MastheadSignup({ text }: { text: string }) {
   if (usePathname() !== "/") return null;
   return (
-    <div className="w-full max-w-xl text-center">
-      <p className="mb-3 font-serif text-lg text-ink/70">{text}</p>
+    <div className="w-full max-w-xl text-center md:text-left">
+      <p className="mb-2 font-serif text-base text-ink/70">{text}</p>
       <NewsletterForm source="masthead" />
     </div>
   );

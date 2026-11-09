@@ -42,17 +42,16 @@ export async function Header() {
           </div>
         </div>
       </div>
-      <div className="mx-auto max-w-7xl px-4 py-6">
-        {/* Mission on the left, logo in the middle, quote wheel on the right. */}
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <p className="hidden max-w-[16rem] font-serif text-base italic leading-snug text-ink/70 md:block">{t("tagline")}</p>
-          <Link href="/" className="col-start-2"><Logo text={name?.value || "RALECHE"} /></Link>
-          <div className="col-start-3 flex justify-end">
-            <QuoteWheelButton quotes={quotes} labels={quoteWheelLabels(t)} cta={t("quoteWheelTitle")} />
-          </div>
+      <div className="mx-auto grid max-w-7xl items-center gap-6 px-4 py-6 md:grid-cols-[minmax(0,1fr)_auto]">
+        {/* Left: logo, mission and newsletter signup. Right: the quote wheel. */}
+        <div className="flex flex-col items-center gap-3 md:items-start">
+          <Link href="/"><Logo text={name?.value || "RALECHE"} /></Link>
+          <p className="font-serif text-base italic leading-snug text-ink/70">{t("tagline")}</p>
+          <MastheadSignup text={t("briefingInbox")} />
         </div>
-        <p className="mt-3 text-center font-serif text-sm italic text-ink/70 md:hidden">{t("tagline")}</p>
-        <div className="mt-4 flex justify-center"><MastheadSignup text={t("briefingInbox")} /></div>
+        <div className="flex justify-center md:justify-end">
+          <QuoteWheelButton quotes={quotes} labels={quoteWheelLabels(t)} cta={t("quoteWheelTitle")} dek={t("quoteWheelShort")} size="lg" />
+        </div>
       </div>
       <nav className="border-t border-ink/10">
         <ul className="mx-auto flex max-w-7xl items-center gap-6 overflow-x-auto px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] [scrollbar-width:none]">
