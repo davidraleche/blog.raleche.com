@@ -33,48 +33,48 @@
       "answer": 1
     },
     {
-      "q": "Which kind of work does Wang compare frontier research to, as opposed to building skyscrapers?",
+      "q": "What stake did Meta take in Scale AI when Wang came over?",
       "options": [
-        "Farming",
-        "Shipbuilding",
-        "Road paving",
-        "Diamond mining"
+        "About 25%",
+        "49%",
+        "51%",
+        "100%, a full buyout"
       ],
-      "answer": 3
+      "answer": 1
     }
   ],
   "andy-jassy-reinventing-amazon-ai-era": [
     {
-      "q": "What example did Jassy give of a small team's output?",
+      "q": "Roughly how much planned 2026 spending did Jassy cite while saying Amazon still leaves demand unserved?",
       "options": [
-        "Six engineers rebuilt an inference engine in 76 days",
-        "Three engineers rebuilt Alexa over a weekend",
-        "Ten engineers launched a new AWS region in 30 days",
-        "Two engineers rewrote the retail app in 90 days"
-      ],
-      "answer": 0
-    },
-    {
-      "q": "What does Jassy say Amazon's own chips deliver versus comparable alternatives?",
-      "options": [
-        "About 10% lower power consumption",
-        "About twice the raw training speed",
-        "Roughly 30 to 40% better price performance",
-        "Roughly 50% less memory usage"
+        "About $80 billion",
+        "About $120 billion",
+        "About $220 billion",
+        "About $500 billion"
       ],
       "answer": 2
+    },
+    {
+      "q": "How fast does Jassy say security fixes must become the standard?",
+      "options": [
+        "Fixing vulnerabilities in minutes, not weeks",
+        "Patching every system once a quarter",
+        "Closing issues within 30 days",
+        "Reviewing security at each annual audit"
+      ],
+      "answer": 0
     }
   ],
   "brian-chesky-airbnb-ai-founder-mode-small-teams": [
     {
-      "q": "Chesky cites the Catholic Church to argue for fewer layers. How many layers does he say it has?",
+      "q": "How much time does Chesky say he spends on hiring?",
       "options": [
-        "Two",
-        "Four",
-        "Seven",
-        "Nine"
+        "About one hour a week",
+        "Half a day each month",
+        "One full day a week",
+        "Two to three hours a day"
       ],
-      "answer": 1
+      "answer": 3
     },
     {
       "q": "About how much did Project Hawaii's team of 10 to 12 people deliver in its first year?",
@@ -187,14 +187,14 @@
       "answer": 2
     },
     {
-      "q": "What is the internal Vercel Slack channel where Rauch reads every bad-experience post?",
+      "q": "What does Rauch describe as \"almost like the new HTTP\"?",
       "options": [
-        "\"scream\"",
-        "\"pain\"",
-        "\"feedback\"",
-        "\"fire\""
+        "GraphQL",
+        "WebSockets",
+        "MCP",
+        "REST APIs"
       ],
-      "answer": 0
+      "answer": 2
     }
   ],
   "josh-woodward-google-labs-every-company-needs-a-labs-team": [
@@ -265,12 +265,12 @@
   ],
   "paul-graham-startups-ambition-great-founders": [
     {
-      "q": "Where does the article say Graham expects the next giant company to come from?",
+      "q": "When hiring and partnering, what does the article say is hard to add later?",
       "options": [
-        "The most crowded AI category",
-        "Formidable founders with promising ideas",
-        "A large incumbent's internal lab",
-        "One predictable hot industry"
+        "Technical skills",
+        "Relentlessness",
+        "Industry contacts",
+        "Domain expertise"
       ],
       "answer": 1
     },
@@ -287,24 +287,24 @@
   ],
   "sam-altman-rsi-ai-consciousness-new-hardware-compute": [
     {
-      "q": "How much time does Altman say his own assistant, Dot, saves him?",
+      "q": "Beyond mathematics, where does Altman expect AI discoveries to extend?",
       "options": [
-        "About ten minutes a day",
-        "About half a day a week",
-        "About an hour a day",
-        "About three hours a day"
+        "Law, finance, insurance and accounting",
+        "Biology, medicine, materials and energy",
+        "Retail, logistics, travel and media",
+        "Music, film, fashion and gaming"
       ],
-      "answer": 2
+      "answer": 1
     },
     {
-      "q": "Which investment did Altman call OpenAI's most important single bet?",
+      "q": "Why does Altman expect demand for compute to keep growing?",
       "options": [
-        "Data centers",
-        "Robotics",
-        "Consumer hardware",
-        "Chips"
+        "Models will need retraining every week",
+        "Chip supply will shrink each year",
+        "As AI gets cheaper and better, people use more",
+        "Regulators will require more testing"
       ],
-      "answer": 3
+      "answer": 2
     }
   ],
   "shopify-ceo-tobi-lutke-why-using-ai-isnt-optional": [
@@ -319,14 +319,14 @@
       "answer": 0
     },
     {
-      "q": "What does Lütke do at the start of every year?",
+      "q": "What early pattern does Lütke see in purchases made by AI agents?",
       "options": [
-        "Writes a detailed annual plan",
-        "Works out how he'd build a better Shopify",
-        "Reviews every team's AI usage stats",
-        "Visits the top 100 Shopify merchants"
+        "Project-based, higher-value orders",
+        "Cheap, repeat household refills",
+        "Mostly digital goods and gift cards",
+        "Impulse buys from social media ads"
       ],
-      "answer": 1
+      "answer": 0
     }
   ],
   "supabase-ceo-paul-copplestone-everyone-can-build-software": [
@@ -353,14 +353,14 @@
   ],
   "yossi-matias-google-research-thinker-who-will-thrive-ai-era": [
     {
-      "q": "What example does Matias give of a flood forecast leading to action?",
+      "q": "With an AI collaborator for every researcher, what does Matias say scientists will act more like?",
       "options": [
-        "India rebuilt dams before monsoon season",
-        "Brazil moved villagers to higher ground",
-        "Nigeria's government sent villagers money ahead of a flood",
-        "Kenya closed schools based on rain alerts"
+        "Reviewers of AI-written papers",
+        "Operators of lab robots",
+        "Teachers of AI models",
+        "Advisers of their own labs"
       ],
-      "answer": 2
+      "answer": 3
     },
     {
       "q": "What does Matias mean by \"ambient intelligence\"?",

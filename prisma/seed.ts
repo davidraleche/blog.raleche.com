@@ -3,6 +3,7 @@ import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { importFromSource, migrateSections, CATEGORIES } from "../lib/importer";
+import { saveMentions, isValidMentions } from "../lib/books";
 
 const db = new PrismaClient();
 
@@ -39,6 +40,7 @@ async function main() {
   await db.setting.upsert({ where: { key: "tagline" }, create: { key: "tagline", value: "Technology, AI and the people building what's next." }, update: {} });
 
   console.log("Quizzes:", await seedQuizzes());
+  console.log("Books and people:", await seedMentions());
 
   if (await db.post.count()) return console.log("Seeded. Articles already present; use Admin → Import TTS42 to re-sync.");
   const r = await importFromSource();
@@ -52,12 +54,29 @@ async function seedQuizzes() {
   const bySlug = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
   let added = 0;
   for (const [slug, questions] of Object.entries(bySlug)) {
-    const post = await db.post.findUnique({ where: { slug }, select: { id: true, quiz: { select: { postId: true } } } });
-    if (!post || post.quiz) continue;
-    await db.quiz.create({ data: { postId: post.id, questions: questions as object, source: "seed" } });
+    const post = await db.post.findUnique({ where: { slug }, select: { id: true, quiz: { select: { source: true, questions: true } } } });
+    if (!post) continue;
+    // Refresh quizzes that came from this file; never overwrite ones edited in admin or generated later.
+    if (post.quiz && (post.quiz.source !== "seed" || JSON.stringify(post.quiz.questions) === JSON.stringify(questions))) continue;
+    await db.quiz.upsert({ where: { postId: post.id }, create: { postId: post.id, questions: questions as object, source: "seed" }, update: { questions: questions as object } });
     added++;
   }
-  return `${added} added`;
+  return `${added} added or updated`;
+}
+
+/** Load books and people from prisma/mentions.json for articles that haven't been processed yet. */
+async function seedMentions() {
+  const file = path.join(__dirname, "mentions.json");
+  if (!fs.existsSync(file)) return "no mentions.json";
+  const bySlug = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
+  let done = 0;
+  for (const [slug, m] of Object.entries(bySlug)) {
+    const post = await db.post.findUnique({ where: { slug }, select: { id: true, mentionsAt: true } });
+    if (!post || post.mentionsAt || !isValidMentions(m)) continue;
+    await saveMentions(post.id, m);
+    done++;
+  }
+  return `${done} articles`;
 }
 
 main().finally(() => db.$disconnect());

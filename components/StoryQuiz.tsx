@@ -2,14 +2,15 @@
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
-import { submitQuiz, type QuizResult } from "@/app/actions/tokens";
+import { submitQuiz, unlockSummary, type QuizResult } from "@/app/actions/tokens";
 
 type Q = { q: string; options: string[] };
 const fill = (s: string, vars: Record<string, string | number>) => s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
 
-export function StoryQuiz({ postId, questions, signedIn, played, reward, signinHref, next, labels }: {
+export function StoryQuiz({ postId, questions, signedIn, played, reward, signinHref, next, summary, videoUrl, labels }: {
   postId: string; questions: Q[]; signedIn: boolean; played: { correct: number; answers: number[] } | null; reward: number; signinHref: string;
-  next: { slug: string; title: string } | null; labels: Record<string, string>;
+  next: { slug: string; title: string } | null; summary: { unlocked: boolean; cost: number; back: string } | null; videoUrl: string | null;
+  labels: Record<string, string>;
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<QuizResult, FormData>(submitQuiz, null);
@@ -38,7 +39,7 @@ export function StoryQuiz({ postId, questions, signedIn, played, reward, signinH
               <p className="font-display text-xl font-bold">{i + 1}. {q.q}</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {q.options.map((o, j) => {
-                  const isAnswer = result?.answers[i] === j;
+                  const isAnswer = !!result && result.answers.length > 0 && result.answers[i] === j;
                   return (
                     <label key={j} className={`flex cursor-pointer items-start gap-2 border-2 px-3 py-2 font-serif transition ${result ? (isAnswer ? "border-green-700 bg-green-50" : "border-ink/15 text-ink/50") : "border-ink/20 hover:border-ink has-[:checked]:border-ink has-[:checked]:bg-terminal-amber/20"}`}>
                       <input type="radio" name={`q${i}`} value={j} required disabled={!!result || !signedIn} className="mt-1 accent-[#e1251b]" />
@@ -59,9 +60,19 @@ export function StoryQuiz({ postId, questions, signedIn, played, reward, signinH
           ) : won ? (
             <p className="font-display text-3xl font-extrabold text-accent">{result.already ? fill(labels.quizPlayed, { c: result.correct }) : fill(labels.quizWin, { n: reward })}</p>
           ) : (
-            <div className="flex flex-wrap items-center gap-4">
+            <div>
               <p className="font-display text-2xl font-bold">{result.already ? fill(labels.quizPlayed, { c: result.correct }) : fill(labels.quizLose, { c: result.correct })}</p>
-              {next && <a href={`/story/${next.slug}#quiz`} className="btn-dark">{labels.quizNext} →</a>}
+              {(summary || videoUrl) && <p className="mt-1 font-serif text-ink/70">{labels.quizAnswersInSummary}</p>}
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                {summary && (summary.unlocked ? (
+                  <a href="#summary" className="btn bg-terminal-amber text-ink hover:bg-ink hover:text-white">{labels.quizReadSummary}</a>
+                ) : (
+                  <button formAction={unlockSummary} formNoValidate className="btn bg-terminal-amber text-ink hover:bg-ink hover:text-white">{fill(labels.unlockFor, { n: summary.cost })}</button>
+                ))}
+                {videoUrl && <a href={videoUrl} target="_blank" rel="noopener" className="btn-light">▶ {labels.watchInterview}</a>}
+                {next && <a href={`/story/${next.slug}#quiz`} className="btn-dark">{labels.quizNext} →</a>}
+              </div>
+              {summary && !summary.unlocked && <input type="hidden" name="back" value={summary.back} />}
             </div>
           )}
           {state?.error === "answerAll" && <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-accent">{labels.quizAnswerAll}</p>}

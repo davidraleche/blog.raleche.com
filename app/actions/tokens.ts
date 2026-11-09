@@ -170,8 +170,10 @@ export async function submitQuiz(_: QuizResult, form: FormData): Promise<QuizRes
   if (!quiz) return { correct: 0, earned: 0, answers: [], error: "invalid" };
   const answers = quiz.map((q) => q.answer);
 
+  // The right answers are only revealed to readers who got both right; otherwise they're in the summary.
+  const reveal = (correct: number) => (correct === quiz.length ? answers : []);
   const prior = await db.quizAttempt.findUnique({ where: { userId_postId: { userId: user.id, postId } } });
-  if (prior) return { correct: prior.correct, earned: prior.earned, answers, already: true };
+  if (prior) return { correct: prior.correct, earned: prior.earned, answers: reveal(prior.correct), already: true };
 
   const picks = quiz.map((_, i) => Number(form.get(`q${i}`)));
   if (picks.some((p) => !Number.isInteger(p) || p < 0 || p > 3)) return { correct: 0, earned: 0, answers: [], error: "answerAll" };
@@ -181,11 +183,11 @@ export async function submitQuiz(_: QuizResult, form: FormData): Promise<QuizRes
     await db.quizAttempt.create({ data: { userId: user.id, postId, correct, earned: won ? QUIZ_REWARD : 0 } });
   } catch {
     const p = await db.quizAttempt.findUniqueOrThrow({ where: { userId_postId: { userId: user.id, postId } } });
-    return { correct: p.correct, earned: p.earned, answers, already: true };
+    return { correct: p.correct, earned: p.earned, answers: reveal(p.correct), already: true };
   }
   if (won) await credit(user.id, QUIZ_REWARD, "quiz", `quiz:${user.id}:${postId}`);
   revalidatePath(`/story/${post.slug}`);
-  return { correct, earned: won ? QUIZ_REWARD : 0, answers };
+  return { correct, earned: won ? QUIZ_REWARD : 0, answers: reveal(correct) };
 }
 
 /* ---------- Follow speakers and hosts ---------- */

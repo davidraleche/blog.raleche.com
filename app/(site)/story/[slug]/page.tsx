@@ -8,6 +8,9 @@ import { unlockSummary, deleteOwnComment } from "@/app/actions/tokens";
 import { StoryPoll, CommentForm } from "@/components/StoryEngage";
 import { StoryQuiz } from "@/components/StoryQuiz";
 import { FollowButton } from "@/components/FollowButton";
+import { StoryBooks } from "@/components/StoryBooks";
+import { amazonTag } from "@/lib/books";
+import { ensureMentions } from "@/lib/mentions-ai";
 import { getQuiz, ensureQuiz, nextStory } from "@/lib/quiz";
 import { after } from "next/server";
 import { hasUnlocked, UNLOCK_COST, PARTICIPATION_REWARD, QUIZ_REWARD } from "@/lib/tokens";
@@ -76,7 +79,17 @@ export default async function Story({ params }: Props) {
     : [null, null, [] as string[]];
   const quizQuestions = quiz ? quiz.map((_, i) => ({ q: quizText[i * 5], options: quizText.slice(i * 5 + 1, i * 5 + 5) })) : [];
   const quizLabels = Object.fromEntries(
-    (["quizTitle", "quizDek", "quizSubmit", "quizAnswerAll", "quizWin", "quizLose", "quizNext", "quizPlayed", "signInToPlay"] as const).map((k) => [k, t(k, { n: "{n}", c: "{c}" })]),
+    (["quizTitle", "quizDek", "quizSubmit", "quizAnswerAll", "quizWin", "quizLose", "quizNext", "quizPlayed", "signInToPlay", "quizAnswersInSummary", "quizReadSummary", "watchInterview", "unlockFor"] as const).map((k) => [k, t(k, { n: "{n}", c: "{c}" })]),
+  );
+  // Books and people from the interview (extracted in the background the first time if missing).
+  const [bookMentions, personMentions, affiliateTag] = await Promise.all([
+    db.bookMention.findMany({ where: { postId: raw.id }, include: { book: true } }),
+    db.personMention.findMany({ where: { postId: raw.id } }),
+    amazonTag(),
+  ]);
+  if (raw.status === "published" && !raw.mentionsAt) after(() => ensureMentions(raw));
+  const bookLabels = Object.fromEntries(
+    (["onTheirShelf", "books", "buyOnAmazon", "relation_recommends", "relation_reading", "relation_influenced", "relation_wrote", "peopleTheyAdmire", "peopleTheyCriticize", "affiliateNote"] as const).map((k) => [k, t(k)]),
   );
   const follows = new Set(
     user && (raw.speaker || raw.host)
@@ -171,10 +184,13 @@ export default async function Story({ params }: Props) {
 
         {raw.status === "published" && (
           <>
+            <StoryBooks books={bookMentions} people={personMentions} tag={affiliateTag} labels={bookLabels} />
             {quiz && (
               <StoryQuiz
                 postId={raw.id} questions={quizQuestions} signedIn={!!user} reward={QUIZ_REWARD}
-                played={quizPlay ? { correct: quizPlay.correct, answers: quiz.map((q) => q.answer) } : null}
+                played={quizPlay ? { correct: quizPlay.correct, answers: quizPlay.correct === quiz.length ? quiz.map((q) => q.answer) : [] } : null}
+                summary={raw.executiveSummary ? { unlocked: member, cost: UNLOCK_COST, back: `/story/${raw.slug}` } : null}
+                videoUrl={raw.body.match(/https:\/\/www\.youtube\.com\/watch\?v=[\w-]+/)?.[0] ?? null}
                 signinHref={`/signin?next=${encodeURIComponent(`/story/${raw.slug}#quiz`)}`} next={quizNextStory} labels={quizLabels}
               />
             )}
@@ -228,7 +244,7 @@ export default async function Story({ params }: Props) {
 function ExecutiveSummary({ hasSummary, html, member, unlocked, signedIn, balance, postId, back, t }: { hasSummary: boolean; html: string; member: boolean; unlocked: boolean; signedIn: boolean; balance: number; postId: string; back: string; t: Awaited<ReturnType<typeof getI18n>>["t"] }) {
   if (!hasSummary) return null;
   return (
-    <aside className="mb-10 border-[3px] border-ink">
+    <aside id="summary" className="mb-10 scroll-mt-24 border-[3px] border-ink">
       <div className="flex items-center justify-between bg-ink px-5 py-3 text-white">
         <span className="font-mono text-[11px] uppercase tracking-[0.2em]">{t("executiveSummary")}</span>
         <span className="font-mono text-[10px] uppercase tracking-widest text-terminal-amber">{unlocked ? t("unlockedBadge") : member ? t("unlockedBadge") : t("unlockFor", { n: UNLOCK_COST })}</span>

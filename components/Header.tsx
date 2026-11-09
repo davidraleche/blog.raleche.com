@@ -53,6 +53,7 @@ export async function Header() {
             <li key={c.id}><Link href={`/category/${c.slug}`} className="whitespace-nowrap hover:text-accent">{c.name}</Link></li>
           ))}
           <li><Link href="/executive-summaries" className="whitespace-nowrap text-accent">{t("executiveSummaries")}</Link></li>
+          <li><Link href="/books" className="whitespace-nowrap hover:text-accent">{t("books")}</Link></li>
           <li><Link href="/play" className="whitespace-nowrap font-bold text-terminal-amber hover:text-accent">{t("play")}</Link></li>
           <li><Link href="/store" className="whitespace-nowrap hover:text-accent">{t("store")}</Link></li>
           <li className="ml-auto"><Link href="/search" className="whitespace-nowrap hover:text-accent">{t("search")}</Link></li>

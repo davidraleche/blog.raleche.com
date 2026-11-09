@@ -13,6 +13,8 @@ import { translateHtml, translateMany } from "@/lib/translate";
 import { messages, isLocale, type Locale } from "@/lib/i18n/messages";
 import { credit } from "@/lib/tokens";
 import { generateQuiz, isValidQuiz } from "@/lib/quiz";
+import { saveMentions, isValidMentions } from "@/lib/books";
+import { extractMentions } from "@/lib/mentions-ai";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
@@ -312,14 +314,59 @@ export async function saveQuiz(form: FormData) {
 
 export async function regenerateQuiz(form: FormData) {
   await requireAdmin();
-  const post = await db.post.findUniqueOrThrow({ where: { id: str(form, "postId") }, select: { id: true, title: true, body: true } });
+  const post = await db.post.findUniqueOrThrow({ where: { id: str(form, "postId") }, select: { id: true, title: true, body: true, executiveSummary: true } });
   let questions;
   try {
-    questions = await generateQuiz(post.title, post.body);
+    questions = await generateQuiz(post.title, post.executiveSummary || post.body);
   } catch (e) {
     redirect(`/admin/quizzes?error=${encodeURIComponent((e as Error).message.slice(0, 120))}&post=${post.id}`);
   }
   await db.quiz.upsert({ where: { postId: post.id }, create: { postId: post.id, questions, source: "ai" }, update: { questions, source: "ai" } });
   revalidatePath("/admin/quizzes");
   redirect(`/admin/quizzes?saved=${post.id}`);
+}
+
+/* ---------- Books ---------- */
+export async function saveAmazonTag(form: FormData) {
+  await requireAdmin();
+  const value = str(form, "tag");
+  await db.setting.upsert({ where: { key: "amazonTag" }, create: { key: "amazonTag", value }, update: { value } });
+  revalidatePath("/admin/books");
+  revalidatePath("/books");
+}
+
+export async function saveBook(form: FormData) {
+  await requireAdmin();
+  const asin = str(form, "asin").toUpperCase() || null;
+  const coverUrl = str(form, "coverUrl") || null;
+  if (asin && !/^[A-Z0-9]{10}$/.test(asin)) redirect(`/admin/books?error=asin`);
+  if (coverUrl && !/^https:\/\//.test(coverUrl)) redirect(`/admin/books?error=cover`);
+  await db.book.update({ where: { id: str(form, "id") }, data: { asin, coverUrl } });
+  revalidatePath("/admin/books");
+  revalidatePath("/books");
+}
+
+export async function saveArticleMentions(form: FormData) {
+  await requireAdmin();
+  const postId = str(form, "postId");
+  let m: unknown;
+  try { m = JSON.parse(str(form, "json")); } catch { redirect(`/admin/books?error=json&post=${postId}`); }
+  if (!isValidMentions(m)) redirect(`/admin/books?error=shape&post=${postId}`);
+  await saveMentions(postId, m);
+  revalidatePath("/admin/books");
+  redirect(`/admin/books?saved=${postId}#articles`);
+}
+
+export async function reextractMentions(form: FormData) {
+  await requireAdmin();
+  const post = await db.post.findUniqueOrThrow({ where: { id: str(form, "postId") }, select: { id: true, title: true, body: true } });
+  let m;
+  try {
+    m = await extractMentions(post.title, post.body);
+  } catch (e) {
+    redirect(`/admin/books?error=${encodeURIComponent((e as Error).message.slice(0, 120))}&post=${post.id}#articles`);
+  }
+  await saveMentions(post.id, m);
+  revalidatePath("/admin/books");
+  redirect(`/admin/books?saved=${post.id}#articles`);
 }

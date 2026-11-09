@@ -1,0 +1,145 @@
+{
+  "alex-karp-palantir-artist-colony-true-cost-of-ai-china": {
+    "books": [
+      {
+        "title": "The Technological Republic: Hard Power, Soft Belief, and the Future of the West",
+        "author": "Alexander C. Karp and Nicholas W. Zamiska",
+        "who": "Alex Karp",
+        "relation": "wrote",
+        "note": "The No. 1 New York Times bestseller Karp co-wrote."
+      }
+    ],
+    "people": []
+  },
+  "alexandr-wang-meta-muse-200-direct-reports-zuckerberg": {
+    "books": [],
+    "people": [
+      {
+        "name": "Mark Zuckerberg",
+        "who": "Alexandr Wang",
+        "stance": "admires",
+        "note": "Credits Zuckerberg's patience on Muse; a leader who deliberates, then commits fully."
+      }
+    ]
+  },
+  "andy-jassy-reinventing-amazon-ai-era": {
+    "books": [],
+    "people": []
+  },
+  "brian-chesky-airbnb-ai-founder-mode-small-teams": {
+    "books": [],
+    "people": [
+      {
+        "name": "Jony Ive",
+        "who": "Brian Chesky",
+        "stance": "admires",
+        "note": "Model of the hands-on leader: \"Jony Ive manages the design. He designs and he leads people.\""
+      }
+    ]
+  },
+  "colin-lernell-negotiate-tech-salary-ai-pay": {
+    "books": [],
+    "people": []
+  },
+  "ethan-evans-amazon-vp-influence-without-insulting": {
+    "books": [],
+    "people": []
+  },
+  "ethan-mollick-wharton-manage-ai-agents-keep-your-thinking": {
+    "books": [
+      {
+        "title": "Co-Existence: The Next Phase of AI",
+        "author": "Ethan Mollick",
+        "who": "Ethan Mollick",
+        "relation": "wrote",
+        "note": "His new book; he says AI fact-checking found errors in it."
+      }
+    ],
+    "people": []
+  },
+  "fiverr-ai-small-gigs-shrinking-marketplace-upmarket-bet": {
+    "books": [],
+    "people": []
+  },
+  "guillermo-rauch-vercel-one-person-ai-agents-trillion-dollar-company": {
+    "books": [],
+    "people": []
+  },
+  "josh-woodward-google-labs-every-company-needs-a-labs-team": {
+    "books": [
+      {
+        "title": "The Master: The Long Run and Beautiful Game of Roger Federer",
+        "author": "Christopher Clarey",
+        "who": "Josh Woodward",
+        "relation": "recommends",
+        "note": "Source of \"explosive endurance\": going very hard, but for years, by pacing yourself and those around you."
+      }
+    ],
+    "people": []
+  },
+  "linda-hill-ceo-leadership-skills-age-of-ai": {
+    "books": [
+      {
+        "title": "Becoming a Manager: How New Managers Master the Challenges of Leadership",
+        "author": "Linda A. Hill",
+        "who": "Linda Hill",
+        "relation": "wrote",
+        "note": "Hill is the author of Becoming a Manager."
+      },
+      {
+        "title": "Genius at Scale: How Great Leaders Drive Innovation",
+        "author": "Linda A. Hill, Emily Tedards, Jason Wild, Karim R. Lakhani",
+        "who": "Linda Hill",
+        "relation": "wrote",
+        "note": "Hill is the author of Genius at Scale."
+      }
+    ],
+    "people": [
+      {
+        "name": "Joe Mazzulla",
+        "who": "Linda Hill",
+        "stance": "admires",
+        "note": "Struck by how deliberate the Celtics coach was, caring for each player on the way to the 18th championship."
+      }
+    ]
+  },
+  "nik-storonsky-revolut-ai-teams-of-two-no-middle-managers": {
+    "books": [],
+    "people": []
+  },
+  "paul-graham-startups-ambition-great-founders": {
+    "books": [],
+    "people": []
+  },
+  "sam-altman-rsi-ai-consciousness-new-hardware-compute": {
+    "books": [],
+    "people": []
+  },
+  "shopify-ceo-tobi-lutke-why-using-ai-isnt-optional": {
+    "books": [
+      {
+        "title": "Cryptonomicon",
+        "author": "Neal Stephenson",
+        "who": "Tobi Lütke",
+        "relation": "reading",
+        "note": "Recently reread it: \"literally everything in the book just happened.\""
+      }
+    ],
+    "people": [
+      {
+        "name": "Mark Zuckerberg",
+        "who": "Tobi Lütke",
+        "stance": "admires",
+        "note": "Praises Zuckerberg as an entrepreneur and thanks Meta for open-sourcing Llama."
+      }
+    ]
+  },
+  "supabase-ceo-paul-copplestone-everyone-can-build-software": {
+    "books": [],
+    "people": []
+  },
+  "yossi-matias-google-research-thinker-who-will-thrive-ai-era": {
+    "books": [],
+    "people": []
+  }
+}

@@ -106,6 +106,9 @@ model Post {
   comments         Comment[]
   quiz             Quiz?
   quizAttempts     QuizAttempt[]
+  bookMentions     BookMention[]
+  personMentions   PersonMention[]
+  mentionsAt       DateTime? // when books/people were last extracted (null = not yet)
   speaker          String?   // person interviewed, e.g. "Sam Altman"
   host             String?   // interviewer, e.g. "Lenny Rachitsky"
   show             String?   // podcast/channel, e.g. "Lenny's Podcast"
@@ -269,4 +272,42 @@ model Follow {
   createdAt DateTime @default(now())
   @@unique([userId, kind, name])
   @@index([kind, name])
+}
+
+/// A book a guest reads, recommends, was shaped by, or wrote. Sold through Amazon affiliate links.
+model Book {
+  id        String        @id @default(cuid())
+  slug      String        @unique
+  title     String
+  author    String
+  asin      String?       // Amazon product id; without it we link to an Amazon search
+  coverUrl  String?
+  createdAt DateTime      @default(now())
+  mentions  BookMention[]
+  @@unique([title, author])
+}
+
+model BookMention {
+  id       String @id @default(cuid())
+  bookId   String
+  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  postId   String
+  post     Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  who      String // person who mentioned it
+  relation String // recommends | reading | influenced | wrote
+  note     String @default("")
+  @@unique([bookId, postId, who])
+}
+
+/// People a guest openly admires or criticizes in an article.
+model PersonMention {
+  id     String @id @default(cuid())
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  name   String
+  who    String
+  stance String // admires | criticizes
+  note   String @default("")
+  @@index([postId])
+  @@index([name])
 }
