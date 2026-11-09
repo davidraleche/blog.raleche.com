@@ -10,6 +10,7 @@ import { formStamp } from "@/lib/comment-guard";
 import { StoryPoll, CommentForm } from "@/components/StoryEngage";
 import { StoryQuiz } from "@/components/StoryQuiz";
 import { FollowButton } from "@/components/FollowButton";
+import { PersonRating } from "@/components/PersonRating";
 import { StoryBooks } from "@/components/StoryBooks";
 import { amazonTag } from "@/lib/books";
 import { ensureMentions } from "@/lib/mentions-ai";
@@ -99,6 +100,22 @@ export default async function Story({ params }: Props) {
       : [],
   );
   const followLabels = { follow: t("follow"), following: t("followingBtn"), unfollow: t("unfollow") };
+  // Like / dislike scores for the speaker and host.
+  const people = [raw.speaker && ["speaker", raw.speaker], raw.host && ["host", raw.host]].filter(Boolean) as [string, string][];
+  const [ratingCounts, myRatings, ratingPaid] = people.length
+    ? await Promise.all([
+        db.personRating.groupBy({ by: ["kind", "name", "value"], where: { OR: people.map(([kind, name]) => ({ kind, name })) }, _count: true }),
+        user ? db.personRating.findMany({ where: { userId: user.id, OR: people.map(([kind, name]) => ({ kind, name })) } }) : [],
+        user ? db.tokenTxn.findMany({ where: { ref: { in: people.map(([kind, name]) => `rating:${user.id}:${kind}:${name}`) } }, select: { ref: true } }) : [],
+      ])
+    : [[], [], []];
+  const ratingFor = (kind: string, name: string) => ({
+    up: ratingCounts.find((r) => r.kind === kind && r.name === name && r.value === 1)?._count ?? 0,
+    down: ratingCounts.find((r) => r.kind === kind && r.name === name && r.value === -1)?._count ?? 0,
+    mine: myRatings.find((r) => r.kind === kind && r.name === name)?.value ?? 0,
+    earned: ratingPaid.some((r) => r.ref === `rating:${user?.id}:${kind}:${name}`),
+  });
+  const ratingLabels = { like: t("likePerson"), dislike: t("dislikePerson"), earn: t("rateEarn", { n: PARTICIPATION_REWARD }), plus: t("earnedTokens", { n: "{n}" }) };
   const reportedIds = new Set(user ? (await db.commentReport.findMany({ where: { userId: user.id, comment: { postId: raw.id } }, select: { commentId: true } })).map((r) => r.commentId) : []);
   const voteCounts = Object.fromEntries(voteGroups.map((g) => [g.choice, g._count]));
   const earnedPoll = earnedRefs.some((r) => r.ref?.startsWith("poll:"));
@@ -134,10 +151,10 @@ export default async function Story({ params }: Props) {
         {(post.speaker || post.host) && (
           <div className="mt-2 flex flex-wrap items-center justify-center gap-x-1 gap-y-2 font-mono text-[11px] uppercase tracking-widest text-ink/60">
             {post.speaker && <Link href={`/speakers#${personSlug(post.speaker)}`} className="text-accent hover:underline">{t("withSpeaker", { name: post.speaker })}</Link>}
-            {raw.speaker && <span className="ml-2 align-middle"><FollowButton kind="speaker" name={raw.speaker} following={follows.has(`speaker:${raw.speaker}`)} signedIn={!!user} back={`/story/${raw.slug}`} labels={followLabels} /></span>}
+            {raw.speaker && <span className="ml-2 inline-flex items-center gap-1 align-middle"><FollowButton kind="speaker" name={raw.speaker} following={follows.has(`speaker:${raw.speaker}`)} signedIn={!!user} back={`/story/${raw.slug}`} labels={followLabels} /><PersonRating kind="speaker" name={raw.speaker} {...ratingFor("speaker", raw.speaker)} signedIn={!!user} back={`/story/${raw.slug}`} reward={PARTICIPATION_REWARD} labels={ratingLabels} /></span>}
             {post.speaker && post.host && " · "}
             {post.host && <Link href={`/hosts#${personSlug(post.host)}`} className="hover:underline">{t("hostedBy", { name: post.host })}{post.show ? `, ${post.show}` : ""}</Link>}
-            {raw.host && <span className="ml-2 align-middle"><FollowButton kind="host" name={raw.host} following={follows.has(`host:${raw.host}`)} signedIn={!!user} back={`/story/${raw.slug}`} labels={followLabels} /></span>}
+            {raw.host && <span className="ml-2 inline-flex items-center gap-1 align-middle"><FollowButton kind="host" name={raw.host} following={follows.has(`host:${raw.host}`)} signedIn={!!user} back={`/story/${raw.slug}`} labels={followLabels} /><PersonRating kind="host" name={raw.host} {...ratingFor("host", raw.host)} signedIn={!!user} back={`/story/${raw.slug}`} reward={PARTICIPATION_REWARD} labels={ratingLabels} /></span>}
           </div>
         )}
         {locale !== "en" && <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-ink/40">{t("machineTranslated")}</p>}

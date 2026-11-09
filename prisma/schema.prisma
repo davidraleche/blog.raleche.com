@@ -32,6 +32,7 @@ model User {
   comments         Comment[]
   quizAttempts     QuizAttempt[]
   follows          Follow[]
+  personRatings    PersonRating[]
   commentBanned    Boolean         @default(false)
   commentReports   CommentReport[]
   activities       Activity[]
@@ -411,4 +412,18 @@ model MemoPurchase {
   createdAt DateTime @default(now())
 
   @@unique([userId, memoId])
+}
+
+/// A reader's like (+1) or dislike (-1) of a speaker or host.
+model PersonRating {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String   // speaker | host
+  name      String
+  value     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, kind, name])
+  @@index([kind, name])
 }

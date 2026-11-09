@@ -13,6 +13,11 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  likePerson: "Like",
+  dislikePerson: "Dislike",
+  rateEarn: "Like or dislike to earn {n} tokens",
+  earnRating: "Like or dislike a speaker or host: {n} tokens",
+  txn_rating: "Rated a speaker or host",
   spinOncePerAccount: "It's one spin a day per account, so the {n} tokens from your earlier spin can't be added.",
   pollCongrats: "Congratulations! Your vote counts.",
   pollTapToVote: "Tap to vote",
@@ -384,6 +389,11 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  likePerson: "J'aime",
+  dislikePerson: "Je n'aime pas",
+  rateEarn: "Notez pour gagner {n} jetons",
+  earnRating: "Aimer ou non un intervenant ou un animateur : {n} jetons",
+  txn_rating: "Note d'un intervenant",
   spinOncePerAccount: "C'est un tour par jour et par compte : les {n} jetons de votre tour précédent ne peuvent pas être ajoutés.",
   pollCongrats: "Bravo ! Votre vote compte.",
   pollTapToVote: "Touchez pour voter",
@@ -741,6 +751,11 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  likePerson: "Me gusta",
+  dislikePerson: "No me gusta",
+  rateEarn: "Valora y gana {n} tokens",
+  earnRating: "Valorar a un ponente o presentador: {n} tokens",
+  txn_rating: "Valoraste a un ponente",
   spinOncePerAccount: "Es un giro al día por cuenta, así que los {n} tokens de tu giro anterior no se pueden añadir.",
   pollCongrats: "¡Enhorabuena! Tu voto cuenta.",
   pollTapToVote: "Toca para votar",
@@ -1098,6 +1113,11 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  likePerson: "赞",
+  dislikePerson: "踩",
+  rateEarn: "点赞或踩即得 {n} 代币",
+  earnRating: "为嘉宾或主持人点赞或踩：{n} 代币",
+  txn_rating: "为嘉宾评分",
   spinOncePerAccount: "每个账号每天只能转一次，所以之前那次转到的 {n} 代币无法再添加。",
   pollCongrats: "恭喜！你的投票已记录。",
   pollTapToVote: "点击投票",

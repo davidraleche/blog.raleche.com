@@ -4,6 +4,8 @@ import { localizePosts } from "@/lib/localize";
 import { personSlug } from "@/lib/people";
 import { GridCard } from "@/components/Cards";
 import { FollowButton } from "@/components/FollowButton";
+import { PersonRating } from "@/components/PersonRating";
+import { PARTICIPATION_REWARD } from "@/lib/tokens";
 import { getUser } from "@/lib/auth";
 
 /** Published stories grouped by speaker or host, people with the most stories first. */
@@ -19,10 +21,17 @@ export async function PeopleIndex({ by }: { by: "speaker" | "host" }) {
   for (const p of posts) groups.set(p[by]!, [...(groups.get(p[by]!) ?? []), p]);
   const people = [...groups.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
   const user = await getUser();
-  const [mine, counts] = await Promise.all([
+  const [mine, counts, ratings, myRatings, earnedRefs] = await Promise.all([
     user ? db.follow.findMany({ where: { userId: user.id, kind: by }, select: { name: true } }) : [],
     db.follow.groupBy({ by: ["name"], where: { kind: by }, _count: true }),
+    db.personRating.groupBy({ by: ["name", "value"], where: { kind: by }, _count: true }),
+    user ? db.personRating.findMany({ where: { userId: user.id, kind: by }, select: { name: true, value: true } }) : [],
+    user ? db.tokenTxn.findMany({ where: { userId: user.id, reason: "rating", ref: { startsWith: `rating:${user.id}:${by}:` } }, select: { ref: true } }) : [],
   ]);
+  const score = (name: string, v: number) => ratings.find((r) => r.name === name && r.value === v)?._count ?? 0;
+  const myRating = new Map(myRatings.map((r) => [r.name, r.value]));
+  const paid = new Set(earnedRefs.map((r) => r.ref!.slice(`rating:${user?.id}:${by}:`.length)));
+  const ratingLabels = { like: t("likePerson"), dislike: t("dislikePerson"), earn: t("rateEarn", { n: PARTICIPATION_REWARD }), plus: t("earnedTokens", { n: "{n}" }) };
   const followed = new Set(mine.map((f) => f.name));
   const followers = new Map(counts.map((c) => [c.name, c._count]));
   const labels = { follow: t("follow"), following: t("followingBtn"), unfollow: t("unfollow") };
@@ -53,6 +62,7 @@ export async function PeopleIndex({ by }: { by: "speaker" | "host" }) {
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="hed text-4xl">{name}</h2>
                 <FollowButton kind={by} name={name} following={followed.has(name)} signedIn={!!user} back={`${base}#${personSlug(name)}`} labels={labels} size="md" />
+                <PersonRating kind={by} name={name} up={score(name, 1)} down={score(name, -1)} mine={myRating.get(name) ?? 0} signedIn={!!user} back={`${base}#${personSlug(name)}`} reward={PARTICIPATION_REWARD} earned={paid.has(name)} labels={ratingLabels} size="md" />
                 {(followers.get(name) ?? 0) > 0 && <span className="font-mono text-[11px] uppercase tracking-widest text-ink/50">{t("followersN", { n: followers.get(name)! })}</span>}
               </div>
               {show && <span className="kicker">{show}</span>}

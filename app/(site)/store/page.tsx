@@ -75,6 +75,7 @@ export default async function Store({ searchParams }: { searchParams: Promise<{ 
             <li className="flex gap-3"><span className="text-accent">■</span>{t("earnWheel")}</li>
             <li className="flex gap-3"><span className="text-accent">■</span>{t("earnPoll", { n: PARTICIPATION_REWARD })}</li>
             <li className="flex gap-3"><span className="text-accent">■</span>{t("earnComment", { n: PARTICIPATION_REWARD })}</li>
+            <li className="flex gap-3"><span className="text-accent">■</span>{t("earnRating", { n: PARTICIPATION_REWARD })}</li>
           </ul>
         </section>
         {user && (
