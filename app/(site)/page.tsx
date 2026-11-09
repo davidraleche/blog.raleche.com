@@ -14,7 +14,7 @@ const published = { status: "published", publishedAt: { lte: new Date() } };
 export default async function Home() {
   const { locale, t } = await getI18n();
   const [rawPosts, rawPopular, rawCategories, user] = await Promise.all([
-    db.post.findMany({ where: published, include: { category: true }, orderBy: [{ featured: "desc" }, { publishedAt: "desc" }], take: 40 }),
+    db.post.findMany({ where: published, include: { category: true }, orderBy: { publishedAt: "desc" }, take: 40 }), // newest story is the center (hero) story
     db.post.findMany({ where: published, include: { category: true }, orderBy: { views: "desc" }, take: 5 }),
     db.category.findMany({ orderBy: { sortOrder: "asc" }, include: { posts: { where: published, include: { category: true }, orderBy: { publishedAt: "desc" }, take: 4 } } }),
     getUser(),

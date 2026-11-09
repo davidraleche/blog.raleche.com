@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getUser, canReadSummaries } from "@/lib/auth";
 import { renderMarkdown } from "@/lib/markdown";
+import { storyVideo } from "@/lib/youtube";
 import { unlockSummary, deleteOwnComment, reportComment } from "@/app/actions/tokens";
 import { formStamp } from "@/lib/comment-guard";
 import { StoryPoll, CommentForm } from "@/components/StoryEngage";
@@ -105,7 +106,8 @@ export default async function Story({ params }: Props) {
   const engageLabels = Object.fromEntries(
     (["pollTitle", "poll_great", "poll_average", "poll_not_great", "pollEarn", "pollThanks", "votesN", "earnedTokens", "signInToVote", "commentsEarn", "commentPlaceholder", "postComment", "commentHeld", "commentRules", "pollCongrats", "pollTapToVote"] as const).map((k) => [k, t(k, { n: "{n}" })]),
   );
-  const body = locked ? raw.body.split(/\n\n/).slice(0, 3).join("\n\n") : raw.body;
+  const { videoId, body: fullBody } = storyVideo(raw.body);
+  const body = locked ? fullBody.split(/\n\n/).slice(0, 3).join("\n\n") : fullBody;
   const rawRelated = await db.post.findMany({
     where: { status: "published", id: { not: raw.id }, categoryId: raw.categoryId },
     include: { category: true }, orderBy: { publishedAt: "desc" }, take: 3,
@@ -163,6 +165,22 @@ export default async function Story({ params }: Props) {
         <ExecutiveSummary hasSummary={!!raw.executiveSummary} html={summaryHtml} member={member} unlocked={unlocked} signedIn={!!user} balance={user?.tokenBalance ?? 0} postId={raw.id} back={`/story/${raw.slug}`} t={t} />
         <AdSlot name="articleTop" />
 
+        {videoId && (
+          <figure className="mb-10">
+            <div className="relative aspect-video w-full overflow-hidden bg-ink">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0`}
+                title={post.title}
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+                className="absolute inset-0 h-full w-full border-0"
+              />
+            </div>
+            <figcaption className="mt-2 font-mono text-[11px] uppercase tracking-widest text-ink/50">{t("watchInterview")}</figcaption>
+          </figure>
+        )}
         <div className="prose-article" dangerouslySetInnerHTML={{ __html: bodyHtml }} />
 
         {locked && (
