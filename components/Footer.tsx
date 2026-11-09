@@ -22,7 +22,7 @@ export async function Footer() {
             <li><Link href="/" className="hover:text-accent">{t("latest")}</Link></li>
             <li><Link href="/speakers" className="hover:text-accent">{t("speakers")}</Link></li>
             <li><Link href="/hosts" className="hover:text-accent">{t("hosts")}</Link></li>
-            <li><Link href="/executive-summaries" className="hover:text-accent">{t("executiveSummaries")}</Link></li>
+            <li><Link href="/memos" className="hover:text-accent">{t("memoNav")}</Link></li>
             <li><Link href="/books" className="hover:text-accent">{t("books")}</Link></li>
             <li><Link href="/play" className="hover:text-accent">{t("play")}</Link></li>
             {categories.map((c) => <li key={c.id}><Link href={`/category/${c.slug}`} className="hover:text-accent">{c.name}</Link></li>)}

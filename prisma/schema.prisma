@@ -8,30 +8,31 @@ datasource db {
 }
 
 model User {
-  id               String    @id @default(cuid())
-  email            String?   @unique
-  phone            String?   @unique
+  id               String          @id @default(cuid())
+  email            String?         @unique
+  phone            String?         @unique
   name             String?
   image            String?
   passwordHash     String?
-  googleId         String?   @unique
-  role             String    @default("USER") // USER | ADMIN
-  stripeCustomerId String?   @unique
-  createdAt        DateTime  @default(now())
+  googleId         String?         @unique
+  role             String          @default("USER") // USER | ADMIN
+  stripeCustomerId String?         @unique
+  createdAt        DateTime        @default(now())
   lastSeenAt       DateTime?
   sessions         Session[]
   subscriptions    Subscription[]
   posts            Post[]
-  tokenBalance     Int       @default(0)
-  language         String?   // preferred language for emails: en | fr | es | zh
+  tokenBalance     Int             @default(0)
+  language         String? // preferred language for emails: en | fr | es | zh
   tokenTxns        TokenTxn[]
   unlocks          Unlock[]
+  memoPurchases    MemoPurchase[]
   spins            WheelSpin[]
   votes            PollVote[]
   comments         Comment[]
   quizAttempts     QuizAttempt[]
   follows          Follow[]
-  commentBanned    Boolean   @default(false)
+  commentBanned    Boolean         @default(false)
   commentReports   CommentReport[]
   activities       Activity[]
   pageViews        PageView[]
@@ -57,55 +58,56 @@ model OtpCode {
 }
 
 model Plan {
-  id          String   @id // "member" | "executive"
-  name        String
-  priceCents  Int
-  interval    String   @default("month")
-  tagline     String
-  features    String   // newline separated
-  active      Boolean  @default(true)
-  sortOrder   Int      @default(0)
+  id            String         @id // "member" | "executive"
+  name          String
+  priceCents    Int
+  interval      String         @default("month")
+  tagline       String
+  features      String // newline separated
+  active        Boolean        @default(true)
+  sortOrder     Int            @default(0)
   subscriptions Subscription[]
 }
 
 model Subscription {
-  id                   String   @id @default(cuid())
+  id                   String    @id @default(cuid())
   userId               String
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   planId               String
-  plan                 Plan     @relation(fields: [planId], references: [id])
-  status               String   // active | trialing | past_due | canceled
-  stripeSubscriptionId String?  @unique
+  plan                 Plan      @relation(fields: [planId], references: [id])
+  status               String // active | trialing | past_due | canceled
+  stripeSubscriptionId String?   @unique
   priceCents           Int
   currentPeriodEnd     DateTime?
-  cancelAtPeriodEnd    Boolean  @default(false)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  cancelAtPeriodEnd    Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 model Category {
-  id        String  @id @default(cuid())
-  name      String  @unique
-  slug      String  @unique
-  sortOrder Int     @default(0)
+  id        String @id @default(cuid())
+  name      String @unique
+  slug      String @unique
+  sortOrder Int    @default(0)
   posts     Post[]
 }
 
 model Post {
-  id               String    @id @default(cuid())
-  slug             String    @unique
+  id               String          @id @default(cuid())
+  slug             String          @unique
   title            String
-  dek              String    @default("") // subtitle / summary line
-  body             String    // markdown
-  executiveSummary String    @default("") // markdown, members only
+  dek              String          @default("") // subtitle / summary line
+  body             String // markdown
+  executiveSummary String          @default("") // markdown, members only
   coverImage       String?
-  tags             String    @default("") // comma separated
-  status           String    @default("draft") // draft | published | scheduled
-  featured         Boolean   @default(false)
-  premium          Boolean   @default(false) // whole article members-only
-  readMinutes      Int       @default(5)
-  views            Int       @default(0)
+  tags             String          @default("") // comma separated
+  status           String          @default("draft") // draft | published | scheduled
+  featured         Boolean         @default(false)
+  premium          Boolean         @default(false) // whole article members-only
+  readMinutes      Int             @default(5)
+  views            Int             @default(0)
   unlocks          Unlock[]
+  memos            Memo[]
   votes            PollVote[]
   comments         Comment[]
   quiz             Quiz?
@@ -113,19 +115,19 @@ model Post {
   bookMentions     BookMention[]
   personMentions   PersonMention[]
   mentionsAt       DateTime? // when books/people were last extracted (null = not yet)
-  speaker          String?   // person interviewed, e.g. "Sam Altman"
-  host             String?   // interviewer, e.g. "Lenny Rachitsky"
-  show             String?   // podcast/channel, e.g. "Lenny's Podcast"
-  source           String?   // e.g. tts42
-  sourceUrl        String?   @unique
+  speaker          String? // person interviewed, e.g. "Sam Altman"
+  host             String? // interviewer, e.g. "Lenny Rachitsky"
+  show             String? // podcast/channel, e.g. "Lenny's Podcast"
+  source           String? // e.g. tts42
+  sourceUrl        String?         @unique
   categoryId       String?
-  category         Category? @relation(fields: [categoryId], references: [id])
+  category         Category?       @relation(fields: [categoryId], references: [id])
   authorId         String?
-  author           User?     @relation(fields: [authorId], references: [id])
-  authorName       String    @default("Raleche Staff")
+  author           User?           @relation(fields: [authorId], references: [id])
+  authorName       String          @default("Raleche Staff")
   publishedAt      DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
   dailyViews       PostView[]
 }
 
@@ -152,7 +154,7 @@ model Subscriber {
 model Campaign {
   id        String    @id @default(cuid())
   subject   String
-  body      String    // markdown
+  body      String // markdown
   status    String    @default("draft") // draft | sent
   sentCount Int       @default(0)
   sentAt    DateTime?
@@ -186,11 +188,12 @@ model TokenTxn {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amount    Int      // positive = earned/bought, negative = spent
-  reason    String   // purchase | wheel | unlock | admin
+  amount    Int // positive = earned/bought, negative = spent
+  reason    String // purchase | wheel | unlock | admin
   ref       String?  @unique // Stripe checkout session, spin id or unlock id: makes credits idempotent
   note      String?
   createdAt DateTime @default(now())
+
   @@index([userId, createdAt])
 }
 
@@ -203,6 +206,7 @@ model Unlock {
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   tokens    Int
   createdAt DateTime @default(now())
+
   @@unique([userId, postId])
 }
 
@@ -211,10 +215,11 @@ model WheelSpin {
   id        String    @id @default(cuid())
   userId    String?
   user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  day       String    // YYYY-MM-DD (UTC)
+  day       String // YYYY-MM-DD (UTC)
   prize     Int
   claimedAt DateTime?
   createdAt DateTime  @default(now())
+
   @@unique([userId, day])
 }
 
@@ -228,23 +233,25 @@ model PollVote {
   choice    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
   @@unique([userId, postId])
   @@index([postId])
 }
 
 model Comment {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId     String
+  post       Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
   body       String
-  hidden     Boolean  @default(false)
-  heldReason String?  // set while waiting for review (hidden until an admin approves)
-  reports    Int      @default(0)
-  rewarded   Boolean  @default(false) // tokens are paid once the comment is public
-  createdAt  DateTime @default(now())
+  hidden     Boolean         @default(false)
+  heldReason String? // set while waiting for review (hidden until an admin approves)
+  reports    Int             @default(0)
+  rewarded   Boolean         @default(false) // tokens are paid once the comment is public
+  createdAt  DateTime        @default(now())
   reportsBy  CommentReport[]
+
   @@index([postId, createdAt])
   @@index([userId, createdAt])
 }
@@ -256,6 +263,7 @@ model CommentReport {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
   @@unique([commentId, userId])
 }
 
@@ -278,6 +286,7 @@ model QuizAttempt {
   correct   Int
   earned    Int      @default(0)
   createdAt DateTime @default(now())
+
   @@unique([userId, postId])
 }
 
@@ -286,9 +295,10 @@ model Follow {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kind      String   // speaker | host
+  kind      String // speaker | host
   name      String
   createdAt DateTime @default(now())
+
   @@unique([userId, kind, name])
   @@index([kind, name])
 }
@@ -299,10 +309,11 @@ model Book {
   slug      String        @unique
   title     String
   author    String
-  asin      String?       // Amazon product id; without it we link to an Amazon search
+  asin      String? // Amazon product id; without it we link to an Amazon search
   coverUrl  String?
   createdAt DateTime      @default(now())
   mentions  BookMention[]
+
   @@unique([title, author])
 }
 
@@ -315,6 +326,7 @@ model BookMention {
   who      String // person who mentioned it
   relation String // recommends | reading | influenced | wrote
   note     String @default("")
+
   @@unique([bookId, postId, who])
 }
 
@@ -327,6 +339,7 @@ model PersonMention {
   who    String
   stance String // admires | criticizes
   note   String @default("")
+
   @@index([postId])
   @@index([name])
 }
@@ -336,11 +349,12 @@ model Activity {
   id        String   @id @default(cuid())
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  kind      String   // comment | vote | spin | quiz | purchase | unlock | follow | signup
+  kind      String // comment | vote | spin | quiz | purchase | unlock | follow | signup
   postId    String?
   detail    String   @default("")
   emailed   Boolean  @default(false)
   createdAt DateTime @default(now())
+
   @@index([createdAt])
   @@index([userId, createdAt])
   @@index([kind, createdAt])
@@ -357,10 +371,44 @@ model PageView {
   title     String   @default("")
   referrer  String?
   landing   Boolean  @default(false) // first page of the visit
-  seconds   Int      @default(0)     // time on the page, reported when the reader leaves it
+  seconds   Int      @default(0) // time on the page, reported when the reader leaves it
   createdAt DateTime @default(now())
+
   @@index([createdAt])
   @@index([sessionId, createdAt])
   @@index([userId, createdAt])
   @@index([path, createdAt])
+}
+
+/// An in-depth memo (PDF) sold for tokens. The file is stored in the database so only buyers can fetch it.
+model Memo {
+  id          String         @id @default(cuid())
+  slug        String         @unique
+  title       String
+  summary     String         @default("")
+  postId      String?
+  post        Post?          @relation(fields: [postId], references: [id], onDelete: SetNull)
+  priceTokens Int            @default(500)
+  active      Boolean        @default(true)
+  sortOrder   Int            @default(0)
+  fileName    String?
+  fileType    String?
+  fileSize    Int?
+  fileData    Bytes?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  purchases   MemoPurchase[]
+}
+
+/// A memo bought with tokens.
+model MemoPurchase {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memoId    String
+  memo      Memo     @relation(fields: [memoId], references: [id], onDelete: Cascade)
+  tokens    Int
+  createdAt DateTime @default(now())
+
+  @@unique([userId, memoId])
 }

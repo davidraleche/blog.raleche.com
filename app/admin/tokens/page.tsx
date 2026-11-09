@@ -15,11 +15,12 @@ export default async function Tokens() {
     ["Wheel", sum("wheel").toLocaleString()],
     ["Polls + comments", (sum("poll") + sum("comment")).toLocaleString()],
     ["Spent on unlocks", Math.abs(sum("unlock")).toLocaleString()],
+    ["Spent on memos", Math.abs(sum("memo")).toLocaleString()],
   ];
   return (
     <div>
       <PageTitle title="Tokens" sub="$1 = 100 tokens · every token change" />
-      <div className="mb-6 grid gap-3 sm:grid-cols-5">
+      <div className="mb-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {tiles.map(([k, v]) => (
           <div key={k} className="term-panel p-4"><p className="font-mono text-[10px] uppercase tracking-widest text-terminal-dim">{k}</p><p className="mt-1 text-xl text-slate-100">{v}</p></div>
         ))}

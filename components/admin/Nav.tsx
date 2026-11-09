@@ -13,6 +13,7 @@ const ITEMS = [
   ["/admin/comments", "Comments", "C"],
   ["/admin/quizzes", "Quizzes", "Q"],
   ["/admin/books", "Books", "B"],
+  ["/admin/memos", "Memos", "M"],
   ["/admin/newsletter", "Newsletter", "F6"],
   ["/admin/import", "Import TTS42", "F8"],
   ["/admin/settings", "Settings", "F9"],

@@ -3,15 +3,15 @@ import { db } from "./db";
 import { sendEmail } from "./email";
 import { adminEmail } from "./auth";
 
-export type ActivityKind = "comment" | "vote" | "spin" | "quiz" | "purchase" | "unlock" | "follow";
+export type ActivityKind = "comment" | "vote" | "spin" | "quiz" | "purchase" | "unlock" | "memo" | "follow";
 
 /** Kinds that also send the admin an email (the rest are only logged). */
-const EMAILED: ActivityKind[] = ["comment", "vote", "spin", "quiz", "purchase"];
+const EMAILED: ActivityKind[] = ["comment", "vote", "spin", "quiz", "purchase", "memo"];
 /** Resend's free plan allows 100 emails a day for everything, so admin alerts are capped. */
 const DAILY_EMAIL_CAP = Number(process.env.ADMIN_ALERT_CAP ?? 40);
 
 const LABEL: Record<ActivityKind, string> = {
-  comment: "New comment", vote: "New vote", spin: "Wheel spin", quiz: "Quiz played", purchase: "Token purchase", unlock: "Summary unlocked", follow: "New follow",
+  comment: "New comment", vote: "New vote", spin: "Wheel spin", quiz: "Quiz played", purchase: "Token purchase", unlock: "Summary unlocked", memo: "Memo bought", follow: "New follow",
 };
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 

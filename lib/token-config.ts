@@ -3,6 +3,8 @@
 export const TOKENS_PER_DOLLAR = 100;
 /** Price to unlock one executive summary. */
 export const UNLOCK_COST = 100;
+/** Default price of an in-depth memo. Each memo can override it in the admin. */
+export const MEMO_COST = 500;
 /** Earned once per article for voting in its poll, and once for commenting on it. */
 export const PARTICIPATION_REWARD = 10;
 /** Earned by getting both quiz questions on an article right (one try per article). */
