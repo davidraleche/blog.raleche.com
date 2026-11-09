@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { PageTitle, Badge, Stat } from "@/components/admin/ui";
-import { addSubscriber, toggleSubscriber, deleteSubscriber, draftDigest } from "../actions";
+import { addSubscriber, toggleSubscriber, deleteSubscriber } from "../actions";
+import { sendWeekly, sendWeeklyTest } from "../weekly-actions";
 import { fmtDate } from "@/lib/utils";
 
-export default async function Newsletter() {
+const WEEKLY_MSG: Record<string, string> = {
+  test: "Test sent to your email.",
+  confirm: "Tick the box to confirm before sending to everyone.",
+};
+
+export default async function Newsletter({ searchParams }: { searchParams: Promise<{ weekly?: string; n?: string }> }) {
+  const { weekly, n } = await searchParams;
   const [subs, campaigns] = await Promise.all([
     db.subscriber.findMany({ orderBy: { createdAt: "desc" } }),
     db.campaign.findMany({ orderBy: { createdAt: "desc" } }),
@@ -14,9 +21,25 @@ export default async function Newsletter() {
     <div>
       <PageTitle title="Newsletter" sub={process.env.RESEND_API_KEY ? "Sending via Resend" : "No RESEND_API_KEY · sends are logged only"}>
         <a href="/admin/newsletter/export" className="term-btn-ghost">Export CSV</a>
-        <form action={draftDigest}><button className="term-btn-ghost">Draft weekly digest</button></form>
         <Link href="/admin/newsletter/campaigns/new" className="term-btn">+ New campaign</Link>
       </PageTitle>
+      <section className="term-panel mb-4 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="term-label text-terminal-amber">Weekly briefing</p>
+            <p className="mt-1 text-sm text-slate-300">Daily wheel · quizzes on new stories · the latest · most read. Built from live stories, translated per subscriber language.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <a href="/admin/newsletter/weekly-preview" target="_blank" className="term-btn-ghost">Preview</a>
+            <form action={sendWeeklyTest}><button className="term-btn-ghost">Send test to me</button></form>
+            <form action={sendWeekly} className="flex items-center gap-2">
+              <label className="flex items-center gap-1 font-mono text-xs text-slate-300"><input type="checkbox" name="confirm" value="yes" /> confirm</label>
+              <button className="term-btn">Send to {active} subscribers</button>
+            </form>
+          </div>
+        </div>
+        {weekly && <p className="mt-3 font-mono text-xs text-terminal-up">{weekly === "sent" ? `Weekly briefing sent to ${n ?? 0} subscribers.` : WEEKLY_MSG[weekly]}</p>}
+      </section>
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Subscribed" value={String(active)} />
         <Stat label="Unsubscribed" value={String(subs.length - active)} />
