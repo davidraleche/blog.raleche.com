@@ -93,7 +93,7 @@ export function QuoteWheel({ quotes, labels, compact = false }: { quotes: Speake
               <blockquote className={`font-serif leading-snug text-white ${compact ? "line-clamp-5 text-base sm:text-lg" : "text-2xl sm:text-3xl"}`}>“{result.quote.text}”</blockquote>
               <figcaption className="mt-4 font-mono text-[12px] uppercase tracking-widest text-[#ffd76a]">
                 — {result.quote.speaker}
-                <a href={`/story/${result.quote.slug}`} className="ml-3 text-white underline hover:text-[#ffd76a]">{labels.readStory}</a>
+                <a href={`/story/${result.quote.slug}#story`} className="ml-3 text-white underline hover:text-[#ffd76a]">{labels.readStory}</a>
               </figcaption>
             </figure>
           )}

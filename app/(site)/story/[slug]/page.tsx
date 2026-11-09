@@ -140,7 +140,7 @@ export default async function Story({ params }: Props) {
     <article>
       <ViewPing postId={post.id} />
       {raw.status === "published" && <JsonLd data={articleJsonLd(raw)} />}
-      <header className="mx-auto max-w-4xl px-4 pt-10 text-center">
+      <header id="story" className="mx-auto max-w-4xl scroll-mt-4 px-4 pt-10 text-center">
         {post.category && <Link href={`/category/${post.category.slug}`} className="kicker hover:underline">{post.category.name}</Link>}
         {post.status !== "published" && <span className="ml-3 bg-terminal-amber px-2 py-0.5 font-mono text-[10px] uppercase">{post.status}</span>}
         <h1 className="hed mt-4 text-5xl sm:text-7xl">{post.title}</h1>
