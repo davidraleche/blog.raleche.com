@@ -98,7 +98,9 @@ export function PrizeWheel({ signedIn, canSpin, claimPending, labels }: { signed
     if (!canSpin || claimPending || pathname.startsWith("/signin")) return;
     let seen = false;
     try { seen = localStorage.getItem("wheel-offered") === todayKey(); } catch {}
-    if (seen) return;
+    // Links from the newsletter (?spin=1) always open the wheel.
+    const forced = new URLSearchParams(window.location.search).has("spin");
+    if (seen && !forced) return;
     const id = setTimeout(() => {
       setOpen(true);
       try { localStorage.setItem("wheel-offered", todayKey()); } catch {}
