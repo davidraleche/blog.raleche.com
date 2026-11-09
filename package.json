@@ -18,6 +18,7 @@
     "canvas-confetti": "^1.9.3",
     "marked": "^18.1.2",
     "next": "^15.5.28",
+    "pdf-lib": "1.17.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "recharts": "^3.10.1",

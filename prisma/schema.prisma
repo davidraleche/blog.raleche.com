@@ -389,7 +389,7 @@ model Memo {
   summary     String         @default("")
   postId      String?
   post        Post?          @relation(fields: [postId], references: [id], onDelete: SetNull)
-  priceTokens Int            @default(500)
+  priceTokens Int            @default(100)
   active      Boolean        @default(true)
   sortOrder   Int            @default(0)
   fileName    String?

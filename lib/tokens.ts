@@ -2,7 +2,9 @@ import "server-only";
 import crypto from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "./db";
+import { after } from "next/server";
 import { logActivity } from "./activity";
+import { sendPurchaseInvoice } from "./receipt";
 
 import { WHEEL, TOKEN_PACKS, UNLOCK_COST } from "./token-config";
 export * from "./token-config";
@@ -65,6 +67,15 @@ export async function creditTokenCheckout(session: { id: string; payment_status:
   if (!md.userId || !Number.isInteger(tokens) || tokens <= 0) return false;
   if (!(await db.user.findUnique({ where: { id: md.userId }, select: { id: true } }))) return false;
   const ok = await credit(md.userId, tokens, "purchase", `stripe:${session.id}`, `${tokens} tokens`);
-  if (ok) await logActivity({ kind: "purchase", userId: md.userId, detail: `Bought ${tokens} tokens for $${(tokens / 100).toFixed(2)}` });
+  if (ok) {
+    await logActivity({ kind: "purchase", userId: md.userId, detail: `Bought ${tokens} tokens for $${(tokens / 100).toFixed(2)}` });
+    // Only the call that actually credited sends the invoice, so the webhook and the return page never both send it.
+    const send = () => sendPurchaseInvoice(session.id, md.userId, tokens);
+    try {
+      after(send); // after the response, so the buyer isn't kept waiting
+    } catch {
+      await send(); // outside a request (scripts)
+    }
+  }
   return ok;
 }
