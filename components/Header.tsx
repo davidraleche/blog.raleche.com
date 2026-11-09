@@ -7,7 +7,7 @@ import { LanguageToggle } from "./LanguageToggle";
 import { MastheadSignup } from "./MastheadSignup";
 import { getI18n } from "@/lib/i18n/server";
 import { localizeFields } from "@/lib/localize";
-import { QuoteWheelButton } from "./QuoteWheelButton";
+import { QuoteWheel } from "./QuoteWheel";
 import { getSpeakerQuotes, quoteWheelLabels } from "@/lib/quotes";
 
 export async function Header() {
@@ -49,9 +49,7 @@ export async function Header() {
           <p className="font-serif text-base italic leading-snug text-ink/70">{t("tagline")}</p>
           <MastheadSignup text={t("briefingInbox")} />
         </div>
-        <div className="flex justify-center md:justify-end [&>button]:w-full">
-          <QuoteWheelButton quotes={quotes} labels={quoteWheelLabels(t)} cta={t("quoteWheelTitle")} dek={t("quoteWheelShort")} size="lg" />
-        </div>
+        {quotes.length > 0 && <QuoteWheel quotes={quotes} labels={quoteWheelLabels(t)} compact />}
       </div>
       <nav className="border-t border-ink/10">
         <ul className="mx-auto flex max-w-7xl items-center gap-6 overflow-x-auto px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] [scrollbar-width:none]">
