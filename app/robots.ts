@@ -3,7 +3,8 @@ import { absUrl } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-const PRIVATE = ["/admin", "/account", "/api/", "/signin", "/unsubscribe"];
+// Search results and sign-in links (with ?next=) are endless URL variants with nothing to index.
+const PRIVATE = ["/admin", "/account", "/api/", "/signin", "/unsubscribe", "/search?"];
 
 // AI search and answer engines we explicitly welcome, so they can cite RALECHE.
 const AI_BOTS = [

@@ -29,6 +29,7 @@ import { UnlockCelebration } from "@/components/UnlockCelebration";
 import { TopUpDialog } from "@/components/TopUpDialog";
 import { topUpLabels, topUpPacks } from "@/lib/topup";
 import { JsonLd, articleJsonLd } from "@/lib/seo";
+import { tagIndex, tagSlug, splitTags } from "@/lib/tags";
 
 type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ unlocked?: string; topup?: string }> };
 
@@ -62,7 +63,7 @@ export default async function Story({ params, searchParams }: Props) {
   const { slug } = await params;
   const sp = (await searchParams) ?? {};
   const justUnlocked = sp.unlocked === "1";
-  const [raw, user, { locale, t, date: fmtDate }] = await Promise.all([load(slug), getUser(), getI18n()]);
+  const [raw, user, { locale, t, date: fmtDate }, tagPages] = await Promise.all([load(slug), getUser(), getI18n(), tagIndex()]);
   if (!raw || (raw.status !== "published" && user?.role !== "ADMIN")) notFound();
 
   const subscriber = canReadSummaries(user);
@@ -243,9 +244,13 @@ export default async function Story({ params, searchParams }: Props) {
 
         {post.tags && (
           <div className="mt-10 flex flex-wrap gap-2 border-t border-ink/15 pt-6">
-            {post.tags.split(",").map((t) => t.trim()).filter(Boolean).map((t) => (
-              <Link key={t} href={`/search?q=${encodeURIComponent(t)}`} className="border border-ink/30 px-3 py-1 font-mono text-[11px] uppercase tracking-widest hover:bg-ink hover:text-white">{t}</Link>
-            ))}
+            {splitTags(post.tags).map((t) =>
+              tagPages.has(tagSlug(t)) ? (
+                <Link key={t} href={`/tag/${tagSlug(t)}`} className="border border-ink/30 px-3 py-1 font-mono text-[11px] uppercase tracking-widest hover:bg-ink hover:text-white">{t}</Link>
+              ) : (
+                <span key={t} className="border border-ink/15 px-3 py-1 font-mono text-[11px] uppercase tracking-widest text-ink/60">{t}</span>
+              ),
+            )}
           </div>
         )}
         {post.sourceUrl && (

@@ -1,12 +1,13 @@
 import { db } from "@/lib/db";
 import { publishedPosts } from "@/lib/public-content";
 import { SITE, absUrl } from "@/lib/seo";
+import { tagIndex } from "@/lib/tags";
 
 export const dynamic = "force-dynamic";
 
 /** https://llmstxt.org: a map of the site for AI assistants. */
 export async function GET() {
-  const [posts, categories] = await Promise.all([publishedPosts(), db.category.findMany({ orderBy: { sortOrder: "asc" } })]);
+  const [posts, categories, tags] = await Promise.all([publishedPosts(), db.category.findMany({ orderBy: { sortOrder: "asc" } }), tagIndex()]);
   const line = (p: (typeof posts)[number]) => `- [${p.title}](${absUrl(`/md/${p.slug}`)})${p.dek ? `: ${p.dek}` : ""}`;
   const body = `# ${SITE.name}
 
@@ -26,6 +27,10 @@ ${categories.map((c) => `- [${c.name}](${absUrl(`/category/${c.slug}`)})`).join(
 - [Speakers](${absUrl("/speakers")}): everyone interviewed, with their stories
 - [Hosts](${absUrl("/hosts")}): the podcasts and interviewers
 - [Buy Memo](${absUrl("/memos")}): in-depth memos sold for tokens
+
+## Topics
+
+${[...tags].map(([slug, t]) => `- [${t.name}](${absUrl(`/tag/${slug}`)}): ${t.count} stories`).join("\n")}
 
 ## Optional
 
