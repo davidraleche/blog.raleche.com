@@ -1,7 +1,7 @@
 // Weekly newsletter: daily wheel, quizzes on new stories, latest stories, most read.
 // No server-only imports, so scripts can render and send it too.
 import type { PrismaClient } from "@prisma/client";
-import { WHEEL, QUIZ_REWARD } from "./token-config";
+import { QUOTE_WHEEL_DAILY_MAX, QUIZ_REWARD } from "./token-config";
 
 type Story = { title: string; slug: string; dek: string; coverImage: string | null; readMinutes: number };
 type QuizTeaser = Story & { question: string; options: string[] };
@@ -44,12 +44,11 @@ export async function loadWeeklyContent(db: PrismaClient): Promise<WeeklyContent
 
 /** Every fixed piece of text, numbers already filled in, so it can be machine-translated as plain strings. */
 export function weeklyLabels() {
-  const top = Math.max(...WHEEL.map((w) => w.prize));
   return {
     briefing: "The weekly briefing",
-    wheelHeading: "Spin the daily wheel",
-    wheelTitle: `Win up to ${top} tokens today`,
-    wheelDek: "One free spin every day. Tokens unlock executive summaries.",
+    wheelHeading: "Spin the wheel",
+    wheelTitle: `Win up to ${QUOTE_WHEEL_DAILY_MAX} tokens a day`,
+    wheelDek: "Free spins, as many as you like: win tokens or a quote from our speakers. Tokens unlock executive summaries.",
     spinNow: "Spin now",
     quizHeading: "Quiz: this week's new stories",
     quizDek: `Read the summary, then get both questions right to win ${QUIZ_REWARD} tokens per story.`,

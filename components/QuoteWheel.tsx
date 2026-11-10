@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 import { spinQuoteWheel } from "@/app/actions/quote-wheel";
 import { QUOTE_WHEEL_DAILY_MAX, QUOTE_WHEEL_PRIZE } from "@/lib/token-config";
@@ -145,21 +145,33 @@ function WheelPanel({ quotes, labels, autoSpin = false, inModal = false }: { quo
   );
 }
 
+/** The wheel big in a popup, spinning straight away. Escape or a click outside closes it. */
+function WheelModal({ quotes, labels, onClose }: { quotes: SpeakerQuote[]; labels: QuoteWheelLabels; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", onKey); };
+  }, [onClose]);
+
+  return createPortal(
+    <div role="dialog" aria-modal="true" aria-label={labels.title} className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-black/75 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="relative w-full max-w-5xl">
+        <button onClick={onClose} aria-label={labels.close} className="absolute -top-3 right-0 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl font-bold text-ink shadow-lg hover:bg-[#ffd76a] sm:-right-3">×</button>
+        <WheelPanel quotes={quotes} labels={labels} autoSpin inModal />
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 /**
  * Quote wheel. Inline (Play page): the full wheel. Compact (masthead): a small card; Spin opens the wheel big in a popup,
  * where it spins straight away, then the reader spins as often as they like. One spin in five lands on tokens, the rest on a speaker quote.
  */
 export function QuoteWheel({ quotes, labels, compact = false }: { quotes: SpeakerQuote[]; labels: QuoteWheelLabels; compact?: boolean }) {
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
-    return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", onKey); };
-  }, [open]);
 
   if (!compact) return <WheelPanel quotes={quotes} labels={labels} />;
 
@@ -179,15 +191,39 @@ export function QuoteWheel({ quotes, labels, compact = false }: { quotes: Speake
           </div>
         </div>
       </section>
-      {open && createPortal(
-        <div role="dialog" aria-modal="true" aria-label={labels.title} className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-black/75 p-4" onClick={(e) => e.target === e.currentTarget && setOpen(false)}>
-          <div className="relative w-full max-w-5xl">
-            <button onClick={() => setOpen(false)} aria-label={labels.close} className="absolute -top-3 right-0 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl font-bold text-ink shadow-lg hover:bg-[#ffd76a] sm:-right-3">×</button>
-            <WheelPanel quotes={quotes} labels={labels} autoSpin inModal />
-          </div>
-        </div>,
-        document.body,
+      {open && <WheelModal quotes={quotes} labels={labels} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+/**
+ * The floating "Daily spin" button on every page: opens the same quote wheel in a popup.
+ * Links with ?spin=1 (the weekly newsletter) open it on arrival.
+ */
+export function QuoteWheelButton({ quotes, labels, buttonLabel }: { quotes: SpeakerQuote[]; labels: QuoteWheelLabels; buttonLabel: string }) {
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!quotes.length || pathname.startsWith("/signin")) return;
+    if (!new URLSearchParams(window.location.search).has("spin")) return;
+    const id = setTimeout(() => setOpen(true), 600);
+    return () => clearTimeout(id);
+  }, [quotes.length, pathname]);
+
+  if (!quotes.length) return null;
+  return (
+    <>
+      {!open && (
+        <button
+          onClick={() => setOpen(true)}
+          className="fixed bottom-4 right-4 z-40 flex items-center gap-2 border-[3px] border-ink bg-terminal-amber px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-widest text-ink shadow-[4px_4px_0_#111] transition hover:-translate-y-0.5"
+        >
+          <span aria-hidden className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-ink border-t-accent" />
+          {buttonLabel}
+        </button>
       )}
+      {open && <WheelModal quotes={quotes} labels={labels} onClose={() => setOpen(false)} />}
     </>
   );
 }

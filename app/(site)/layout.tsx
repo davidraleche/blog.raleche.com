@@ -1,7 +1,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { VisitBeacon } from "@/components/VisitBeacon";
-import { PrizeWheelSlot } from "@/components/PrizeWheelSlot";
+import { QuoteWheelSlot } from "@/components/QuoteWheelSlot";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <main>{children}</main>
       <Footer />
       <VisitBeacon />
-      <PrizeWheelSlot />
+      <QuoteWheelSlot />
     </>
   );
 }
