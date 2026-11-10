@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 import { spinQuoteWheel } from "@/app/actions/quote-wheel";
-import { QUOTE_WHEEL_PRIZE } from "@/lib/token-config";
+import { QUOTE_WHEEL_DAILY_MAX, QUOTE_WHEEL_PRIZE } from "@/lib/token-config";
 
 export type SpeakerQuote = { text: string; speaker: string; slug: string; title: string };
 export type QuoteWheelLabels = Record<"title" | "dek" | "spin" | "spinAgain" | "quote" | "won" | "wonDetail" | "signIn" | "signInDek" | "readStory" | "close", string>;
@@ -132,7 +132,7 @@ function WheelPanel({ quotes, labels, autoSpin = false, inModal = false }: { quo
           {result?.kind === "tokens" && (
             <div className="congrats-in mt-2">
               <h2 className="hed text-5xl text-[#ffd76a] sm:text-6xl">{result.credited ? fill(labels.won, result.amount) : `+${result.amount} 🪙`}</h2>
-              <p className="mt-3 font-serif text-lg text-white/90">{result.credited ? fill(labels.wonDetail, (result.balance ?? 0).toLocaleString()) : fill(labels.signInDek, result.amount)}</p>
+              <p className="mt-3 font-serif text-lg text-white/90">{result.credited ? fill(labels.wonDetail, (result.balance ?? 0).toLocaleString()).replace("{max}", String(QUOTE_WHEEL_DAILY_MAX)) : fill(labels.signInDek, result.amount)}</p>
               {!result.credited && <a href={signinHref} className="mt-4 inline-block rounded-full bg-white px-6 py-2 font-mono text-[12px] font-bold uppercase tracking-widest text-[#0b3a75] hover:bg-[#ffd76a]">{labels.signIn}</a>}
             </div>
           )}

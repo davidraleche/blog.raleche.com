@@ -14,7 +14,7 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 
 const en = {
   quoteWheelWon: "You won {n} tokens!",
-  quoteWheelWonDetail: "Added to your balance: you now have {n} tokens. Tokens on this wheel pay out once a day, so keep spinning for quotes.",
+  quoteWheelWonDetail: "Added to your balance: you now have {n} tokens. You can win up to {max} tokens a day on this wheel.",
   quoteWheelSignIn: "Sign in to win tokens",
   quoteWheelSignInDek: "You landed on {n} tokens! Tokens go to signed-in readers: sign in, then spin again.",
   homeNav: "Home",
@@ -416,7 +416,7 @@ export type Messages = typeof en;
 
 const fr: Messages = {
   quoteWheelWon: "Vous gagnez {n} jetons !",
-  quoteWheelWonDetail: "Ajoutés à votre solde : vous avez maintenant {n} jetons. Cette roue fait gagner des jetons une fois par jour ; continuez pour les citations.",
+  quoteWheelWonDetail: "Ajoutés à votre solde : vous avez maintenant {n} jetons. Cette roue permet de gagner jusqu'à {max} jetons par jour.",
   quoteWheelSignIn: "Connectez-vous pour gagner des jetons",
   quoteWheelSignInDek: "Vous tombez sur {n} jetons ! Les jetons sont réservés aux lecteurs connectés : connectez-vous, puis retournez la roue.",
   homeNav: "Accueil",
@@ -804,7 +804,7 @@ const fr: Messages = {
 
 const es: Messages = {
   quoteWheelWon: "¡Ganaste {n} tokens!",
-  quoteWheelWonDetail: "Añadidos a tu saldo: ahora tienes {n} tokens. Esta rueda da tokens una vez al día; sigue girando para ver citas.",
+  quoteWheelWonDetail: "Añadidos a tu saldo: ahora tienes {n} tokens. Puedes ganar hasta {max} tokens al día en esta rueda.",
   quoteWheelSignIn: "Inicia sesión para ganar tokens",
   quoteWheelSignInDek: "¡Caíste en {n} tokens! Los tokens son para lectores con sesión iniciada: inicia sesión y vuelve a girar.",
   homeNav: "Inicio",
@@ -1192,7 +1192,7 @@ const es: Messages = {
 
 const zh: Messages = {
   quoteWheelWon: "你赢得了 {n} 代币！",
-  quoteWheelWonDetail: "已存入余额：你现在有 {n} 代币。此轮盘每天只发一次代币，继续转来看名言吧。",
+  quoteWheelWonDetail: "已存入余额：你现在有 {n} 代币。此轮盘每天最多可赢 {max} 代币。",
   quoteWheelSignIn: "登录赢代币",
   quoteWheelSignInDek: "你转到了 {n} 代币！代币仅发给已登录读者：请登录后再转一次。",
   homeNav: "首页",

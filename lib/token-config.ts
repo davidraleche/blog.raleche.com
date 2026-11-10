@@ -28,6 +28,7 @@ export const WHEEL = [
 ] as const;
 
 
-/** Quote wheel: one spin in QUOTE_WHEEL_ODDS lands on tokens (the rest land on a speaker quote). Tokens pay out once a day per account. */
+/** Quote wheel: one spin in QUOTE_WHEEL_ODDS lands on tokens (the rest land on a speaker quote), up to QUOTE_WHEEL_DAILY_MAX tokens a day per account. */
 export const QUOTE_WHEEL_ODDS = 5;
 export const QUOTE_WHEEL_PRIZE = 10;
+export const QUOTE_WHEEL_DAILY_MAX = 40;
