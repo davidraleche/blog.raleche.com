@@ -3,6 +3,9 @@ import { cookies, headers } from "next/headers";
 import { getUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { BOT_UA } from "@/lib/seo";
+import { after } from "next/server";
+import { clientIp, countryOf, countryLabel } from "@/lib/geo";
+import { logActivity } from "@/lib/activity";
 
 const VISITOR = "vid"; // first-party visitor id, 1 year
 const VISIT = "vsid"; // current visit; ends after 30 minutes without a page view
@@ -15,7 +18,8 @@ const VISIT_MS = 30 * 60e3;
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as { path?: string; title?: string; referrer?: string } | null;
   if (!body?.path || !body.path.startsWith("/") || body.path.length > 500) return Response.json({ error: "path required" }, { status: 400 });
-  const ua = (await headers()).get("user-agent") ?? "";
+  const h = await headers();
+  const ua = h.get("user-agent") ?? "";
   // Crawlers aren't counted. Real browsers that mention an app name (e.g. "Claude/4.x Chrome/…") still are.
   const realBrowser = /Mozilla\/5\.0 .*(Chrome|Safari|Firefox)\/[\d.]+/.test(ua) && !/bot\b|crawler|spider/i.test(ua);
   if (BOT_UA.test(ua) && !realBrowser) return Response.json({ ok: true });
@@ -41,10 +45,20 @@ export async function POST(req: Request) {
       if (r && !/(^|\.)raleche\.com$|^localhost$/.test(r.hostname)) referrer = `${r.hostname}${r.pathname}`.slice(0, 300);
     } catch {}
 
+    const country = countryOf(clientIp(h));
     const pv = await db.pageView.create({
-      data: { visitorId, sessionId: sessionId!, userId: user?.id ?? null, path: body.path, title: (body.title ?? "").slice(0, 200), referrer, landing },
+      data: { visitorId, sessionId: sessionId!, userId: user?.id ?? null, path: body.path, title: (body.title ?? "").slice(0, 200), referrer, landing, country },
     });
     id = pv.id;
+    // Each new visit (its first page) alerts the admin: where from, which page.
+    if (landing) {
+      const vid = visitorId;
+      after(async () => {
+        const before = await db.pageView.count({ where: { visitorId: vid } });
+        const detail = `${countryLabel(country)} · landed on ${body.path}${body.title ? ` (“${body.title.slice(0, 120)}”)` : ""} · from ${referrer ?? "direct / unknown"} · ${before > 1 ? "returning visitor" : "first visit"}`;
+        await logActivity({ kind: "visit", userId: user?.id ?? null, detail });
+      });
+    }
   }
 
   // Signed-in visits are also forwarded to the tts42 admin log.

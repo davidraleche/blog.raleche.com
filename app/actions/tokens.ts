@@ -10,7 +10,7 @@ import { today } from "@/lib/utils";
 import { credit, drawPrize, findPack, hasUnlocked, unlockWithTokens, PARTICIPATION_REWARD, POLL_CHOICES, QUIZ_REWARD } from "@/lib/tokens";
 import { getQuiz } from "@/lib/quiz";
 import { after } from "next/server";
-import { logActivity } from "@/lib/activity";
+import { anonymousVisitorNote, logActivity } from "@/lib/activity";
 import { checkComment, MAX_COMMENT } from "@/lib/comment-guard";
 import { parseThen, safeNext } from "@/lib/checkout-intent";
 
@@ -112,6 +112,8 @@ export async function spinWheel(): Promise<SpinResult> {
   }
   const spin = await db.wheelSpin.create({ data: { day, prize: drawPrize() } });
   await markSpun(day);
+  const who = await anonymousVisitorNote();
+  after(() => logActivity({ kind: "spin", detail: `Anonymous visitor spun the daily wheel and won ${spin.prize} token${spin.prize === 1 ? "" : "s"} (held until they sign in)${who ? ` · ${who}` : ""}` }));
   jar.set(SPIN_COOKIE, spin.id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 3 * 864e2 });
   return { prize: spin.prize, credited: false };
 }

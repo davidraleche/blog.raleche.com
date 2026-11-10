@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { PageTitle, Badge } from "@/components/admin/ui";
+import { countryLabel } from "@/lib/geo";
 
-type PV = { id: string; visitorId: string; sessionId: string; userId: string | null; path: string; title: string; referrer: string | null; landing: boolean; seconds: number; createdAt: Date };
+type PV = { id: string; visitorId: string; sessionId: string; userId: string | null; path: string; title: string; referrer: string | null; landing: boolean; country: string | null; seconds: number; createdAt: Date };
 
 const fmtSec = (s: number) => (s < 60 ? `${Math.round(s)}s` : `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`);
 const time = (d: Date) => d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" });
@@ -88,7 +89,8 @@ export default async function Visitors({ searchParams }: { searchParams: Promise
         ))}
       </div>
 
-      <div className="mb-6 grid gap-4 lg:grid-cols-3">
+      <div className="mb-6 grid gap-4 md:grid-cols-2">
+        <Table title="Countries (visits)" rows={top(landings, (v) => countryLabel(v.country))} />
         <Table title="Landing pages (where visits start)" rows={top(landings, (v) => v.path)} />
         <Table title="Exit pages (where visits end)" rows={top(exits, (v) => v.path)} />
         <Table title="Where visitors come from" rows={top(landings.filter((v) => v.referrer), (v) => v.referrer!.split("/")[0])} />
@@ -174,7 +176,7 @@ async function UserDetail({ userId, since, days }: { userId: string; since: Date
         {visits.length === 0 && <p className="text-terminal-dim">No visits in the last {days} days.</p>}
         {visits.map((s) => (
           <div key={s[0].sessionId} className="term-panel p-3">
-            <p className="mb-2 text-[11px] text-terminal-dim">{time(s[0].createdAt)} · {s.length} page{s.length > 1 ? "s" : ""} · {fmtSec(s.reduce((n, v) => n + v.seconds, 0))}{s[0].referrer ? ` · from ${s[0].referrer}` : ""}</p>
+            <p className="mb-2 text-[11px] text-terminal-dim">{time(s[0].createdAt)} · {s.length} page{s.length > 1 ? "s" : ""} · {fmtSec(s.reduce((n, v) => n + v.seconds, 0))}{s[0].country !== undefined ? ` · ${countryLabel(s[0].country)}` : ""}{s[0].referrer ? ` · from ${s[0].referrer}` : ""}</p>
             <ol className="space-y-1">
               {s.map((v, i) => (
                 <li key={v.id} className="flex gap-2 text-[12px]">

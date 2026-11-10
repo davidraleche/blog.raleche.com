@@ -6,7 +6,8 @@ import { db } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 import { today } from "@/lib/utils";
 import { credit } from "@/lib/tokens";
-import { logActivity } from "@/lib/activity";
+import { cookies } from "next/headers";
+import { anonymousVisitorNote, logActivity } from "@/lib/activity";
 import { QUOTE_WHEEL_DAILY_MAX, QUOTE_WHEEL_ODDS, QUOTE_WHEEL_PRIZE } from "@/lib/token-config";
 
 export type QuoteSpin = { outcome: "quote" } | { outcome: "tokens"; amount: number; credited: boolean; balance?: number };
@@ -17,9 +18,13 @@ export type QuoteSpin = { outcome: "quote" } | { outcome: "tokens"; amount: numb
  * Signed-out readers can land on tokens but must sign in to win them.
  */
 export async function spinQuoteWheel(): Promise<QuoteSpin> {
-  if (randomInt(QUOTE_WHEEL_ODDS) !== 0) return { outcome: "quote" };
+  const hit = randomInt(QUOTE_WHEEL_ODDS) === 0;
   const user = await getUser();
-  if (!user) return { outcome: "tokens", amount: QUOTE_WHEEL_PRIZE, credited: false };
+  if (!user) {
+    await alertAnonymousSpin(hit);
+    return hit ? { outcome: "tokens", amount: QUOTE_WHEEL_PRIZE, credited: false } : { outcome: "quote" };
+  }
+  if (!hit) return { outcome: "quote" };
   // Each win of the day gets its own numbered ref, so two spins racing for the same slot can't both pay.
   const prefix = `quotewheel:${user.id}:${today()}`;
   const won = await db.tokenTxn.findMany({ where: { userId: user.id, reason: "quotewheel", ref: { startsWith: prefix } }, select: { amount: true } });
@@ -31,4 +36,14 @@ export async function spinQuoteWheel(): Promise<QuoteSpin> {
   const balance = (await db.user.findUnique({ where: { id: user.id }, select: { tokenBalance: true } }))?.tokenBalance;
   revalidatePath("/", "layout");
   return { outcome: "tokens", amount: QUOTE_WHEEL_PRIZE, credited: true, balance };
+}
+
+/** Tell the admin a signed-out visitor is spinning. Spins are unlimited, so only the first one per visitor per day sends an alert. */
+async function alertAnonymousSpin(hit: boolean) {
+  const jar = await cookies();
+  const day = today();
+  if (jar.get("qw_alerted")?.value === day) return;
+  jar.set("qw_alerted", day, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 2 * 86400 });
+  const who = await anonymousVisitorNote();
+  after(() => logActivity({ kind: "spin", detail: `Anonymous visitor spun the quote wheel (${hit ? `landed on ${QUOTE_WHEEL_PRIZE} tokens, asked to sign in` : "landed on a quote"}); further spins today aren't emailed${who ? ` · ${who}` : ""}` }));
 }

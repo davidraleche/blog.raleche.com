@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { PageTitle, Badge } from "@/components/admin/ui";
 import { setAdminAlerts } from "../actions";
 
-const KINDS = ["comment", "vote", "spin", "quiz", "purchase", "unlock", "memo", "follow"] as const;
+const KINDS = ["comment", "vote", "spin", "quiz", "purchase", "unlock", "memo", "follow", "visit"] as const;
 const TONE: Record<string, "up" | "down" | "amber" | "dim"> = { comment: "amber", vote: "up", spin: "amber", quiz: "up", purchase: "up", unlock: "up", follow: "dim" };
 const time = (d: Date) => d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" });
 

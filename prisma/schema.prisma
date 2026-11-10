@@ -373,6 +373,7 @@ model PageView {
   title     String   @default("")
   referrer  String?
   landing   Boolean  @default(false) // first page of the visit
+  country   String? // two-letter code, from the visitor's IP
   seconds   Int      @default(0) // time on the page, reported when the reader leaves it
   createdAt DateTime @default(now())
 
