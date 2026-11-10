@@ -9,14 +9,15 @@ import { localizePosts, localizeFields } from "@/lib/localize";
 
 export const metadata = { alternates: { canonical: "/" }, openGraph: { url: "/" } };
 
-const published = { status: "published", publishedAt: { lte: new Date() } };
+// A function, so "now" is the time of each request (a constant froze it at server start and hid stories published since).
+const published = () => ({ status: "published", publishedAt: { lte: new Date() } });
 
 export default async function Home() {
   const { locale, t } = await getI18n();
   const [rawPosts, rawPopular, rawCategories, user] = await Promise.all([
-    db.post.findMany({ where: published, include: { category: true }, orderBy: { publishedAt: "desc" }, take: 40 }), // newest story is the center (hero) story
-    db.post.findMany({ where: published, include: { category: true }, orderBy: { views: "desc" }, take: 5 }),
-    db.category.findMany({ orderBy: { sortOrder: "asc" }, include: { posts: { where: published, include: { category: true }, orderBy: { publishedAt: "desc" }, take: 4 } } }),
+    db.post.findMany({ where: published(), include: { category: true }, orderBy: { publishedAt: "desc" }, take: 40 }), // newest story is the center (hero) story
+    db.post.findMany({ where: published(), include: { category: true }, orderBy: { views: "desc" }, take: 5 }),
+    db.category.findMany({ orderBy: { sortOrder: "asc" }, include: { posts: { where: published(), include: { category: true }, orderBy: { publishedAt: "desc" }, take: 4 } } }),
     getUser(),
   ]);
   // One translation batch for every story on the page.
