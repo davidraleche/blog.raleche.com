@@ -16,7 +16,7 @@ import { credit, PARTICIPATION_REWARD } from "@/lib/tokens";
 import { generateQuiz, isValidQuiz } from "@/lib/quiz";
 import { prepareStories } from "@/lib/prepare";
 import { saveMentions, isValidMentions } from "@/lib/books";
-import { extractMentions } from "@/lib/mentions-ai";
+import { extractMentions, fetchTranscript } from "@/lib/mentions-ai";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
@@ -381,10 +381,10 @@ export async function saveArticleMentions(form: FormData) {
 
 export async function reextractMentions(form: FormData) {
   await requireAdmin();
-  const post = await db.post.findUniqueOrThrow({ where: { id: str(form, "postId") }, select: { id: true, title: true, body: true } });
+  const post = await db.post.findUniqueOrThrow({ where: { id: str(form, "postId") }, select: { id: true, slug: true, title: true, body: true } });
   let m;
   try {
-    m = await extractMentions(post.title, post.body);
+    m = await extractMentions(post.title, post.body, await fetchTranscript(post.slug));
   } catch (e) {
     redirect(`/admin/books?error=${encodeURIComponent((e as Error).message.slice(0, 120))}&post=${post.id}#articles`);
   }

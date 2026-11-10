@@ -4,8 +4,8 @@ import { renderMarkdown } from "./markdown";
 import { LOCALES, type Locale } from "./i18n/messages";
 import { translateHtml, translateMany } from "./translate";
 import { answersInSummary, generateQuiz, getQuiz, isValidQuiz, type QuizQuestion } from "./quiz";
-import { extractMentions } from "./mentions-ai";
-import { saveMentions } from "./books";
+import { extractMentions, fetchTranscript } from "./mentions-ai";
+import { saveMentions, loadMentions, type Mentions } from "./books";
 
 export type PrepareReport = { slug: string; quiz: "created" | "kept" | "fixed" | "missing"; answersInSummary: boolean | null; languages: Locale[]; books?: number; note?: string };
 
@@ -17,16 +17,25 @@ const OTHER = LOCALES.filter((l): l is Exclude<Locale, "en"> => l !== "en");
  * summary, quiz and headline are translated (and cached) in every language.
  * With recheck, an existing AI or starter quiz is verified and rewritten if an answer is not in the summary (quizzes edited by an admin are never touched).
  */
-export async function prepareStory(postId: string, opts: { recheck?: boolean } = {}): Promise<PrepareReport> {
+/** Existing mentions first (they may be admin edits), then new ones not already listed. */
+function mergeMentions(old: Mentions, add: Mentions): Mentions {
+  const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const books = [...old.books, ...add.books.filter((b) => !old.books.some((o) => key(o.title) === key(b.title)))];
+  const people = [...old.people, ...add.people.filter((p) => !old.people.some((o) => key(o.name) === key(p.name)))];
+  return { books, people };
+}
+
+export async function prepareStory(postId: string, opts: { recheck?: boolean; rescanBooks?: boolean } = {}): Promise<PrepareReport> {
   const post = await db.post.findUnique({ where: { id: postId }, select: { id: true, slug: true, title: true, dek: true, body: true, executiveSummary: true, status: true, mentionsAt: true } });
   if (!post || post.status !== "published") return { slug: post?.slug ?? postId, quiz: "missing", answersInSummary: null, languages: [], note: "not published" };
   const summary = post.executiveSummary || post.body;
   const report: PrepareReport = { slug: post.slug, quiz: "missing", answersInSummary: null, languages: [] };
 
   // 0. Books and people (admin edits are kept: only stories never extracted are done here)
-  if (!post.mentionsAt) {
+  if (!post.mentionsAt || opts.rescanBooks) {
     try {
-      const m = await extractMentions(post.title, post.body);
+      let m = await extractMentions(post.title, post.body, await fetchTranscript(post.slug));
+      if (post.mentionsAt) m = mergeMentions(await loadMentions(post.id), m); // rescan: keep what's there, add what's new
       await saveMentions(post.id, m);
       report.books = m.books.length;
     } catch (e) {
@@ -73,7 +82,7 @@ export async function prepareStory(postId: string, opts: { recheck?: boolean } =
 }
 
 /** Prepares several stories one after another (kept sequential to stay inside API limits). */
-export async function prepareStories(ids: string[], opts: { recheck?: boolean } = {}) {
+export async function prepareStories(ids: string[], opts: { recheck?: boolean; rescanBooks?: boolean } = {}) {
   const reports: PrepareReport[] = [];
   for (const id of ids) reports.push(await prepareStory(id, opts).catch((e) => ({ slug: id, quiz: "missing" as const, answersInSummary: null, languages: [], note: (e as Error).message.slice(0, 200) })));
   console.log("[prepare]", JSON.stringify(reports));
