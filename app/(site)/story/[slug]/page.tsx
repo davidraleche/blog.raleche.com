@@ -145,11 +145,41 @@ export default async function Story({ params, searchParams }: Props) {
     include: { category: true }, orderBy: { publishedAt: "desc" }, take: 3,
   });
   // Only translate the summary for readers who can see it.
-  const [[post, ...related], bodyHtml, summaryHtml] = await Promise.all([
+  // Split the article right after its "The short version" section; the reader blocks go there.
+  const split = splitAfterShortVersion(body);
+  const [[post, ...related], bodyHtml, restHtml, summaryHtml] = await Promise.all([
     localizePosts(locale, [raw, ...rawRelated]),
-    translateHtml(locale, renderMarkdown(body)),
+    translateHtml(locale, renderMarkdown(split ? split[0] : body)),
+    split ? translateHtml(locale, renderMarkdown(split[1])) : Promise.resolve(""),
     member && raw.executiveSummary ? translateHtml(locale, renderMarkdown(raw.executiveSummary)) : Promise.resolve(""),
   ]);
+
+  const readerBlocks = (
+    <>
+        {raw.status === "published" && (
+          <div id="rate" className="mb-10 flex flex-wrap items-center gap-3 border-y-2 border-ink py-4">
+            <span className="font-mono text-[11px] uppercase tracking-widest text-ink/60">{t("rateThisStory")}</span>
+            <PersonRating kind="story" name={raw.slug} {...ratingFor("story", raw.slug)} signedIn={!!user} back={`/story/${raw.slug}#rate`} reward={PARTICIPATION_REWARD} labels={storyRatingLabels} size="md" />
+          </div>
+        )}
+        <StoryBooks books={bookMentions} people={personMentions} tag={affiliateTag} labels={bookLabels} className="mb-10" />
+        {user && !member && raw.executiveSummary && (sp.topup === "quiz" || sp.topup === "summary") && (
+          <TopUpDialog packs={topUpPacks()} balance={user.tokenBalance} cost={UNLOCK_COST} next={`/story/${raw.slug}`} then={`unlock:${raw.id}:${sp.topup}`} labels={topUpLabels(t)} />
+        )}
+        {justUnlocked && unlocked && (() => { const fromQuiz = !!quiz && !!quizPlay && quizPlay.correct < quiz.length; return <UnlockCelebration title={t("unlockCelebrateTitle")} detail={t(fromQuiz ? "unlockCelebrateQuiz" : "unlockCelebrateDetail")} target={fromQuiz ? "quiz" : "summary"} />; })()}
+        <ExecutiveSummary hasSummary={!!raw.executiveSummary} html={summaryHtml} member={member} unlocked={unlocked} signedIn={!!user} balance={user?.tokenBalance ?? 0} postId={raw.id} back={`/story/${raw.slug}`} t={t} />
+        {quiz && raw.status === "published" && (
+          <StoryQuiz
+            className="mb-10"
+            postId={raw.id} questions={quizQuestions} signedIn={!!user} reward={QUIZ_REWARD}
+            played={quizPlay ? { correct: quizPlay.correct, answers: quizPlay.correct === quiz.length || member ? quiz.map((q) => q.answer) : [], picks: quizPlay.picks } : null}
+            summary={raw.executiveSummary ? { unlocked: member, cost: UNLOCK_COST, back: `/story/${raw.slug}`, pdf: `/story/${raw.slug}/summary.pdf` } : null}
+            videoUrl={raw.body.match(/https:\/\/www\.youtube\.com\/watch\?v=[\w-]+/)?.[0] ?? null}
+            signinHref={`/signin?next=${encodeURIComponent(`/story/${raw.slug}#quiz`)}`} next={quizNextStory} labels={quizLabels}
+          />
+        )}
+    </>
+  );
 
   return (
     <article>
@@ -183,28 +213,7 @@ export default async function Story({ params, searchParams }: Props) {
       )}
 
       <div className="mx-auto mt-10 max-w-3xl px-4">
-        {quiz && raw.status === "published" && (
-          <StoryQuiz
-            className="mb-10"
-            postId={raw.id} questions={quizQuestions} signedIn={!!user} reward={QUIZ_REWARD}
-            played={quizPlay ? { correct: quizPlay.correct, answers: quizPlay.correct === quiz.length || member ? quiz.map((q) => q.answer) : [], picks: quizPlay.picks } : null}
-            summary={raw.executiveSummary ? { unlocked: member, cost: UNLOCK_COST, back: `/story/${raw.slug}`, pdf: `/story/${raw.slug}/summary.pdf` } : null}
-            videoUrl={raw.body.match(/https:\/\/www\.youtube\.com\/watch\?v=[\w-]+/)?.[0] ?? null}
-            signinHref={`/signin?next=${encodeURIComponent(`/story/${raw.slug}#quiz`)}`} next={quizNextStory} labels={quizLabels}
-          />
-        )}
-        <StoryBooks books={bookMentions} people={personMentions} tag={affiliateTag} labels={bookLabels} className="mb-10" />
-        {user && !member && raw.executiveSummary && (sp.topup === "quiz" || sp.topup === "summary") && (
-          <TopUpDialog packs={topUpPacks()} balance={user.tokenBalance} cost={UNLOCK_COST} next={`/story/${raw.slug}`} then={`unlock:${raw.id}:${sp.topup}`} labels={topUpLabels(t)} />
-        )}
-        {justUnlocked && unlocked && (() => { const fromQuiz = !!quiz && !!quizPlay && quizPlay.correct < quiz.length; return <UnlockCelebration title={t("unlockCelebrateTitle")} detail={t(fromQuiz ? "unlockCelebrateQuiz" : "unlockCelebrateDetail")} target={fromQuiz ? "quiz" : "summary"} />; })()}
-        <ExecutiveSummary hasSummary={!!raw.executiveSummary} html={summaryHtml} member={member} unlocked={unlocked} signedIn={!!user} balance={user?.tokenBalance ?? 0} postId={raw.id} back={`/story/${raw.slug}`} t={t} />
-        {raw.status === "published" && (
-          <div id="rate" className="-mt-6 mb-10 flex flex-wrap items-center gap-3 border-b-2 border-ink pb-4">
-            <span className="font-mono text-[11px] uppercase tracking-widest text-ink/60">{t("rateThisStory")}</span>
-            <PersonRating kind="story" name={raw.slug} {...ratingFor("story", raw.slug)} signedIn={!!user} back={`/story/${raw.slug}#rate`} reward={PARTICIPATION_REWARD} labels={storyRatingLabels} size="md" />
-          </div>
-        )}
+        {!split && readerBlocks}
         <AdSlot name="articleTop" />
 
         {videoId && (
@@ -224,6 +233,12 @@ export default async function Story({ params, searchParams }: Props) {
           </figure>
         )}
         <div className="prose-article" dangerouslySetInnerHTML={{ __html: bodyHtml }} />
+        {split && (
+          <>
+            <div className="mt-10">{readerBlocks}</div>
+            <div className="prose-article" dangerouslySetInnerHTML={{ __html: restHtml }} />
+          </>
+        )}
 
         {locked && (
           <div className="relative -mt-24 bg-gradient-to-t from-white via-white to-transparent pt-24 text-center">
@@ -356,4 +371,14 @@ function ExecutiveSummary({ hasSummary, html, member, unlocked, signedIn, balanc
       )}
     </aside>
   );
+}
+
+/** Cut the article markdown after its "## The short version" section (before the next "## " heading). Null when there is none. */
+function splitAfterShortVersion(md: string): [string, string] | null {
+  const head = /^##\s+the short version\s*$/im.exec(md);
+  if (!head) return null;
+  const after = head.index + head[0].length;
+  const next = /^##\s/m.exec(md.slice(after));
+  if (!next) return null;
+  return [md.slice(0, after + next.index), md.slice(after + next.index)];
 }
