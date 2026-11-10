@@ -36,7 +36,6 @@ export default async function Account({ searchParams }: { searchParams: Promise<
           <p className="mt-2 font-serif text-lg">{t("tokensCardText", { n: unlockCount })}</p>
           <div className="mt-6 flex flex-wrap gap-2">
             <Link href="/store" className="btn-dark">{t("getTokens")}</Link>
-            <Link href="/account/summaries" className="btn-light">{t("readYourSummaries")}</Link>
             <Link href="/account/invoices" className="btn-light">{t("tabInvoices")}</Link>
             {stripe && user.stripeCustomerId && <form action={openBillingPortal}><button className="btn-light">{t("manageCards")}</button></form>}
           </div>
