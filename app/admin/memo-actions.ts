@@ -24,7 +24,7 @@ export async function saveMemo(form: FormData) {
   const title = str(form, "title");
   if (!title) redirect(`/admin/memos?error=title`);
   const price = Number(str(form, "priceTokens") || MEMO_COST);
-  if (!Number.isInteger(price) || price < 1) redirect(`/admin/memos?error=price`);
+  if (!Number.isInteger(price) || price < 0) redirect(`/admin/memos?error=price`);
   const data = {
     title,
     summary: str(form, "summary"),

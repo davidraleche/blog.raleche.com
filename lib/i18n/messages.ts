@@ -13,6 +13,9 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  memoFree: "Free",
+  memoFreeBadge: "Free sample",
+  memoReadFree: "Read it free",
   quoteWheelWon: "You won {n} tokens!",
   quoteWheelWonDetail: "Added to your balance: you now have {n} tokens. You can win up to {max} tokens a day on this wheel.",
   quoteWheelSignIn: "Sign in to win tokens",
@@ -415,6 +418,9 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  memoFree: "Gratuit",
+  memoFreeBadge: "Exemple gratuit",
+  memoReadFree: "Lire gratuitement",
   quoteWheelWon: "Vous gagnez {n} jetons !",
   quoteWheelWonDetail: "Ajoutés à votre solde : vous avez maintenant {n} jetons. Cette roue permet de gagner jusqu'à {max} jetons par jour.",
   quoteWheelSignIn: "Connectez-vous pour gagner des jetons",
@@ -803,6 +809,9 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  memoFree: "Gratis",
+  memoFreeBadge: "Muestra gratis",
+  memoReadFree: "Léelo gratis",
   quoteWheelWon: "¡Ganaste {n} tokens!",
   quoteWheelWonDetail: "Añadidos a tu saldo: ahora tienes {n} tokens. Puedes ganar hasta {max} tokens al día en esta rueda.",
   quoteWheelSignIn: "Inicia sesión para ganar tokens",
@@ -1191,6 +1200,9 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  memoFree: "免费",
+  memoFreeBadge: "免费试读",
+  memoReadFree: "免费阅读",
   quoteWheelWon: "你赢得了 {n} 代币！",
   quoteWheelWonDetail: "已存入余额：你现在有 {n} 代币。此轮盘每天最多可赢 {max} 代币。",
   quoteWheelSignIn: "登录赢代币",

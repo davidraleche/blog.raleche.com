@@ -29,7 +29,7 @@ function MemoForm({ memo, posts }: { memo?: Awaited<ReturnType<typeof load>>["me
         </select>
       </label>
       <div className="grid grid-cols-2 gap-3">
-        <label className="block"><span className="term-label">Price (tokens)</span><input name="priceTokens" type="number" min={1} defaultValue={memo?.priceTokens ?? MEMO_COST} className="term-input mt-1" /></label>
+        <label className="block"><span className="term-label">Price (tokens)</span><input name="priceTokens" type="number" min={0} title="0 makes it a free sample anyone can read" defaultValue={memo?.priceTokens ?? MEMO_COST} className="term-input mt-1" /></label>
         <label className="block"><span className="term-label">Order</span><input name="sortOrder" type="number" defaultValue={memo?.sortOrder ?? 0} className="term-input mt-1" /></label>
       </div>
       <label className="block"><span className="term-label">{memo?.fileName ? "Replace PDF" : "PDF file"} (max 4.5 MB)</span><input name="file" type="file" accept="application/pdf" className="term-input mt-1" /></label>
@@ -73,7 +73,7 @@ export default async function Memos({ searchParams }: { searchParams: Promise<{ 
             <details key={m.id} open={sp.saved === m.id} className="term-panel p-4">
               <summary className="flex cursor-pointer flex-wrap items-center gap-3">
                 <span className="text-slate-100">{m.title}</span>
-                {!m.fileSize ? <Badge tone="down">No PDF</Badge> : m.active ? <Badge tone="up">On sale · {m.priceTokens} tokens</Badge> : <Badge>Hidden</Badge>}
+                {!m.fileSize ? <Badge tone="down">No PDF</Badge> : m.active ? <Badge tone="up">{m.priceTokens === 0 ? "Free sample" : `On sale · ${m.priceTokens} tokens`}</Badge> : <Badge>Hidden</Badge>}
                 <span className="font-mono text-[10px] text-terminal-dim">{s ? `${s._count} sold · ${(s._sum.tokens ?? 0).toLocaleString()} tokens` : "0 sold"}</span>
               </summary>
               <div className="mt-4">

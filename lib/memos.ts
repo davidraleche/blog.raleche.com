@@ -9,6 +9,9 @@ export const memoListSelect = {
   post: { select: { slug: true, title: true, coverImage: true } },
 } satisfies Prisma.MemoSelect;
 
+/** A memo priced at 0 tokens is a free sample: anyone can read it, no purchase or sign-in needed. */
+export const isFreeMemo = (m: { priceTokens: number }) => m.priceTokens === 0;
+
 export const ownsMemo = async (userId: string | undefined, memoId: string) =>
   !!userId && !!(await db.memoPurchase.findUnique({ where: { userId_memoId: { userId, memoId } }, select: { id: true } }));
 
@@ -16,6 +19,7 @@ export const ownsMemo = async (userId: string | undefined, memoId: string) =>
 export async function buyMemoWithTokens(userId: string, memoId: string): Promise<"ok" | "already" | "insufficient" | "unavailable"> {
   const memo = await db.memo.findUnique({ where: { id: memoId }, select: { active: true, priceTokens: true, fileSize: true } });
   if (!memo?.active || !memo.fileSize) return "unavailable";
+  if (memo.priceTokens === 0) return "already"; // free sample: nothing to buy
   if (await ownsMemo(userId, memoId)) return "already";
   const cost = memo.priceTokens;
   try {

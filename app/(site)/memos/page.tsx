@@ -3,7 +3,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { localizeFields } from "@/lib/localize";
 import { db } from "@/lib/db";
 import { getUser } from "@/lib/auth";
-import { memoListSelect } from "@/lib/memos";
+import { isFreeMemo, memoListSelect } from "@/lib/memos";
 import { buyMemo } from "@/app/actions/memos";
 import { TopUpDialog } from "@/components/TopUpDialog";
 import { topUpLabels, topUpPacks } from "@/lib/topup";
@@ -23,7 +23,8 @@ export default async function Memos({ searchParams }: { searchParams: Promise<{ 
     db.memo.findMany({ where: { active: true }, select: memoListSelect, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }),
     user ? db.memoPurchase.findMany({ where: { userId: user.id }, select: { memoId: true } }) : [],
   ]);
-  const memos = await localizeFields(locale, rawMemos, ["title", "summary"]);
+  // Free samples first, so readers can see what a memo looks like before buying one.
+  const memos = (await localizeFields(locale, rawMemos, ["title", "summary"])).sort((a, b) => Number(isFreeMemo(b)) - Number(isFreeMemo(a)));
   const ownedIds = new Set(owned.map((o) => o.memoId));
   const n = (v: number) => v.toLocaleString(BCP47[locale]);
 
@@ -51,8 +52,10 @@ export default async function Memos({ searchParams }: { searchParams: Promise<{ 
           {memos.map((m) => {
             const mine = ownedIds.has(m.id);
             const onSale = !!m.fileSize;
+            const free = onSale && isFreeMemo(m);
             return (
-              <div key={m.id} id={m.slug} className="flex scroll-mt-24 flex-col border-[3px] border-ink target:ring-4 target:ring-accent">
+              <div key={m.id} id={m.slug} className={`relative flex scroll-mt-24 flex-col border-[3px] target:ring-4 target:ring-accent ${free ? "border-terminal-amber shadow-[6px_6px_0_#f5a623]" : "border-ink"}`}>
+                {free && <span className="absolute left-3 top-3 z-10 bg-terminal-amber px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-ink shadow">{t("memoFreeBadge")}</span>}
                 {m.post?.coverImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={m.post.coverImage} alt="" className="aspect-[1200/630] w-full border-b-[3px] border-ink object-cover" loading="lazy" />
@@ -62,9 +65,11 @@ export default async function Memos({ searchParams }: { searchParams: Promise<{ 
                 <div className="flex flex-1 flex-col p-5">
                   <h2 className="hed text-2xl">{m.title}</h2>
                   <p className="mt-2 flex-1 font-serif text-ink/70">{m.summary}</p>
-                  <p className="mt-4 font-display text-3xl font-extrabold">{onSale ? t("memoPrice", { n: n(m.priceTokens) }) : t("memoSoon")}</p>
+                  <p className="mt-4 font-display text-3xl font-extrabold">{free ? t("memoFree") : onSale ? t("memoPrice", { n: n(m.priceTokens) }) : t("memoSoon")}</p>
                   <div className="mt-3 flex flex-wrap gap-3 font-mono text-[11px] uppercase tracking-[0.15em]">
-                    {mine ? (
+                    {free ? (
+                      <a href={`/memos/${m.id}/file`} target="_blank" rel="noopener" className="bg-terminal-amber px-4 py-2 font-bold text-ink hover:bg-ink hover:text-white">{t("memoReadFree")}</a>
+                    ) : mine ? (
                       <Link href="/account/memos" className="bg-ink px-4 py-2 text-white hover:bg-accent">{t("memoOpen")}</Link>
                     ) : onSale ? (
                       <form action={buyMemo}>
