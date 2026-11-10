@@ -4,6 +4,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { amazonTag, amazonUrl } from "@/lib/books";
 import { BookCover } from "@/components/BookCover";
 import type { Messages } from "@/lib/i18n/messages";
+import { AmazonButton } from "@/components/AmazonButton";
 
 export const metadata = { title: "Books", description: "The books RALECHE guests read, recommend and wrote, with where they talked about them.", alternates: { canonical: "/books" } };
 
@@ -43,7 +44,7 @@ export default async function Books() {
                   </li>
                 ))}
               </ul>
-              <a href={amazonUrl(b, tag)} target="_blank" rel="sponsored nofollow noopener" className="btn-dark mt-4 self-start">{t("buyOnAmazon")}</a>
+              <div className="mt-4 self-start"><AmazonButton href={amazonUrl(b, tag)} label={t("buyOnAmazon")} className="h-10" /></div>
             </div>
           </article>
         ))}

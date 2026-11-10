@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BookCover } from "./BookCover";
 import { amazonUrl } from "@/lib/books";
+import { AmazonButton } from "./AmazonButton";
 
 type Book = { id: string; slug: string; title: string; author: string; asin: string | null; coverUrl: string | null };
 type BookMention = { id: string; who: string; relation: string; note: string; book: Book };
@@ -26,7 +27,7 @@ export function StoryBooks({ books, people, tag, labels, className = "mt-12" }: 
                   <p className="font-display text-xl font-bold leading-tight">{m.book.title}</p>
                   <p className="font-mono text-[10px] uppercase tracking-widest text-ink/60">{m.book.author}</p>
                   <p className="mt-1 font-serif text-sm"><span className="font-bold">{m.who}</span> {labels[`relation_${m.relation}`]}{m.note && <span className="text-ink/70">: “{m.note}”</span>}</p>
-                  <a href={amazonUrl(m.book, tag)} target="_blank" rel="sponsored nofollow noopener" className="mt-2 inline-block bg-terminal-amber px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-widest text-ink hover:bg-ink hover:text-white">{labels.buyOnAmazon}</a>
+                  <div className="mt-2"><AmazonButton href={amazonUrl(m.book, tag)} label={labels.buyOnAmazon} className="h-8" /></div>
                 </div>
               </li>
             ))}
