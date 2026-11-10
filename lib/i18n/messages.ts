@@ -13,13 +13,17 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  quoteWheelWon: "You won {n} tokens!",
+  quoteWheelWonDetail: "Added to your balance: you now have {n} tokens. Tokens on this wheel pay out once a day, so keep spinning for quotes.",
+  quoteWheelSignIn: "Sign in to win tokens",
+  quoteWheelSignInDek: "You landed on {n} tokens! Tokens go to signed-in readers: sign in, then spin again.",
   homeNav: "Home",
   rateThisStory: "Rate this story",
   likeStory: "I like this story",
   dislikeStory: "I don't like this story",
-  quoteWheelShort: "Free spins. One in two lands on a quote from our speakers.",
-  quoteWheelTitle: "Spin for a quote",
-  quoteWheelDek: "Spin as often as you like. One in two spins lands on a quote from our speakers.",
+  quoteWheelShort: "Free spins. One in five wins tokens, the rest land on a quote from our speakers.",
+  quoteWheelTitle: "Spin the wheel",
+  quoteWheelDek: "Spin as often as you like. One in five spins wins tokens, the rest land on a quote from our speakers.",
   spinAgain: "Spin again",
   quoteWord: "Quote",
   tryAgain: "Try again",
@@ -411,13 +415,17 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  quoteWheelWon: "Vous gagnez {n} jetons !",
+  quoteWheelWonDetail: "Ajoutés à votre solde : vous avez maintenant {n} jetons. Cette roue fait gagner des jetons une fois par jour ; continuez pour les citations.",
+  quoteWheelSignIn: "Connectez-vous pour gagner des jetons",
+  quoteWheelSignInDek: "Vous tombez sur {n} jetons ! Les jetons sont réservés aux lecteurs connectés : connectez-vous, puis retournez la roue.",
   homeNav: "Accueil",
   rateThisStory: "Notez cet article",
   likeStory: "J'aime cet article",
   dislikeStory: "Je n'aime pas cet article",
-  quoteWheelShort: "Tours gratuits. Un sur deux tombe sur une citation de nos intervenants.",
-  quoteWheelTitle: "Tournez pour une citation",
-  quoteWheelDek: "Tournez autant que vous voulez. Un tour sur deux tombe sur une citation de nos intervenants.",
+  quoteWheelShort: "Tours gratuits. Un sur cinq fait gagner des jetons, les autres tombent sur une citation de nos intervenants.",
+  quoteWheelTitle: "Tournez la roue",
+  quoteWheelDek: "Tournez autant que vous voulez. Un tour sur cinq fait gagner des jetons, les autres tombent sur une citation de nos intervenants.",
   spinAgain: "Rejouer",
   quoteWord: "Citation",
   tryAgain: "Réessayez",
@@ -795,13 +803,17 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  quoteWheelWon: "¡Ganaste {n} tokens!",
+  quoteWheelWonDetail: "Añadidos a tu saldo: ahora tienes {n} tokens. Esta rueda da tokens una vez al día; sigue girando para ver citas.",
+  quoteWheelSignIn: "Inicia sesión para ganar tokens",
+  quoteWheelSignInDek: "¡Caíste en {n} tokens! Los tokens son para lectores con sesión iniciada: inicia sesión y vuelve a girar.",
   homeNav: "Inicio",
   rateThisStory: "Valora esta historia",
   likeStory: "Me gusta esta historia",
   dislikeStory: "No me gusta esta historia",
-  quoteWheelShort: "Giros gratis. Uno de cada dos cae en una cita de nuestros ponentes.",
-  quoteWheelTitle: "Gira para una cita",
-  quoteWheelDek: "Gira cuanto quieras. Uno de cada dos giros cae en una cita de nuestros ponentes.",
+  quoteWheelShort: "Giros gratis. Uno de cada cinco gana tokens, el resto cae en una cita de nuestros ponentes.",
+  quoteWheelTitle: "Gira la rueda",
+  quoteWheelDek: "Gira cuanto quieras. Uno de cada cinco giros gana tokens, el resto cae en una cita de nuestros ponentes.",
   spinAgain: "Girar otra vez",
   quoteWord: "Cita",
   tryAgain: "Otra vez",
@@ -1179,13 +1191,17 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  quoteWheelWon: "你赢得了 {n} 代币！",
+  quoteWheelWonDetail: "已存入余额：你现在有 {n} 代币。此轮盘每天只发一次代币，继续转来看名言吧。",
+  quoteWheelSignIn: "登录赢代币",
+  quoteWheelSignInDek: "你转到了 {n} 代币！代币仅发给已登录读者：请登录后再转一次。",
   homeNav: "首页",
   rateThisStory: "为本文打分",
   likeStory: "喜欢这篇",
   dislikeStory: "不喜欢这篇",
-  quoteWheelShort: "免费转，每两次就有一次转出嘉宾名言。",
-  quoteWheelTitle: "转出名言",
-  quoteWheelDek: "想转几次都行，每两次就有一次会转出嘉宾名言。",
+  quoteWheelShort: "免费转：五次中有一次赢代币，其余转出嘉宾名言。",
+  quoteWheelTitle: "转动幸运轮",
+  quoteWheelDek: "想转几次都行：五次中有一次赢代币，其余转出嘉宾名言。",
   spinAgain: "再转一次",
   quoteWord: "名言",
   tryAgain: "再试一次",

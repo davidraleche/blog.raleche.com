@@ -27,3 +27,7 @@ export const WHEEL = [
   { prize: 30, weight: 7 },
 ] as const;
 
+
+/** Quote wheel: one spin in QUOTE_WHEEL_ODDS lands on tokens (the rest land on a speaker quote). Tokens pay out once a day per account. */
+export const QUOTE_WHEEL_ODDS = 5;
+export const QUOTE_WHEEL_PRIZE = 10;

@@ -20,5 +20,5 @@ export const getSpeakerQuotes = cache(async (locale: Locale): Promise<SpeakerQuo
 
 export function quoteWheelLabels(t: (k: never, vars?: Record<string, string | number>) => string) {
   const tt = t as unknown as (k: string) => string;
-  return { title: tt("quoteWheelTitle"), dek: tt("quoteWheelDek"), spin: tt("spin"), spinAgain: tt("spinAgain"), quote: tt("quoteWord"), miss: tt("tryAgain"), missDek: tt("quoteMissDek"), readStory: tt("readFullStory") };
+  return { title: tt("quoteWheelTitle"), dek: tt("quoteWheelDek"), spin: tt("spin"), spinAgain: tt("spinAgain"), quote: tt("quoteWord"), won: tt("quoteWheelWon"), wonDetail: tt("quoteWheelWonDetail"), signIn: tt("quoteWheelSignIn"), signInDek: tt("quoteWheelSignInDek"), readStory: tt("readFullStory"), close: tt("close") };
 }
