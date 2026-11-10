@@ -9,10 +9,13 @@ export const isLocale = (v: unknown): v is Locale => LOCALES.includes(v as Local
 
 /** Replace {name} placeholders. */
 export function fmt(s: string, vars: Record<string, string | number> = {}) {
-  return s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
+  // A missing key gives "" instead of crashing the page.
+  return (s ?? "").replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
 }
 
 const en = {
+  txn_quotewheel: "Won on the quote wheel",
+  txn_memo: "Bought a memo",
   memoFree: "Free",
   memoFreeBadge: "Free sample",
   memoReadFree: "Read it free",
@@ -418,6 +421,8 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  txn_quotewheel: "Gain à la roue des citations",
+  txn_memo: "Mémo acheté",
   memoFree: "Gratuit",
   memoFreeBadge: "Exemple gratuit",
   memoReadFree: "Lire gratuitement",
@@ -809,6 +814,8 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  txn_quotewheel: "Premio en la rueda de citas",
+  txn_memo: "Compraste un memo",
   memoFree: "Gratis",
   memoFreeBadge: "Muestra gratis",
   memoReadFree: "Léelo gratis",
@@ -1200,6 +1207,8 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  txn_quotewheel: "名言轮盘奖励",
+  txn_memo: "购买备忘录",
   memoFree: "免费",
   memoFreeBadge: "免费试读",
   memoReadFree: "免费阅读",
