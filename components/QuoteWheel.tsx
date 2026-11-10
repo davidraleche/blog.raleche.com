@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 import { spinQuoteWheel } from "@/app/actions/quote-wheel";
+import { trackEvent } from "@/lib/track-client";
 import { QUOTE_WHEEL_DAILY_MAX, QUOTE_WHEEL_PRIZE } from "@/lib/token-config";
 
 export type SpeakerQuote = { text: string; speaker: string; slug: string; title: string };
@@ -97,6 +98,7 @@ function WheelPanel({ quotes, labels, autoSpin = false, inModal = false }: { quo
         if (quotes.length > 1 && i === last.current) i = (i + 1) % quotes.length; // no immediate repeats
         last.current = i;
         setResult({ kind: "quote", quote: quotes[i] });
+        trackEvent("spin_quote", `Quote wheel: landed on a quote by ${quotes[i].speaker}: “${quotes[i].text.slice(0, 160)}”`);
         confetti({ particleCount: 90, spread: 80, origin: { y: 0.6 }, colors: ["#f5a623", "#ffd76a", "#e1251b", "#1fb6e8", "#ffffff"], shapes: ["star", "circle"], zIndex: 2000 });
       }
       setSpinning(false);

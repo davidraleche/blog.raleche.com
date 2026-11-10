@@ -402,6 +402,24 @@ model PageView {
   @@index([path, createdAt])
 }
 
+/// Everything a visitor does besides viewing pages (clicks, spins, quiz and game answers), signed in or not, in order.
+model VisitorEvent {
+  id        String   @id @default(cuid())
+  visitorId String // the "vid" cookie (same as PageView.visitorId)
+  sessionId String? // the visit ("vsid" cookie)
+  userId    String?
+  kind      String // click | spin_daily | spin_quote | quiz | vocab | quote_game
+  path      String   @default("")
+  detail    String   @default("")
+  amount    Int? // tokens won
+  correct   Boolean? // quiz or game answer right or wrong
+  createdAt DateTime @default(now())
+
+  @@index([visitorId, createdAt])
+  @@index([createdAt])
+  @@index([kind, createdAt])
+}
+
 /// An in-depth memo (PDF) sold for tokens. The file is stored in the database so only buyers can fetch it.
 model Memo {
   id          String         @id @default(cuid())

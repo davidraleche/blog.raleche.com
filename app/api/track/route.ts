@@ -6,6 +6,7 @@ import { BOT_UA } from "@/lib/seo";
 import { after } from "next/server";
 import { clientIp, countryOf, countryLabel } from "@/lib/geo";
 import { logActivity } from "@/lib/activity";
+import { visitorName } from "@/lib/visitor-name";
 
 const VISITOR = "vid"; // first-party visitor id, 1 year
 const VISIT = "vsid"; // current visit; ends after 30 minutes without a page view
@@ -54,8 +55,8 @@ export async function POST(req: Request) {
     if (landing) {
       const vid = visitorId;
       after(async () => {
-        const before = await db.pageView.count({ where: { visitorId: vid } });
-        const detail = `${countryLabel(country)} · landed on ${body.path}${body.title ? ` (“${body.title.slice(0, 120)}”)` : ""} · from ${referrer ?? "direct / unknown"} · ${before > 1 ? "returning visitor" : "first visit"}`;
+        const visits = await db.pageView.count({ where: { visitorId: vid, landing: true } });
+        const detail = `${visitorName(vid)} (${visits > 1 ? `visit #${visits}` : "first visit"}) · ${countryLabel(country)} · landed on ${body.path}${body.title ? ` (“${body.title.slice(0, 120)}”)` : ""} · from ${referrer ?? "direct / unknown"}`;
         await logActivity({ kind: "visit", userId: user?.id ?? null, detail });
       });
     }

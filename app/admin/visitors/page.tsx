@@ -2,6 +2,8 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { PageTitle, Badge } from "@/components/admin/ui";
 import { countryLabel } from "@/lib/geo";
+import { visitorName } from "@/lib/visitor-name";
+import { VisitorDetail } from "./VisitorDetail";
 
 type PV = { id: string; visitorId: string; sessionId: string; userId: string | null; path: string; title: string; referrer: string | null; landing: boolean; country: string | null; seconds: number; createdAt: Date };
 
@@ -28,11 +30,12 @@ function Table({ title, rows, unit = "" }: { title: string; rows: [string, numbe
   );
 }
 
-export default async function Visitors({ searchParams }: { searchParams: Promise<{ days?: string; user?: string }> }) {
+export default async function Visitors({ searchParams }: { searchParams: Promise<{ days?: string; user?: string; visitor?: string }> }) {
   const sp = await searchParams;
   const days = [7, 30, 90].includes(Number(sp.days)) ? Number(sp.days) : 30;
   const since = new Date(Date.now() - days * 86400e3);
 
+  if (sp.visitor) return <VisitorDetail visitorId={sp.visitor} days={days} />;
   if (sp.user) return <UserDetail userId={sp.user} since={since} days={days} />;
 
   const views: PV[] = await db.pageView.findMany({ where: { createdAt: { gte: since } }, orderBy: { createdAt: "asc" }, take: 100_000 });
@@ -77,6 +80,26 @@ export default async function Visitors({ searchParams }: { searchParams: Promise
     return { ...u, views: mine.length, visits: new Set(mine.map((v) => v.sessionId)).size, seconds: mine.reduce((n, v) => n + v.seconds, 0), last: mine[mine.length - 1]?.createdAt };
   }).sort((a, b) => (b.last?.getTime() ?? 0) - (a.last?.getTime() ?? 0));
 
+  // Every visitor (signed in or not) under their visitor name: visits, what they did, where they last left.
+  const events = await db.visitorEvent.findMany({ where: { createdAt: { gte: since } }, select: { visitorId: true, kind: true, correct: true, amount: true }, take: 200_000 });
+  const evBy = new Map<string, typeof events>();
+  for (const e of events) evBy.set(e.visitorId, [...(evBy.get(e.visitorId) ?? []), e]);
+  const byVisitor = new Map<string, PV[]>();
+  for (const v of views) byVisitor.set(v.visitorId, [...(byVisitor.get(v.visitorId) ?? []), v]);
+  const everVisits = await db.pageView.groupBy({ by: ["visitorId"], where: { visitorId: { in: [...byVisitor.keys()] }, landing: true }, _count: true, _min: { createdAt: true } });
+  const visitorRows = [...byVisitor.entries()].map(([vid, vs]) => {
+    const ev = evBy.get(vid) ?? [];
+    const ever = everVisits.find((x) => x.visitorId === vid);
+    const answered = ev.filter((e) => e.correct !== null);
+    const uid = vs.find((v) => v.userId)?.userId;
+    return {
+      vid, name: visitorName(vid), member: uid ? users.find((u) => u.id === uid) : undefined, country: vs[0].country,
+      visits: Math.max(ever?._count ?? 0, new Set(vs.map((v) => v.sessionId)).size), firstSeen: ever?._min.createdAt ?? vs[0].createdAt, last: vs[vs.length - 1],
+      pages: vs.length, spins: ev.filter((e) => e.kind.startsWith("spin")).length, right: answered.filter((e) => e.correct).length, wrong: answered.filter((e) => !e.correct).length,
+      won: ev.reduce((n, e) => n + (e.amount ?? 0), 0), clicks: ev.filter((e) => e.kind === "click").length,
+    };
+  }).sort((a, b) => b.last.createdAt.getTime() - a.last.createdAt.getTime()).slice(0, 300);
+
   return (
     <div>
       <PageTitle title="Visitors" sub={`Last ${days} days · page views, landing and exit pages, what readers like`} />
@@ -94,6 +117,26 @@ export default async function Visitors({ searchParams }: { searchParams: Promise
         <Table title="Landing pages (where visits start)" rows={top(landings, (v) => v.path)} />
         <Table title="Exit pages (where visits end)" rows={top(exits, (v) => v.path)} />
         <Table title="Where visitors come from" rows={top(landings.filter((v) => v.referrer), (v) => v.referrer!.split("/")[0])} />
+      </div>
+
+      <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-terminal-amber">Every visitor (newest first) · click a name for everything they did</h2>
+      <div className="term-panel mb-6 overflow-x-auto">
+        <table className="term-table">
+          <thead><tr><th>Visitor</th><th>Country</th><th className="text-right">Visits</th><th className="text-right">Pages</th><th className="text-right">Clicks</th><th className="text-right">Spins</th><th className="text-right">Right / wrong</th><th className="text-right">Tokens won</th><th>First seen</th><th>Last seen</th><th>Left from</th></tr></thead>
+          <tbody>
+            {visitorRows.length === 0 && <tr><td colSpan={11} className="text-terminal-dim">No visitors yet.</td></tr>}
+            {visitorRows.map((r) => (
+              <tr key={r.vid}>
+                <td className="whitespace-nowrap"><Link href={`/admin/visitors?visitor=${encodeURIComponent(r.vid)}&days=${days}`} className="text-slate-100 hover:text-terminal-amber">{r.name}</Link>{r.member && <span className="ml-2 text-terminal-amber">{r.member.name || r.member.email || r.member.phone}</span>}</td>
+                <td className="whitespace-nowrap">{countryLabel(r.country)}</td>
+                <td className="text-right">{r.visits}{r.visits > 1 && <span className="text-terminal-up"> ↺</span>}</td><td className="text-right">{r.pages}</td><td className="text-right">{r.clicks}</td><td className="text-right">{r.spins}</td>
+                <td className="text-right">{r.right + r.wrong ? `${r.right} / ${r.wrong}` : "–"}</td><td className="text-right">{r.won || "–"}</td>
+                <td className="whitespace-nowrap text-terminal-dim">{time(r.firstSeen)}</td><td className="whitespace-nowrap text-terminal-dim">{time(r.last.createdAt)}</td>
+                <td className="max-w-[16rem] truncate" title={r.last.path}>{r.last.path}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-terminal-amber">What readers like most</h2>

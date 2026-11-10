@@ -8,6 +8,7 @@ import { today } from "@/lib/utils";
 import { credit } from "@/lib/tokens";
 import { logActivity } from "@/lib/activity";
 import { openToken } from "@/lib/word-games";
+import { recordEvent } from "@/lib/visitor-events";
 import { WORD_GAME_DAILY_MAX, WORD_GAME_PRIZE } from "@/lib/token-config";
 
 export type GameResult = {
@@ -23,7 +24,20 @@ export type GameResult = {
 };
 
 /** Check an answer to a Vocabulary or Quotes question. Right answers pay WORD_GAME_PRIZE, up to WORD_GAME_DAILY_MAX a day per game. */
-export async function answerWordGame(token: string, choice: number): Promise<GameResult | null> {
+export async function answerWordGame(token: string, choice: number, shown?: { prompt: string; options: string[] }): Promise<GameResult | null> {
+  const r = await answer(token, choice);
+  if (r) {
+    const picked = shown?.options[choice] ?? `option ${choice + 1}`;
+    const right = shown?.options[r.answer] ?? `option ${r.answer + 1}`;
+    const prompt = (shown?.prompt ?? "").slice(0, 140);
+    const what = openToken(token)?.k === "vocab" ? `Vocabulary “${prompt}”` : `Who said “${prompt}”`;
+    const pay = r.earned ? ` · +${r.earned} tokens` : r.reason === "signin" ? " · signed out, no tokens" : r.reason === "capped" ? " · daily token limit reached" : r.reason === "answered" ? " · already answered" : "";
+    await recordEvent({ kind: openToken(token)?.k === "vocab" ? "vocab" : "quote_game", detail: `${what}: picked “${picked.slice(0, 120)}”, ${r.correct ? "right" : `wrong (answer: “${right.slice(0, 120)}”)`}${pay}`, correct: r.correct, amount: r.earned });
+  }
+  return r;
+}
+
+async function answer(token: string, choice: number): Promise<GameResult | null> {
   const p = openToken(token);
   if (!p || !Number.isInteger(choice) || choice < 0 || choice > 3) return null;
   const correct = choice === p.a;

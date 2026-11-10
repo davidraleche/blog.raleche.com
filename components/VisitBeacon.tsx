@@ -2,10 +2,28 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
+import { trackEvent } from "@/lib/track-client";
 
 /** Records each page view, and how long the page was actually visible when the reader leaves it. */
 export function VisitBeacon() {
   const pathname = usePathname();
+  // Every click on a link or button (what the visitor does next), and leaving the site (tab closed, reload or another site).
+  useEffect(() => {
+    let internalAt = 0; // a click that moves within the site (link or reload button) isn't leaving it
+    const onClick = (ev: MouseEvent) => {
+      const el = (ev.target as Element | null)?.closest?.("a, button, [role=button], label");
+      if (!el || el.closest("[data-no-track], input[type=password]")) return;
+      const text = (el.getAttribute("aria-label") || el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 140);
+      const href = el instanceof HTMLAnchorElement ? el.getAttribute("href") : null;
+      const out = href && /^https?:/.test(href) && !href.includes(location.host) ? " (leaves the site)" : "";
+      if (!out) internalAt = Date.now();
+      trackEvent("click", href ? `${text || "link"} → ${href}${out}` : text || el.tagName.toLowerCase());
+    };
+    const onLeave = () => { if (Date.now() - internalAt > 3000) trackEvent("leave", `Closed the tab, went to another site or reloaded, on ${location.pathname}`); };
+    document.addEventListener("click", onClick, true);
+    window.addEventListener("pagehide", onLeave);
+    return () => { document.removeEventListener("click", onClick, true); window.removeEventListener("pagehide", onLeave); };
+  }, []);
   useEffect(() => {
     let id: string | null = null;
     let visibleMs = 0;

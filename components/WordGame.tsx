@@ -19,7 +19,7 @@ export function WordGame({ q: initial, labels, signInHref }: { q: GameQuestion; 
     if (picked !== null) return;
     setPicked(i);
     start(async () => {
-      const r = await answerWordGame(q.token, i).catch(() => null);
+      const r = await answerWordGame(q.token, i, { prompt: q.prompt, options: q.options }).catch(() => null);
       if (r) setResult(r);
       else setFailed(true);
     });
@@ -35,7 +35,7 @@ export function WordGame({ q: initial, labels, signInHref }: { q: GameQuestion; 
           <blockquote className="font-display text-2xl font-bold leading-snug sm:text-4xl">“{q.prompt}”</blockquote>
         )}
       </div>
-      <ol className="grid gap-3 p-5 sm:grid-cols-2 sm:p-8">
+      <ol data-no-track className="grid gap-3 p-5 sm:grid-cols-2 sm:p-8">
         {q.options.map((o, i) => {
           const isAnswer = result && i === result.answer;
           const isWrongPick = result && i === picked && !result.correct;

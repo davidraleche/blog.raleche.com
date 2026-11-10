@@ -8,6 +8,7 @@ import { today } from "@/lib/utils";
 import { credit } from "@/lib/tokens";
 import { cookies } from "next/headers";
 import { anonymousVisitorNote, logActivity } from "@/lib/activity";
+import { recordEvent } from "@/lib/visitor-events";
 import { QUOTE_WHEEL_DAILY_MAX, QUOTE_WHEEL_ODDS, QUOTE_WHEEL_PRIZE } from "@/lib/token-config";
 
 export type QuoteSpin = { outcome: "quote" } | { outcome: "tokens"; amount: number; credited: boolean; balance?: number };
@@ -18,6 +19,13 @@ export type QuoteSpin = { outcome: "quote" } | { outcome: "tokens"; amount: numb
  * Signed-out readers can land on tokens but must sign in to win them.
  */
 export async function spinQuoteWheel(): Promise<QuoteSpin> {
+  const r = await spin();
+  // The quote it lands on is picked in the browser, which reports it; tokens are recorded here.
+  if (r.outcome === "tokens") await recordEvent({ kind: "spin_quote", detail: r.credited ? `Quote wheel: won ${r.amount} tokens` : `Quote wheel: landed on ${r.amount} tokens, signed out (asked to sign in)`, amount: r.credited ? r.amount : 0 });
+  return r;
+}
+
+async function spin(): Promise<QuoteSpin> {
   const hit = randomInt(QUOTE_WHEEL_ODDS) === 0;
   const user = await getUser();
   if (!user) {

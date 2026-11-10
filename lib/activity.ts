@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "./db";
+import { visitorName } from "./visitor-name";
 import { sendEmail } from "./email";
 import { adminEmail } from "./auth";
 
@@ -77,7 +78,7 @@ export async function anonymousVisitorNote(): Promise<string> {
         const from = first.referrer ? (() => { try { return new URL(first.referrer!).hostname; } catch { return first.referrer; } })() : "direct";
         parts.push(`first came ${first.createdAt.toISOString().slice(0, 10)} to ${first.path} (from ${from})`, `${views} page view${views === 1 ? "" : "s"}`);
       }
-      parts.push(`visitor ${vid.slice(0, 8)}`);
+      parts.push(`visitor ${visitorName(vid)}`);
     }
     return parts.filter(Boolean).join(" · ");
   } catch {

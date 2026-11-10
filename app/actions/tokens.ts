@@ -1,4 +1,5 @@
 "use server";
+import { recordEvent } from "@/lib/visitor-events";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -249,6 +250,7 @@ export async function submitQuiz(_: QuizResult, form: FormData): Promise<QuizRes
     return { correct: p.correct, earned: p.earned, answers: reveal(p.correct), picks: p.picks, already: true };
   }
   if (won) await credit(user.id, QUIZ_REWARD, "quiz", `quiz:${user.id}:${postId}`);
+  await recordEvent({ kind: "quiz", detail: `Story quiz on ${post.slug}: ${correct} of ${quiz.length} right · ${quiz.map((q, i) => `“${q.q.slice(0, 70)}” → picked “${q.options[picks[i]]?.slice(0, 60)}” ${picks[i] === q.answer ? "✓" : "✗"}`).join(" · ")}${won ? ` · +${QUIZ_REWARD} tokens` : ""}`, correct: won, amount: won ? QUIZ_REWARD : 0 });
   after(() => logActivity({ kind: "quiz", userId: user.id, postId, detail: `${correct} of ${quiz.length} right${won ? ` (+${QUIZ_REWARD} tokens)` : ""}` }));
   revalidatePath(`/story/${post.slug}`);
   return { correct, earned: won ? QUIZ_REWARD : 0, answers: reveal(correct), picks };
