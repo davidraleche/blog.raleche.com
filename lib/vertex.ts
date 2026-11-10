@@ -4,7 +4,8 @@ import { promisify } from "util";
 
 const PROJECT = process.env.GOOGLE_CLOUD_PROJECT || "raleche-blog";
 // Tried in order; the first one this project can use is remembered. Set GEMINI_MODEL to force one.
-const MODELS = [process.env.GEMINI_MODEL || process.env.QUIZ_MODEL, "gemini-2.5-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-3.6-flash", "gemini-3-flash-preview"].filter((m, i, a): m is string => !!m && a.indexOf(m) === i);
+// gemini-2.5-flash was retired in Nov 2026 (it answered 404, or 403 "may not exist", and stopped every AI job).
+const MODELS = [process.env.GEMINI_MODEL || process.env.QUIZ_MODEL, "gemini-3.5-flash", "gemini-3.6-flash", "gemini-3-flash-preview", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite"].filter((m, i, a): m is string => !!m && a.indexOf(m) === i);
 let workingModel: string | null = null;
 
 async function accessToken() {
@@ -32,8 +33,12 @@ export async function geminiJson<T>(prompt: string, responseSchema: object, temp
       body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature, responseMimeType: "application/json", responseSchema } }),
       signal: AbortSignal.timeout(60_000),
     });
-    if (res.status === 404 && !workingModel) { lastError = `Vertex AI 404 for ${model}`; continue; } // not available to this project: try the next one
-    if (!res.ok) throw new Error(`Vertex AI ${res.status} (${model}): ${(await res.text()).replace(/\s+/g, " ").slice(0, 300)}`);
+    if (!res.ok) {
+      const text = (await res.text()).replace(/\s+/g, " ");
+      // Not available to this project (retired models can also answer 403 "or it may not exist"): try the next one.
+      if (!workingModel && (res.status === 404 || (res.status === 403 && /may not exist|not found/i.test(text)))) { lastError = `Vertex AI ${res.status} for ${model}`; continue; }
+      throw new Error(`Vertex AI ${res.status} (${model}): ${text.slice(0, 300)}`);
+    }
     if (!workingModel) { workingModel = model; console.log(`[vertex] using ${model}`); }
     const j = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
     return JSON.parse(j.candidates?.[0]?.content?.parts?.[0]?.text ?? "null") as T;

@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const r = await importFromSource(undefined, slug);
   if (r.errors.length) return Response.json({ error: r.errors[0] }, { status: 502 });
   revalidatePath("/", "layout");
-  // Quiz (answers checked against the executive summary) and FR/ES/ZH translations are prepared right after the response.
+  // Books and people, quiz (answers checked against the executive summary) and FR/ES/ZH translations are prepared right after the response.
   after(() => prepareStories(r.postIds));
-  return Response.json({ ok: true, created: r.created, updated: r.updated, preparing: ["quiz", "fr", "es", "zh"], url: `${process.env.APP_URL ?? "https://blog.raleche.com"}/story/${slug}` });
+  return Response.json({ ok: true, created: r.created, updated: r.updated, preparing: ["books", "quiz", "fr", "es", "zh"], url: `${process.env.APP_URL ?? "https://blog.raleche.com"}/story/${slug}` });
 }

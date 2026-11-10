@@ -4,21 +4,36 @@ import { renderMarkdown } from "./markdown";
 import { LOCALES, type Locale } from "./i18n/messages";
 import { translateHtml, translateMany } from "./translate";
 import { answersInSummary, generateQuiz, getQuiz, isValidQuiz, type QuizQuestion } from "./quiz";
+import { extractMentions } from "./mentions-ai";
+import { saveMentions } from "./books";
 
-export type PrepareReport = { slug: string; quiz: "created" | "kept" | "fixed" | "missing"; answersInSummary: boolean | null; languages: Locale[]; note?: string };
+export type PrepareReport = { slug: string; quiz: "created" | "kept" | "fixed" | "missing"; answersInSummary: boolean | null; languages: Locale[]; books?: number; note?: string };
 
 const OTHER = LOCALES.filter((l): l is Exclude<Locale, "en"> => l !== "en");
 
 /**
- * Gets a published story ready for readers: its quiz exists and every answer is stated in the executive
- * summary, and the summary, quiz and headline are translated (and cached) in every language.
+ * Gets a published story ready for readers: the books and people mentioned in it are found (for the Books
+ * section and its Amazon links), its quiz exists and every answer is stated in the executive summary, and the
+ * summary, quiz and headline are translated (and cached) in every language.
  * With recheck, an existing AI or starter quiz is verified and rewritten if an answer is not in the summary (quizzes edited by an admin are never touched).
  */
 export async function prepareStory(postId: string, opts: { recheck?: boolean } = {}): Promise<PrepareReport> {
-  const post = await db.post.findUnique({ where: { id: postId }, select: { id: true, slug: true, title: true, dek: true, body: true, executiveSummary: true, status: true } });
+  const post = await db.post.findUnique({ where: { id: postId }, select: { id: true, slug: true, title: true, dek: true, body: true, executiveSummary: true, status: true, mentionsAt: true } });
   if (!post || post.status !== "published") return { slug: post?.slug ?? postId, quiz: "missing", answersInSummary: null, languages: [], note: "not published" };
   const summary = post.executiveSummary || post.body;
   const report: PrepareReport = { slug: post.slug, quiz: "missing", answersInSummary: null, languages: [] };
+
+  // 0. Books and people (admin edits are kept: only stories never extracted are done here)
+  if (!post.mentionsAt) {
+    try {
+      const m = await extractMentions(post.title, post.body);
+      await saveMentions(post.id, m);
+      report.books = m.books.length;
+    } catch (e) {
+      report.note = (e as Error).message.slice(0, 200);
+      console.error(`[prepare] books for ${post.slug}: ${report.note}`);
+    }
+  }
 
   // 1. Quiz
   let quiz: QuizQuestion[] | null = await getQuiz(post.id);

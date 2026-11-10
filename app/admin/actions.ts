@@ -52,6 +52,8 @@ export async function savePost(form: FormData) {
   const post = id
     ? await db.post.update({ where: { id }, data })
     : await db.post.create({ data: { ...data, authorId: admin.id } });
+  // Publishing gets the story ready: books and people for the Books section, quiz, translations.
+  if (post.status === "published") after(() => prepareStories([post.id]));
   revalidatePath("/", "layout");
   redirect(`/admin/posts/${post.id}?saved=1`);
 }
