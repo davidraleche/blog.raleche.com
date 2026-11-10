@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getUser, canReadSummaries } from "@/lib/auth";
 import { renderMarkdown } from "@/lib/markdown";
 import { storyVideo } from "@/lib/youtube";
+import { hasTranscript } from "@/lib/transcript";
 import { unlockSummary, deleteOwnComment, reportComment } from "@/app/actions/tokens";
 import { formStamp } from "@/lib/comment-guard";
 import { StoryPoll, CommentForm } from "@/components/StoryEngage";
@@ -150,6 +151,7 @@ export default async function Story({ params, searchParams }: Props) {
     (["pollTitle", "poll_great", "poll_average", "poll_not_great", "pollEarn", "pollThanks", "votesN", "earnedTokens", "signInToVote", "commentsEarn", "commentPlaceholder", "postComment", "commentHeld", "commentRules", "pollCongrats", "pollTapToVote"] as const).map((k) => [k, t(k, { n: "{n}" })]),
   );
   const { videoId, body: fullBody } = storyVideo(raw.body);
+  const transcriptAvailable = raw.status === "published" && (await hasTranscript(raw.slug));
   const body = locked ? fullBody.split(/\n\n/).slice(0, 3).join("\n\n") : fullBody;
   const rawRelated = await db.post.findMany({
     where: { status: "published", id: { not: raw.id }, categoryId: raw.categoryId },
@@ -265,6 +267,19 @@ export default async function Story({ params, searchParams }: Props) {
             )}
             {user && <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-ink/60">{t("youHaveTokens", { n: user.tokenBalance })} · <Link href="/store" className="text-accent underline">{t("getTokens")}</Link></p>}
           </div>
+        )}
+
+        {transcriptAvailable && (
+          <section id="transcript" className="mt-12 border-[3px] border-ink p-6">
+            <p className="kicker">{t("transcriptTitle")}</p>
+            <p className="mt-2 font-serif text-lg text-ink/80">{t("transcriptBlurb")}</p>
+            <Link
+              href={user ? `/story/${raw.slug}/transcript` : `/signin?next=${encodeURIComponent(`/story/${raw.slug}/transcript`)}`}
+              className="btn-dark mt-4"
+            >
+              {user ? t("transcriptOpen") : t("transcriptSignIn")}
+            </Link>
+          </section>
         )}
 
         <AdSlot name="articleEnd" />
