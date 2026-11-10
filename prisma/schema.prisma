@@ -116,6 +116,8 @@ model Post {
   bookMentions     BookMention[]
   personMentions   PersonMention[]
   mentionsAt       DateTime? // when books/people were last extracted (null = not yet)
+  vocabTerms       VocabTerm[]
+  vocabAt          DateTime? // when the vocabulary was last extracted (null = not yet)
   speaker          String? // person interviewed, e.g. "Sam Altman"
   host             String? // interviewer, e.g. "Lenny Rachitsky"
   show             String? // podcast/channel, e.g. "Lenny's Podcast"
@@ -344,6 +346,23 @@ model PersonMention {
 
   @@index([postId])
   @@index([name])
+}
+
+/// A word or expression used in an interview, with its definition and who said it (for the Vocabulary section and vocabulary quizzes).
+model VocabTerm {
+  id         String   @id @default(cuid())
+  postId     String
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  term       String
+  definition String
+  category   String // elegant | ai | tech | trend
+  who        String // person who used it
+  quote      String   @default("") // the sentence where they used it
+  createdAt  DateTime @default(now())
+
+  @@unique([postId, term])
+  @@index([category])
+  @@index([who])
 }
 
 /// Everything readers do that the admin wants to know about: comments, votes, spins, quizzes, purchases, unlocks, follows.

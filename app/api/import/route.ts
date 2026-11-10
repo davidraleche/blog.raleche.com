@@ -18,5 +18,5 @@ export async function POST(req: Request) {
   revalidatePath("/", "layout");
   // Books and people, quiz (answers checked against the executive summary) and FR/ES/ZH translations are prepared right after the response.
   after(() => prepareStories(r.postIds));
-  return Response.json({ ok: true, created: r.created, updated: r.updated, preparing: ["books", "quiz", "fr", "es", "zh"], url: `${process.env.APP_URL ?? "https://blog.raleche.com"}/story/${slug}` });
+  return Response.json({ ok: true, created: r.created, updated: r.updated, preparing: ["books", "vocabulary", "quiz", "fr", "es", "zh"], url: `${process.env.APP_URL ?? "https://blog.raleche.com"}/story/${slug}` });
 }

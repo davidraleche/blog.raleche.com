@@ -6,13 +6,15 @@ import { translateHtml, translateMany } from "./translate";
 import { answersInSummary, generateQuiz, getQuiz, isValidQuiz, type QuizQuestion } from "./quiz";
 import { extractMentions, fetchTranscript } from "./mentions-ai";
 import { saveMentions, loadMentions, type Mentions } from "./books";
+import { extractVocab } from "./vocab-ai";
+import { saveVocab, loadVocab, mergeVocab } from "./vocab";
 
-export type PrepareReport = { slug: string; quiz: "created" | "kept" | "fixed" | "missing"; answersInSummary: boolean | null; languages: Locale[]; books?: number; note?: string };
+export type PrepareReport = { slug: string; quiz: "created" | "kept" | "fixed" | "missing"; answersInSummary: boolean | null; languages: Locale[]; books?: number; vocab?: number; note?: string };
 
 const OTHER = LOCALES.filter((l): l is Exclude<Locale, "en"> => l !== "en");
 
 /**
- * Gets a published story ready for readers: the books and people mentioned in it are found (for the Books
+ * Gets a published story ready for readers: its vocabulary (elegant, AI, tech and trend words, by speaker) is built, the books and people mentioned in it are found (for the Books
  * section and its Amazon links), its quiz exists and every answer is stated in the executive summary, and the
  * summary, quiz and headline are translated (and cached) in every language.
  * With recheck, an existing AI or starter quiz is verified and rewritten if an answer is not in the summary (quizzes edited by an admin are never touched).
@@ -25,22 +27,37 @@ function mergeMentions(old: Mentions, add: Mentions): Mentions {
   return { books, people };
 }
 
-export async function prepareStory(postId: string, opts: { recheck?: boolean; rescanBooks?: boolean } = {}): Promise<PrepareReport> {
-  const post = await db.post.findUnique({ where: { id: postId }, select: { id: true, slug: true, title: true, dek: true, body: true, executiveSummary: true, status: true, mentionsAt: true } });
+export async function prepareStory(postId: string, opts: { recheck?: boolean; rescanBooks?: boolean; rescanVocab?: boolean } = {}): Promise<PrepareReport> {
+  const post = await db.post.findUnique({ where: { id: postId }, select: { id: true, slug: true, title: true, dek: true, body: true, executiveSummary: true, status: true, mentionsAt: true, vocabAt: true, speaker: true, host: true } });
   if (!post || post.status !== "published") return { slug: post?.slug ?? postId, quiz: "missing", answersInSummary: null, languages: [], note: "not published" };
   const summary = post.executiveSummary || post.body;
   const report: PrepareReport = { slug: post.slug, quiz: "missing", answersInSummary: null, languages: [] };
 
   // 0. Books and people (admin edits are kept: only stories never extracted are done here)
+  let transcript: string | null | undefined;
+  const getTranscript = async () => (transcript === undefined ? (transcript = await fetchTranscript(post.slug)) : transcript);
   if (!post.mentionsAt || opts.rescanBooks) {
     try {
-      let m = await extractMentions(post.title, post.body, await fetchTranscript(post.slug));
+      let m = await extractMentions(post.title, post.body, await getTranscript());
       if (post.mentionsAt) m = mergeMentions(await loadMentions(post.id), m); // rescan: keep what's there, add what's new
       await saveMentions(post.id, m);
       report.books = m.books.length;
     } catch (e) {
       report.note = (e as Error).message.slice(0, 200);
       console.error(`[prepare] books for ${post.slug}: ${report.note}`);
+    }
+  }
+
+  // 0b. Vocabulary: elegant, AI, tech and trend words, each tied to the speaker who used it.
+  if (!post.vocabAt || opts.rescanVocab) {
+    try {
+      let v = await extractVocab(post, await getTranscript());
+      if (post.vocabAt) v = mergeVocab(await loadVocab(post.id), v);
+      await saveVocab(post.id, v);
+      report.vocab = v.length;
+    } catch (e) {
+      report.note = (e as Error).message.slice(0, 200);
+      console.error(`[prepare] vocabulary for ${post.slug}: ${report.note}`);
     }
   }
 
@@ -82,7 +99,7 @@ export async function prepareStory(postId: string, opts: { recheck?: boolean; re
 }
 
 /** Prepares several stories one after another (kept sequential to stay inside API limits). */
-export async function prepareStories(ids: string[], opts: { recheck?: boolean; rescanBooks?: boolean } = {}) {
+export async function prepareStories(ids: string[], opts: { recheck?: boolean; rescanBooks?: boolean; rescanVocab?: boolean } = {}) {
   const reports: PrepareReport[] = [];
   for (const id of ids) reports.push(await prepareStory(id, opts).catch((e) => ({ slug: id, quiz: "missing" as const, answersInSummary: null, languages: [], note: (e as Error).message.slice(0, 200) })));
   console.log("[prepare]", JSON.stringify(reports));

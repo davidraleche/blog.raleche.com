@@ -12,6 +12,8 @@ import { StoryQuiz } from "@/components/StoryQuiz";
 import { FollowButton } from "@/components/FollowButton";
 import { PersonRating } from "@/components/PersonRating";
 import { StoryBooks } from "@/components/StoryBooks";
+import { StoryVocab } from "@/components/StoryVocab";
+import { ensureVocab } from "@/lib/vocab-ai";
 import { amazonTag } from "@/lib/books";
 import { ensureMentions } from "@/lib/mentions-ai";
 import { getQuiz, ensureQuiz, nextStory } from "@/lib/quiz";
@@ -97,6 +99,15 @@ export default async function Story({ params, searchParams }: Props) {
     amazonTag(),
   ]);
   if (raw.status === "published" && !raw.mentionsAt) after(() => ensureMentions(raw));
+  // Vocabulary (terms stay in English, the point is to learn them; definitions are translated).
+  const vocabRows = await db.vocabTerm.findMany({ where: { postId: raw.id }, orderBy: { createdAt: "asc" } });
+  if (raw.status === "published" && !raw.vocabAt) after(() => ensureVocab(raw));
+  const vocabDefs = vocabRows.length ? await translateMany(locale, vocabRows.map((v) => v.definition)) : [];
+  const vocabTerms = vocabRows.map((v, i) => ({ ...v, definition: vocabDefs[i] || v.definition }));
+  const vocabLabels = {
+    ...Object.fromEntries((["vocabTitle", "vocabDek", "vocab_elegant", "vocab_ai", "vocab_tech", "vocab_trend"] as const).map((k) => [k, t(k)])),
+    vocabCount: t("vocabCount", { n: vocabRows.length }),
+  };
   const bookLabels = Object.fromEntries(
     (["onTheirShelf", "books", "buyOnAmazon", "relation_recommends", "relation_reading", "relation_influenced", "relation_wrote", "peopleTheyAdmire", "peopleTheyCriticize", "affiliateNote"] as const).map((k) => [k, t(k)]),
   );
@@ -163,6 +174,7 @@ export default async function Story({ params, searchParams }: Props) {
           </div>
         )}
         <StoryBooks books={bookMentions} people={personMentions} tag={affiliateTag} labels={bookLabels} className="mb-10" />
+        <StoryVocab terms={vocabTerms} labels={vocabLabels} className="mb-10" />
         {user && !member && raw.executiveSummary && (sp.topup === "quiz" || sp.topup === "summary") && (
           <TopUpDialog packs={topUpPacks()} balance={user.tokenBalance} cost={UNLOCK_COST} next={`/story/${raw.slug}`} then={`unlock:${raw.id}:${sp.topup}`} labels={topUpLabels(t)} />
         )}
