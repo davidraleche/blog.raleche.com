@@ -8,7 +8,7 @@ import type { Locale } from "./i18n/messages";
 export type GameKind = "vocab" | "quote";
 /** What the browser gets: the prompt and four choices. The right answer only travels inside the encrypted token. */
 export type GameQuestion = { kind: GameKind; prompt: string; hint: string; options: string[]; token: string };
-type Payload = { k: GameKind; a: number; s: string; r?: string; n: string; e: number };
+type Payload = { k: GameKind; a: number; s: string; r?: string; x?: string; n: string; e: number };
 
 const key = () => crypto.createHash("sha256").update(`${process.env.SESSION_SECRET || "dev-secret"}:word-games`).digest();
 
@@ -67,12 +67,31 @@ export async function quoteQuestion(locale: Locale): Promise<GameQuestion | null
   const speakers = [...new Set(all.map((q) => q.speaker))];
   // Lines that name one of the choices (e.g. "Andy Jassy, Amazon's CEO, ...") would give the answer away.
   const names = speakers.flatMap((s) => [s, s.split(" ").at(-1)!]).filter((n) => n.length > 2);
-  const quotes = all.filter((q) => !names.some((n) => q.text.includes(n)));
+  const quotes = all.map((q, i) => ({ ...q, i })).filter((q) => !names.some((n) => q.text.includes(n)));
   if (!quotes.length) return null;
   if (speakers.length < 4) return null;
   // Speaker first, then one of their quotes, so stories with many quotes don't crowd out the rest.
   const who = pick([...new Set(quotes.map((q) => q.speaker))]);
   const q = pick(quotes.filter((x) => x.speaker === who));
   const { options, a } = choices(q.speaker, speakers);
-  return { kind: "quote", prompt: q.text, hint: "", options, token: ticket({ k: "quote", a, s: q.slug }) };
+  // The English original travels in the token so the answer can show the passage it came from.
+  const en = locale === "en" ? all : await getSpeakerQuotes("en");
+  return { kind: "quote", prompt: q.text, hint: "", options, token: ticket({ k: "quote", a, s: q.slug, x: en[q.i]?.text }) };
+}
+
+const plain = (md: string) =>
+  md.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/^#+\s*|^>\s*|^[-*]\s+/gm, "").replace(/[*_`]+/g, "").replace(/\s+/g, " ").trim();
+
+/** The passage of the article a quote comes from: its paragraph (with the one before when it stands alone), in plain text. */
+export function quoteExtract(body: string, quote: string): string | null {
+  const paras = body.split(/\n\s*\n/);
+  const i = paras.findIndex((p) => p.includes(quote));
+  if (i < 0) return null;
+  let text = plain(paras[i]);
+  if (text.length < quote.length + 60 && i > 0 && !/^#/.test(paras[i - 1].trim())) text = `${plain(paras[i - 1])} ${text}`;
+  if (text.length > 700) {
+    const at = Math.max(0, text.indexOf(quote.slice(0, 40)) - 250);
+    text = `${at > 0 ? "…" : ""}${text.slice(at, at + 650).trim()}…`;
+  }
+  return text;
 }
