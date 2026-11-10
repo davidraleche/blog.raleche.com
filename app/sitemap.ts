@@ -20,6 +20,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     page("/hosts", 0.7),
     page("/store", 0.6, "monthly"),
     page("/play", 0.7, "daily"),
+    page("/vocabulary", 0.6, "daily"),
+    page("/quotes", 0.6, "daily"),
     page("/books", 0.7, "weekly"),
     ...categories.map((c) => page(`/category/${c.slug}`, 0.7, "daily")),
     ...posts.map((p) => ({ url: absUrl(`/story/${p.slug}`), lastModified: p.updatedAt, changeFrequency: "weekly" as const, priority: 0.9, images: p.coverImage ? [p.coverImage] : undefined })),

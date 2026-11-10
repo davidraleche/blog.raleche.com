@@ -32,3 +32,7 @@ export const WHEEL = [
 export const QUOTE_WHEEL_ODDS = 5;
 export const QUOTE_WHEEL_PRIZE = 10;
 export const QUOTE_WHEEL_DAILY_MAX = 40;
+
+/** Word games (Vocabulary: "what does it mean?", Quotes: "who said it?"): each right answer pays WORD_GAME_PRIZE, up to WORD_GAME_DAILY_MAX a day per game per account. */
+export const WORD_GAME_PRIZE = 10;
+export const WORD_GAME_DAILY_MAX = 30;
