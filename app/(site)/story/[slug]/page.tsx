@@ -14,6 +14,8 @@ import { FollowButton } from "@/components/FollowButton";
 import { PersonRating } from "@/components/PersonRating";
 import { StoryBooks } from "@/components/StoryBooks";
 import { StoryVocab } from "@/components/StoryVocab";
+import { StoryShareVideo } from "@/components/StoryShareVideo";
+import { storyMiniVideo } from "@/lib/story-videos";
 import { ensureVocab } from "@/lib/vocab-ai";
 import { amazonTag } from "@/lib/books";
 import { ensureMentions } from "@/lib/mentions-ai";
@@ -150,6 +152,11 @@ export default async function Story({ params, searchParams }: Props) {
   const engageLabels = Object.fromEntries(
     (["pollTitle", "poll_great", "poll_average", "poll_not_great", "pollEarn", "pollThanks", "votesN", "earnedTokens", "signInToVote", "commentsEarn", "commentPlaceholder", "postComment", "commentHeld", "commentRules", "pollCongrats", "pollTapToVote"] as const).map((k) => [k, t(k, { n: "{n}" })]),
   );
+  // The story's mini video (8-second clip) and its share panel, shown at the end of the story.
+  const miniVideo = raw.status === "published" ? await storyMiniVideo(raw.slug) : null;
+  const shareVideoLabels = Object.fromEntries(
+    (["shareVideoTitle", "shareVideoBadge", "shareVideoDek", "shareVideoVertical", "shareVideoVerticalFor", "shareVideoWide", "shareVideoWideFor", "shareVideoDownload", "shareVideoShare", "shareVideoCopyCaption", "shareVideoCopyLink", "shareVideoCopied", "shareVideoOn", "shareVideoIntentTip", "shareVideoUploadTitle", "shareVideoStep1", "shareVideoStep2", "shareVideoStep3", "shareVideoOpen", "shareVideoShareFailed", "shareVideoSeeCaption"] as const).map((k) => [k, t(k, { platform: "{platform}" })]),
+  );
   const { videoId, body: fullBody } = storyVideo(raw.body);
   const transcriptAvailable = raw.status === "published" && (await hasTranscript(raw.slug));
   const body = locked ? fullBody.split(/\n\n/).slice(0, 3).join("\n\n") : fullBody;
@@ -280,6 +287,13 @@ export default async function Story({ params, searchParams }: Props) {
               {user ? t("transcriptOpen") : t("transcriptSignIn")}
             </Link>
           </section>
+        )}
+
+        {miniVideo && (
+          <StoryShareVideo
+            slug={raw.slug} storyUrl={`https://raleche.com/story/${raw.slug}`} formats={miniVideo.formats} speaker={miniVideo.speaker}
+            text={miniVideo.text} credit={miniVideo.credit} hashtags={miniVideo.hashtags} labels={shareVideoLabels}
+          />
         )}
 
         <AdSlot name="articleEnd" />
