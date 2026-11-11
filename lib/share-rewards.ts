@@ -12,11 +12,9 @@ export async function shareCodeFor(userId: string): Promise<string> {
   if (u?.shareCode) return u.shareCode;
   for (let i = 0; i < 5; i++) {
     const code = crypto.randomBytes(6).toString("base64url").replace(/[-_]/g, "").slice(0, 7).toLowerCase();
-    if (code.length < 6) continue;
-    try {
-      await db.user.update({ where: { id: userId }, data: { shareCode: code } });
-      return code;
-    } catch {}
+    if (code.length < 6 || (await db.user.findFirst({ where: { shareCode: code }, select: { id: true } }))) continue;
+    await db.user.update({ where: { id: userId }, data: { shareCode: code } });
+    return code;
   }
   throw new Error("could not create a share code");
 }
@@ -25,7 +23,7 @@ export async function shareCodeFor(userId: string): Promise<string> {
 export async function sharerByCode(code: string | null | undefined) {
   const c = (code ?? "").trim().toLowerCase();
   if (!/^[a-z0-9]{4,12}$/.test(c)) return null;
-  return db.user.findUnique({ where: { shareCode: c }, select: { id: true, email: true, name: true, language: true } });
+  return db.user.findFirst({ where: { shareCode: c }, select: { id: true, email: true, name: true, language: true } });
 }
 
 const NETWORK: Record<string, string> = { twitter: "X", linkedin: "LinkedIn", facebook: "Facebook", instagram: "Instagram", tiktok: "TikTok", youtube: "YouTube" };

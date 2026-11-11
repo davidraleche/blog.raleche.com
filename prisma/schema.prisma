@@ -37,7 +37,9 @@ model User {
   commentReports   CommentReport[]
   activities       Activity[]
   pageViews        PageView[]
-  shareCode        String?         @unique // public code in the links this reader shares (?by=…), to credit them for the readers they bring
+  shareCode        String? // public code in the links this reader shares (?by=…), to credit them for the readers they bring
+
+  @@index([shareCode])
 }
 
 model Session {
