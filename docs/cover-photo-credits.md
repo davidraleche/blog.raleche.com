@@ -18,3 +18,4 @@ Speaker photos on story covers come from Wikimedia Commons. Each cover shows the
 | tobi-lutke-shopify-ai-cover.png | Tobi Lütke | Tobias Lütke, Shopify.jpg | Union Eleven | CC BY-SA 3.0 |
 | yc-seven-powers-ai-moats-cover.png | Garry Tan | Garry Tan, Web Summit 2018, November 6 SD5 6949 (45700698642)(tighter 4x3 crop).jpg | Web Summit | CC BY 2.0 |
 | yossi-matias-google-research-thinker-cover.png | Yossi Matias | Yossi Matias (4108387033).jpg | simone.brunozzi | CC BY-SA 2.0 |
+| mark-zuckerberg-muse-agent-cover.png | Mark Zuckerberg | Mark Zuckerberg 2019 (cropped).jpg | Anthony Quintano | CC BY 2.0 |
