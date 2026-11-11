@@ -226,7 +226,7 @@ export type QuizResult = { correct: number; earned: number; answers: number[]; p
 /** One play per reader per article. Both answers right = QUIZ_REWARD tokens. */
 export async function submitQuiz(_: QuizResult, form: FormData): Promise<QuizResult> {
   const postId = String(form.get("postId"));
-  const post = await db.post.findFirst({ where: { id: postId, status: "published" }, select: { id: true, slug: true } });
+  const post = await db.post.findFirst({ where: { id: postId, status: "published" }, select: { id: true, slug: true, title: true } });
   if (!post) return { correct: 0, earned: 0, answers: [], error: "invalid" };
   const user = await requireUser(`/story/${post.slug}#quiz`);
   const quiz = await getQuiz(postId);
@@ -249,7 +249,7 @@ export async function submitQuiz(_: QuizResult, form: FormData): Promise<QuizRes
     const p = await db.quizAttempt.findUniqueOrThrow({ where: { userId_postId: { userId: user.id, postId } } });
     return { correct: p.correct, earned: p.earned, answers: reveal(p.correct), picks: p.picks, already: true };
   }
-  if (won) await credit(user.id, QUIZ_REWARD, "quiz", `quiz:${user.id}:${postId}`);
+  if (won) await credit(user.id, QUIZ_REWARD, "quiz", `quiz:${user.id}:${postId}`, post.title.slice(0, 120));
   await recordEvent({ kind: "quiz", detail: `Story quiz on ${post.slug}: ${correct} of ${quiz.length} right · ${quiz.map((q, i) => `“${q.q.slice(0, 70)}” → picked “${q.options[picks[i]]?.slice(0, 60)}” ${picks[i] === q.answer ? "✓" : "✗"}`).join(" · ")}${won ? ` · +${QUIZ_REWARD} tokens` : ""}`, correct: won, amount: won ? QUIZ_REWARD : 0 });
   after(() => logActivity({ kind: "quiz", userId: user.id, postId, detail: `${correct} of ${quiz.length} right${won ? ` (+${QUIZ_REWARD} tokens)` : ""}` }));
   revalidatePath(`/story/${post.slug}`);

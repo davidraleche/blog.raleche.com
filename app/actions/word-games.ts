@@ -48,7 +48,7 @@ async function answer(token: string, choice: number): Promise<GameResult | null>
   const correct = choice === p.a;
   const row = await db.post.findUnique({ where: { slug: p.s }, select: { slug: true, title: true, body: true, speaker: true } });
   const post = row && { slug: row.slug, title: row.title };
-  const term = p.r ? await db.vocabTerm.findUnique({ where: { id: p.r }, select: { who: true, quote: true } }) : null;
+  const term = p.r ? await db.vocabTerm.findUnique({ where: { id: p.r }, select: { term: true, who: true, quote: true } }) : null;
   const base: GameResult = { correct, answer: p.a, earned: 0, story: post, who: term?.who, quote: term?.quote || undefined };
   if (p.k === "quote" && row && p.x) {
     // Show where the line was said, and link straight to it (a text fragment: browsers scroll to and highlight it).
@@ -74,7 +74,8 @@ async function answer(token: string, choice: number): Promise<GameResult | null>
   // Numbered refs (unique in the database), so two answers racing for the same slot can't both pay.
   const won = await db.tokenTxn.findMany({ where: { userId: user.id, reason, ref: { startsWith: prefix } }, select: { amount: true } });
   if (won.reduce((s, w) => s + w.amount, 0) + WORD_GAME_PRIZE > WORD_GAME_DAILY_MAX) return { ...base, reason: "capped" };
-  if (!(await credit(user.id, WORD_GAME_PRIZE, reason, `${prefix}:${won.length + 1}`))) return { ...base, reason: "capped" };
+  const note = p.k === "vocab" ? `“${term?.term ?? ""}”` : `${post?.title ? `${post.title.slice(0, 80)}` : ""}`;
+  if (!(await credit(user.id, WORD_GAME_PRIZE, reason, `${prefix}:${won.length + 1}`, note))) return { ...base, reason: "capped" };
   after(() => logActivity({ kind: "quiz", userId: user.id, detail: `Won ${WORD_GAME_PRIZE} tokens on ${p.k === "vocab" ? "Vocabulary (what does it mean?)" : "Quotes (who said it?)"}` }));
   revalidatePath("/", "layout");
   const balance = (await db.user.findUnique({ where: { id: user.id }, select: { tokenBalance: true } }))?.tokenBalance;
