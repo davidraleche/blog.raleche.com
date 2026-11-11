@@ -16,12 +16,13 @@ import { StoryBooks } from "@/components/StoryBooks";
 import { StoryVocab } from "@/components/StoryVocab";
 import { StoryShareVideo } from "@/components/StoryShareVideo";
 import { storyMiniVideo } from "@/lib/story-videos";
+import { shareCodeFor } from "@/lib/share-rewards";
 import { ensureVocab } from "@/lib/vocab-ai";
 import { amazonTag } from "@/lib/books";
 import { ensureMentions } from "@/lib/mentions-ai";
 import { getQuiz, ensureQuiz, nextStory } from "@/lib/quiz";
 import { after } from "next/server";
-import { hasUnlocked, UNLOCK_COST, PARTICIPATION_REWARD, QUIZ_REWARD } from "@/lib/tokens";
+import { hasUnlocked, UNLOCK_COST, PARTICIPATION_REWARD, QUIZ_REWARD, SHARE_REWARD } from "@/lib/tokens";
 import { getI18n } from "@/lib/i18n/server";
 import { localizePosts } from "@/lib/localize";
 import { translateHtml, translateMany } from "@/lib/translate";
@@ -154,8 +155,10 @@ export default async function Story({ params, searchParams }: Props) {
   );
   // The story's mini video (8-second clip) and its share panel, shown at the end of the story.
   const miniVideo = raw.status === "published" ? await storyMiniVideo(raw.slug) : null;
+  // Signed-in readers share links with their code (&by=…) and earn tokens for each new reader they bring.
+  const shareCode = miniVideo && user ? await shareCodeFor(user.id).catch(() => null) : null;
   const shareVideoLabels = Object.fromEntries(
-    (["shareVideoTitle", "shareVideoBadge", "shareVideoDek", "shareVideoVertical", "shareVideoVerticalFor", "shareVideoWide", "shareVideoWideFor", "shareVideoDownload", "shareVideoShare", "shareVideoCopyCaption", "shareVideoCopyLink", "shareVideoCopied", "shareVideoOn", "shareVideoIntentTip", "shareVideoUploadTitle", "shareVideoStep1", "shareVideoStep2", "shareVideoStep3", "shareVideoOpen", "shareVideoShareFailed", "shareVideoSeeCaption"] as const).map((k) => [k, t(k, { platform: "{platform}" })]),
+    (["shareVideoTitle", "shareVideoBadge", "shareVideoDek", "shareVideoVertical", "shareVideoVerticalFor", "shareVideoWide", "shareVideoWideFor", "shareVideoDownload", "shareVideoShare", "shareVideoCopyCaption", "shareVideoCopyLink", "shareVideoCopied", "shareVideoOn", "shareVideoIntentTip", "shareVideoUploadTitle", "shareVideoStep1", "shareVideoStep2", "shareVideoStep3", "shareVideoOpen", "shareVideoShareFailed", "shareVideoSeeCaption", "shareVideoEarn", "shareVideoEarnSignIn", "shareVideoSignIn"] as const).map((k) => [k, t(k, { platform: "{platform}", n: SHARE_REWARD })]),
   );
   const { videoId, body: fullBody } = storyVideo(raw.body);
   const transcriptAvailable = raw.status === "published" && (await hasTranscript(raw.slug));
@@ -293,6 +296,7 @@ export default async function Story({ params, searchParams }: Props) {
           <StoryShareVideo
             slug={raw.slug} storyUrl={`https://raleche.com/story/${raw.slug}`} formats={miniVideo.formats} speaker={miniVideo.speaker}
             text={miniVideo.text} credit={miniVideo.credit} hashtags={miniVideo.hashtags} labels={shareVideoLabels}
+            shareCode={shareCode} signinHref={user ? undefined : `/signin?next=${encodeURIComponent(`/story/${raw.slug}#share-video`)}`}
           />
         )}
 

@@ -7,6 +7,10 @@ export const UNLOCK_COST = 100;
 export const MEMO_COST = 100;
 /** Earned once per article for voting in its poll, and once for commenting on it. */
 export const PARTICIPATION_REWARD = 10;
+/** Earned by a signed-in reader for each new visitor who opens a story from their share link (?by=…). */
+export const SHARE_REWARD = 200;
+/** At most this many share rewards per reader in 24 hours. */
+export const SHARE_DAILY_CAP = 5;
 /** Earned by getting both quiz questions on an article right (one try per article). */
 export const QUIZ_REWARD = 10;
 export const POLL_CHOICES = ["great", "average", "not_great"] as const;

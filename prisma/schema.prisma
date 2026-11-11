@@ -37,6 +37,7 @@ model User {
   commentReports   CommentReport[]
   activities       Activity[]
   pageViews        PageView[]
+  shareCode        String?         @unique // public code in the links this reader shares (?by=…), to credit them for the readers they bring
 }
 
 model Session {
@@ -391,6 +392,8 @@ model PageView {
   path      String
   title     String   @default("")
   referrer  String?
+  source    String? // where the visit came from: the ?source= (or utm_source) tag of the link, else guessed from the referrer (twitter, linkedin, google…)
+  sharedBy  String? // the member whose share link (?by=) brought this visit
   landing   Boolean  @default(false) // first page of the visit
   country   String? // two-letter code, from the visitor's IP
   seconds   Int      @default(0) // time on the page, reported when the reader leaves it
@@ -400,6 +403,8 @@ model PageView {
   @@index([sessionId, createdAt])
   @@index([userId, createdAt])
   @@index([path, createdAt])
+  @@index([source, createdAt])
+  @@index([sharedBy, createdAt])
 }
 
 /// Everything a visitor does besides viewing pages (clicks, spins, quiz and game answers), signed in or not, in order.

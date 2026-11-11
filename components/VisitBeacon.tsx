@@ -4,6 +4,9 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { trackEvent } from "@/lib/track-client";
 
+/** The ?source= tag of the page the reader arrived on, until its page view is recorded. */
+let carried: { path: string; source?: string; by?: string } | null = null;
+
 /** Records each page view, and how long the page was actually visible when the reader leaves it. */
 export function VisitBeacon() {
   const pathname = usePathname();
@@ -30,10 +33,24 @@ export function VisitBeacon() {
     let since = document.visibilityState === "visible" ? Date.now() : 0;
     let sent = false;
 
+    // Links we share carry ?source=twitter, linkedin… (or utm_source): send it, then drop it from the address bar
+    // so a reader who copies the link doesn't pass our tag on.
+    const qs = new URLSearchParams(location.search);
+    const tagged = qs.get("source") || qs.get("utm_source") || undefined;
+    const by = qs.get("by") || undefined; // who shared the link
+    if (tagged || by) carried = { path: location.pathname, source: tagged, by };
+    // Kept outside the effect: in development React runs it twice, and the tag is already gone from the URL the second time.
+    const mine = carried?.path === location.pathname ? carried : null;
+    const source = mine?.source, sharedBy = mine?.by;
+    if (tagged || by) {
+      ["source", "by", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"].forEach((k) => qs.delete(k));
+      const rest = qs.toString();
+      try { window.history.replaceState(window.history.state, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`); } catch {}
+    }
     const t = setTimeout(() => {
-      fetch("/api/track", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ path: pathname, title: document.title, referrer: document.referrer }), keepalive: true })
+      fetch("/api/track", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ path: pathname, title: document.title, referrer: document.referrer, source, by: sharedBy }), keepalive: true })
         .then((r) => r.json())
-        .then((j: { id?: string | null }) => { id = j.id ?? null; })
+        .then((j: { id?: string | null }) => { id = j.id ?? null; if (mine) carried = null; })
         .catch(() => {});
     }, 600);
 

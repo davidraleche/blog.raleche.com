@@ -7,6 +7,8 @@ import { after } from "next/server";
 import { clientIp, countryOf, countryLabel } from "@/lib/geo";
 import { logActivity } from "@/lib/activity";
 import { visitorName } from "@/lib/visitor-name";
+import { cleanSource, sourceFromReferrer } from "@/lib/traffic-source";
+import { sharerByCode, rewardShare } from "@/lib/share-rewards";
 
 const VISITOR = "vid"; // first-party visitor id, 1 year
 const VISIT = "vsid"; // current visit; ends after 30 minutes without a page view
@@ -17,7 +19,7 @@ const VISIT_MS = 30 * 60e3;
  * linked to the member when signed in, and forwards signed-in visits to the tts42 admin log as before.
  */
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => null)) as { path?: string; title?: string; referrer?: string } | null;
+  const body = (await req.json().catch(() => null)) as { path?: string; title?: string; referrer?: string; source?: string; by?: string } | null;
   if (!body?.path || !body.path.startsWith("/") || body.path.length > 500) return Response.json({ error: "path required" }, { status: 400 });
   const h = await headers();
   const ua = h.get("user-agent") ?? "";
@@ -46,17 +48,28 @@ export async function POST(req: Request) {
       if (r && !/(^|\.)raleche\.com$|^localhost$/.test(r.hostname)) referrer = `${r.hostname}${r.pathname}`.slice(0, 300);
     } catch {}
 
-    const country = countryOf(clientIp(h));
+    // Where the visit came from: the link's ?source= tag, else the referrer's site. Only set on the page the reader arrived on.
+    const source = cleanSource(body.source) ?? (landing || referrer ? sourceFromReferrer(referrer) : null);
+
+    // Who shared the link (?by=<their share code>), credited below when it brings a new visitor.
+    const sharer = await sharerByCode(body.by);
+
+    const ip = clientIp(h);
+    const country = countryOf(ip);
     const pv = await db.pageView.create({
-      data: { visitorId, sessionId: sessionId!, userId: user?.id ?? null, path: body.path, title: (body.title ?? "").slice(0, 200), referrer, landing, country },
+      data: { visitorId, sessionId: sessionId!, userId: user?.id ?? null, path: body.path, title: (body.title ?? "").slice(0, 200), referrer, source, sharedBy: sharer?.id ?? null, landing, country },
     });
     id = pv.id;
+    if (sharer && landing) {
+      const vid = visitorId;
+      after(() => rewardShare({ sharer, visitorId: vid, viewerUserId: user?.id ?? null, ip, path: body.path!, title: body.title ?? "", source }).catch(() => {}));
+    }
     // Each new visit (its first page) alerts the admin: where from, which page.
     if (landing) {
       const vid = visitorId;
       after(async () => {
         const visits = await db.pageView.count({ where: { visitorId: vid, landing: true } });
-        const detail = `${visitorName(vid)} (${visits > 1 ? `visit #${visits}` : "first visit"}) · ${countryLabel(country)} · landed on ${body.path}${body.title ? ` (“${body.title.slice(0, 120)}”)` : ""} · from ${referrer ?? "direct / unknown"}`;
+        const detail = `${visitorName(vid)} (${visits > 1 ? `visit #${visits}` : "first visit"}) · ${countryLabel(country)} · landed on ${body.path}${body.title ? ` (“${body.title.slice(0, 120)}”)` : ""} · from ${source && source !== referrer?.split("/")[0] ? `${source}${referrer ? ` (${referrer})` : ""}` : referrer ?? "direct / unknown"}`;
         await logActivity({ kind: "visit", userId: user?.id ?? null, detail });
       });
     }

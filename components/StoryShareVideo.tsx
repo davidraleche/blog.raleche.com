@@ -28,6 +28,10 @@ type Props = {
   credit: string;
   hashtags: string;
   labels: Record<string, string>;
+  /** The signed-in reader's share code: their links carry &by=<code> and earn them tokens. */
+  shareCode?: string | null;
+  /** Sign-in link back to this panel, shown to readers who aren't signed in. */
+  signinHref?: string;
   className?: string;
 };
 
@@ -52,7 +56,7 @@ async function copyText(text: string) {
 }
 
 /** End-of-story panel: the story's mini video, download, and one-click sharing to the networks. */
-export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit, hashtags, labels, className = "mt-12" }: Props) {
+export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit, hashtags, labels, shareCode, signinHref, className = "mt-12" }: Props) {
   const [format, setFormat] = useState<Format>(formats[0]);
   const [copied, setCopied] = useState<"caption" | "link" | null>(null);
   const [tip, setTip] = useState<{ kind: "intent" | "upload" | "error"; platform: Platform } | null>(null);
@@ -62,7 +66,10 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
 
   const src = (f: Format) => `/story/${slug}/video/${f}.mp4`;
   const fileName = (f: Format) => `raleche-${slug}-${f}.mp4`;
-  const caption = [text, `Full story: ${storyUrl}`, credit, hashtags].filter(Boolean).join("\n\n");
+  // Every link we hand out says where it was shared (?source=twitter…), so the admin dashboard can count those visits.
+  const linkFor = (source: string) => `${storyUrl}?source=${source}${shareCode ? `&by=${shareCode}` : ""}`;
+  const captionFor = (source: string) => [text, `Full story: ${linkFor(source)}`, credit, hashtags].filter(Boolean).join("\n\n");
+  const caption = captionFor("share");
   // Short text for X (the link is added by X): the speaker and the quote.
   const quote = text.split(/\n\n/).pop() || text;
   const shortText = (speaker && !quote.startsWith(speaker) ? `${speaker}: ${quote}` : quote).slice(0, 220);
@@ -108,12 +115,12 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
   };
 
   /** Share the video file with the phone's share sheet. Returns false if this device can't. */
-  const shareFile = async (f: Format) => {
+  const shareFile = async (f: Format, text = caption) => {
     if (!canShareFiles) return false;
     const file = await loadFile(f);
     if (!file || !navigator.canShare?.({ files: [file] })) return false;
     try {
-      await navigator.share({ files: [file], text: caption, title: speaker });
+      await navigator.share({ files: [file], text, title: speaker });
     } catch (e) {
       // The reader closed the share sheet: that's fine, not a failure.
       if ((e as Error)?.name !== "AbortError") return false;
@@ -124,7 +131,8 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
   const onPlatform = async (p: (typeof PLATFORMS)[number]) => {
     const f = formats.includes(p.format) ? p.format : formats[0];
     setFormat(f);
-    const link = encodeURIComponent(storyUrl);
+    const link = encodeURIComponent(linkFor(p.id === "x" ? "twitter" : p.id));
+    const platformCaption = captionFor(p.id === "x" ? "twitter" : p.id);
     const intent =
       p.id === "x" ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(shortText)}&url=${link}`
       : p.id === "linkedin" ? `https://www.linkedin.com/sharing/share-offsite/?url=${link}`
@@ -133,13 +141,13 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
     if (intent) {
       // Open first (still inside the click, so it isn't blocked as a popup), then copy the caption.
       window.open(intent, "_blank", "noopener,noreferrer,width=640,height=640");
-      copyText(caption);
+      copyText(platformCaption);
       setTip({ kind: "intent", platform: p.id });
       return;
     }
     // Instagram, TikTok, YouTube: no web link to post a video. On phones the share sheet sends the file straight to the app.
-    copyText(caption);
-    if (await shareFile(f)) {
+    copyText(platformCaption);
+    if (await shareFile(f, platformCaption)) {
       setTip(null);
       return;
     }
@@ -164,6 +172,13 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
       </div>
       <div className="px-5 py-5">
         <p className="font-serif text-ink/80">{labels.shareVideoDek}</p>
+        {shareCode ? (
+          <p className="mt-3 border-l-[3px] border-terminal-amber bg-terminal-amber/10 px-3 py-2 font-mono text-[11px] uppercase tracking-widest">★ {labels.shareVideoEarn}</p>
+        ) : signinHref ? (
+          <p className="mt-3 border-l-[3px] border-terminal-amber bg-terminal-amber/10 px-3 py-2 font-mono text-[11px] uppercase tracking-widest">
+            ★ {labels.shareVideoEarnSignIn} <a href={signinHref} className="text-accent underline">{labels.shareVideoSignIn}</a>
+          </p>
+        ) : null}
 
         {formats.length > 1 && (
           <div className="mt-4 flex gap-2" role="tablist">
@@ -196,7 +211,7 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
           <button type="button" onClick={() => copyText(caption).then((ok) => ok && flash("caption"))} className="btn-light">
             {copied === "caption" ? `✓ ${labels.shareVideoCopied}` : labels.shareVideoCopyCaption}
           </button>
-          <button type="button" onClick={() => copyText(storyUrl).then((ok) => ok && flash("link"))} className="btn-light">
+          <button type="button" onClick={() => copyText(linkFor("link")).then((ok) => ok && flash("link"))} className="btn-light">
             {copied === "link" ? `✓ ${labels.shareVideoCopied}` : labels.shareVideoCopyLink}
           </button>
         </div>

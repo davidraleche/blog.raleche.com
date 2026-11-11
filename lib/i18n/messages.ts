@@ -14,6 +14,16 @@ export function fmt(s: string, vars: Record<string, string | number> = {}) {
 }
 
 const en = {
+  txn_share: "A new reader came from your share",
+  shareVideoEarn: "Your links carry your name: you earn {n} tokens for every new reader who opens this story from your share.",
+  shareVideoEarnSignIn: "Earn {n} tokens for every new reader your share brings:",
+  shareVideoSignIn: "sign in first",
+  shareRewardEmailSubject: "+{n} tokens: a new reader opened your share",
+  shareRewardEmailBody: "Thanks for sharing! A new reader just opened “{title}” from your {network} share, so we added <b>{n} tokens</b> to your balance. You now have {balance} tokens.",
+  shareRewardEmailLink: "See your token history",
+  shareRewardEmailFoot: "You earn {n} tokens for each new reader your links bring, up to {cap} a day.",
+  tokenHistory: "Token history",
+  tokenHistoryDek: "Every token you earned or spent: share rewards, quizzes, wheel spins, purchases and unlocks.",
   shareVideoTitle: "Share this story as a mini video",
   shareVideoBadge: "8 seconds · free",
   shareVideoDek: "We turned this story into a short clip, ready to post. Pick a format, then where to share it: your friends get the story link with it.",
@@ -454,6 +464,16 @@ const en = {
 export type Messages = typeof en;
 
 const fr: Messages = {
+  txn_share: "Un nouveau lecteur est venu par votre partage",
+  shareVideoEarn: "Vos liens portent votre nom : vous gagnez {n} jetons pour chaque nouveau lecteur qui ouvre cet article depuis votre partage.",
+  shareVideoEarnSignIn: "Gagnez {n} jetons pour chaque nouveau lecteur amené par votre partage :",
+  shareVideoSignIn: "connectez-vous d'abord",
+  shareRewardEmailSubject: "+{n} jetons : un nouveau lecteur a ouvert votre partage",
+  shareRewardEmailBody: "Merci pour le partage ! Un nouveau lecteur vient d'ouvrir « {title} » depuis votre partage sur {network} : nous avons ajouté <b>{n} jetons</b> à votre solde. Vous avez maintenant {balance} jetons.",
+  shareRewardEmailLink: "Voir l'historique de vos jetons",
+  shareRewardEmailFoot: "Vous gagnez {n} jetons pour chaque nouveau lecteur amené par vos liens, jusqu'à {cap} par jour.",
+  tokenHistory: "Historique des jetons",
+  tokenHistoryDek: "Tous les jetons gagnés ou dépensés : partages récompensés, quiz, roue, achats et déblocages.",
   shareVideoTitle: "Partagez cet article en mini vidéo",
   shareVideoBadge: "8 secondes · gratuit",
   shareVideoDek: "Nous avons fait de cet article un court clip, prêt à publier. Choisissez un format, puis où le partager : vos amis reçoivent le lien de l'article avec.",
@@ -880,6 +900,16 @@ const fr: Messages = {
 };
 
 const es: Messages = {
+  txn_share: "Un lector nuevo llegó por tu enlace",
+  shareVideoEarn: "Tus enlaces llevan tu nombre: ganas {n} tokens por cada lector nuevo que abra esta historia desde lo que compartes.",
+  shareVideoEarnSignIn: "Gana {n} tokens por cada lector nuevo que traiga lo que compartes:",
+  shareVideoSignIn: "inicia sesión primero",
+  shareRewardEmailSubject: "+{n} tokens: un lector nuevo abrió lo que compartiste",
+  shareRewardEmailBody: "¡Gracias por compartir! Un lector nuevo acaba de abrir «{title}» desde lo que compartiste en {network}, así que añadimos <b>{n} tokens</b> a tu saldo. Ahora tienes {balance} tokens.",
+  shareRewardEmailLink: "Ver tu historial de tokens",
+  shareRewardEmailFoot: "Ganas {n} tokens por cada lector nuevo que traigan tus enlaces, hasta {cap} al día.",
+  tokenHistory: "Historial de tokens",
+  tokenHistoryDek: "Todos los tokens que ganaste o gastaste: recompensas por compartir, quiz, ruleta, compras y desbloqueos.",
   shareVideoTitle: "Comparte esta historia como mini video",
   shareVideoBadge: "8 segundos · gratis",
   shareVideoDek: "Convertimos esta historia en un clip corto, listo para publicar. Elige un formato y dónde compartirlo: tus amigos reciben el enlace de la historia con él.",
@@ -1306,6 +1336,16 @@ const es: Messages = {
 };
 
 const zh: Messages = {
+  txn_share: "有新读者通过你的分享而来",
+  shareVideoEarn: "你的链接带有你的标识：每有一位新读者通过你的分享打开这篇故事，你就获得 {n} 个代币。",
+  shareVideoEarnSignIn: "每有一位新读者通过你的分享而来，可获得 {n} 个代币：",
+  shareVideoSignIn: "请先登录",
+  shareRewardEmailSubject: "+{n} 代币：有新读者打开了你的分享",
+  shareRewardEmailBody: "感谢分享！一位新读者刚刚通过你在 {network} 的分享打开了《{title}》，我们已向你的余额添加 <b>{n} 个代币</b>。你现在共有 {balance} 个代币。",
+  shareRewardEmailLink: "查看代币记录",
+  shareRewardEmailFoot: "你的链接每带来一位新读者，你可获得 {n} 个代币，每天最多 {cap} 次。",
+  tokenHistory: "代币记录",
+  tokenHistoryDek: "你获得或花费的每一个代币：分享奖励、测验、转盘、购买和解锁。",
   shareVideoTitle: "把这篇故事分享为迷你视频",
   shareVideoBadge: "8 秒 · 免费",
   shareVideoDek: "我们把这篇故事做成了一段短视频，可直接发布。选择格式，再选择分享平台：朋友们会同时收到故事链接。",

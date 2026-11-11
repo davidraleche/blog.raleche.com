@@ -4,7 +4,7 @@ import { visitorName } from "./visitor-name";
 import { sendEmail } from "./email";
 import { adminEmail } from "./auth";
 
-export type ActivityKind = "comment" | "vote" | "spin" | "quiz" | "purchase" | "unlock" | "memo" | "follow" | "visit";
+export type ActivityKind = "comment" | "vote" | "spin" | "quiz" | "purchase" | "unlock" | "memo" | "follow" | "visit" | "share_reward";
 
 /** Kinds that also send the admin an email (the rest are only logged). */
 const EMAILED: ActivityKind[] = ["comment", "vote", "spin", "quiz", "purchase", "memo", "visit"];
@@ -14,7 +14,7 @@ const VISIT_EMAIL_CAP = Number(process.env.VISIT_ALERT_CAP ?? 20);
 const DAILY_EMAIL_CAP = Number(process.env.ADMIN_ALERT_CAP ?? 40);
 
 const LABEL: Record<ActivityKind, string> = {
-  comment: "New comment", vote: "New vote", spin: "Wheel spin", quiz: "Quiz played", purchase: "Token purchase", unlock: "Summary unlocked", memo: "Memo bought", follow: "New follow", visit: "New visit",
+  comment: "New comment", vote: "New vote", spin: "Wheel spin", quiz: "Quiz played", purchase: "Token purchase", unlock: "Summary unlocked", memo: "Memo bought", follow: "New follow", visit: "New visit", share_reward: "Share reward",
 };
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 

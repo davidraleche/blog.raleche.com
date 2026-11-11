@@ -25,7 +25,7 @@ export default async function Store({ searchParams }: { searchParams: Promise<{ 
   const added = Number(sp.added) || 0;
 
   const user = await getUser();
-  const txns = user ? await db.tokenTxn.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 15 }) : [];
+  const txns = user ? await db.tokenTxn.findMany({ where: { userId: user.id, reason: { not: "share_ip" } }, orderBy: { createdAt: "desc" }, take: 15 }) : [];
   const fmt = (n: number) => n.toLocaleString(BCP47[locale]);
   const next = sp.next?.startsWith("/") ? sp.next : null;
 

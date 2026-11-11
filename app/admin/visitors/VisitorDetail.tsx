@@ -27,15 +27,16 @@ export async function VisitorDetail({ visitorId, days }: { visitorId: string; da
   const users = userIds.length ? await db.user.findMany({ where: { id: { in: userIds } }, select: { id: true, email: true, phone: true, name: true } }) : [];
 
   // Group by visit. Events carry the visit id; older ones without it go into the visit they fall inside.
-  const visits = new Map<string, { start: Date; steps: Step[]; country: string | null; referrer: string | null }>();
+  const visits = new Map<string, { start: Date; steps: Step[]; country: string | null; referrer: string | null; source: string | null }>();
   for (const v of views) {
-    const s = visits.get(v.sessionId) ?? { start: v.createdAt, steps: [], country: v.country, referrer: v.referrer };
+    const s = visits.get(v.sessionId) ?? { start: v.createdAt, steps: [], country: v.country, referrer: v.referrer, source: v.source };
+    if (!s.source && v.source) s.source = v.source;
     s.steps.push({ type: "page", at: v.createdAt, path: v.path, title: v.title, seconds: v.seconds, landing: v.landing, referrer: v.referrer });
     visits.set(v.sessionId, s);
   }
   for (const e of events) {
     const key = e.sessionId && visits.has(e.sessionId) ? e.sessionId : [...visits.entries()].filter(([, s]) => s.start <= e.createdAt).at(-1)?.[0] ?? `solo-${e.id}`;
-    const s = visits.get(key) ?? { start: e.createdAt, steps: [], country: null, referrer: null };
+    const s = visits.get(key) ?? { start: e.createdAt, steps: [], country: null, referrer: null, source: null };
     s.steps.push({ type: "event", at: e.createdAt, kind: e.kind, detail: e.detail, correct: e.correct, amount: e.amount });
     visits.set(key, s);
   }
@@ -77,7 +78,7 @@ export async function VisitorDetail({ visitorId, days }: { visitorId: string; da
             <div key={s.start.toISOString() + n} className="term-panel p-3">
               <p className="mb-2 text-[11px] text-terminal-dim">
                 Visit #{list.length - n} · {time(s.start)} · {pages.length} page{pages.length === 1 ? "" : "s"} · {fmtSec(pages.reduce((t, p) => t + (p.type === "page" ? p.seconds : 0), 0))}
-                {s.country ? ` · ${countryLabel(s.country)}` : ""}{s.referrer ? ` · from ${s.referrer}` : ""}
+                {s.country ? ` · ${countryLabel(s.country)}` : ""}{s.source ? ` · via ${s.source}` : ""}{s.referrer && s.referrer.split("/")[0] !== s.source ? ` · from ${s.referrer}` : ""}
               </p>
               <ol className="space-y-1">
                 {s.steps.map((x, i) => (

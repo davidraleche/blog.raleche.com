@@ -4,12 +4,17 @@ import { PageTitle, Badge } from "@/components/admin/ui";
 import { countryLabel } from "@/lib/geo";
 import { visitorName } from "@/lib/visitor-name";
 import { VisitorDetail } from "./VisitorDetail";
+import { sourceFromReferrer, SOCIAL_SOURCES } from "@/lib/traffic-source";
 
-type PV = { id: string; visitorId: string; sessionId: string; userId: string | null; path: string; title: string; referrer: string | null; landing: boolean; country: string | null; seconds: number; createdAt: Date };
+type PV = { id: string; visitorId: string; sessionId: string; userId: string | null; path: string; title: string; referrer: string | null; source: string | null; sharedBy: string | null; landing: boolean; country: string | null; seconds: number; createdAt: Date };
 
 const fmtSec = (s: number) => (s < 60 ? `${Math.round(s)}s` : `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`);
 const time = (d: Date) => d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" });
 const short = (t: string, n = 60) => (t.length > n ? `${t.slice(0, n)}…` : t);
+
+/** Where a visit came from: its ?source= tag, else its referrer's site (older visits), else direct. */
+const visitSource = (s: PV[]) => s.find((v) => v.source)?.source ?? sourceFromReferrer(s[0].referrer) ?? "direct";
+const slugOf = (path: string) => (path.startsWith("/story/") ? path.replace("/story/", "").split(/[?#/]/)[0] : null);
 
 function top<K>(items: K[], key: (k: K) => string, n = 10) {
   const m = new Map<string, number>();
@@ -30,13 +35,14 @@ function Table({ title, rows, unit = "" }: { title: string; rows: [string, numbe
   );
 }
 
-export default async function Visitors({ searchParams }: { searchParams: Promise<{ days?: string; user?: string; visitor?: string }> }) {
+export default async function Visitors({ searchParams }: { searchParams: Promise<{ days?: string; user?: string; visitor?: string; source?: string }> }) {
   const sp = await searchParams;
   const days = [7, 30, 90].includes(Number(sp.days)) ? Number(sp.days) : 30;
   const since = new Date(Date.now() - days * 86400e3);
 
   if (sp.visitor) return <VisitorDetail visitorId={sp.visitor} days={days} />;
   if (sp.user) return <UserDetail userId={sp.user} since={since} days={days} />;
+  if (sp.source) return <SourceDetail source={sp.source} since={since} days={days} />;
 
   const views: PV[] = await db.pageView.findMany({ where: { createdAt: { gte: since } }, orderBy: { createdAt: "asc" }, take: 100_000 });
   const sessions = new Map<string, PV[]>();
@@ -44,6 +50,51 @@ export default async function Visitors({ searchParams }: { searchParams: Promise
   const visits = [...sessions.values()];
   const landings = visits.map((s) => s[0]);
   const exits = visits.map((s) => s[s.length - 1]);
+  // Traffic sources: every visit by where it came from (link tag ?source=…, else referrer), and how good those visits were.
+  const bySource = new Map<string, PV[][]>();
+  for (const v of visits) { const k = visitSource(v); bySource.set(k, [...(bySource.get(k) ?? []), v]); }
+  const titleOf = new Map(views.map((v) => [v.path, v.title.replace(/ \| RALECHE$/, "")]));
+  const sourceRows = [...bySource.entries()].map(([source, vs]) => {
+    const pages = vs.reduce((n, s) => n + s.length, 0);
+    const secs = vs.reduce((n, s) => n + s.reduce((t, v) => t + v.seconds, 0), 0);
+    const topLanding = top(vs.map((s) => s[0]), (v) => v.path, 1)[0];
+    return {
+      source, visits: vs.length, visitors: new Set(vs.map((s) => s[0].visitorId)).size, tagged: vs.filter((s) => s.some((v) => v.source)).length,
+      pagesPer: pages / vs.length, bounce: Math.round((vs.filter((s) => s.length === 1).length / vs.length) * 100), avgVisit: secs / vs.length,
+      members: new Set(vs.flatMap((s) => s.map((v) => v.userId)).filter(Boolean)).size, topLanding,
+    };
+  }).sort((a, b) => b.visits - a.visits);
+  // Stories × social network: visits that landed on a story from each network.
+  const storySocial = new Map<string, Record<string, number>>();
+  for (const v of visits) {
+    const src = visitSource(v), slug = slugOf(v[0].path);
+    if (!slug || !SOCIAL_SOURCES.includes(src)) continue;
+    const row = storySocial.get(v[0].path) ?? {};
+    row[src] = (row[src] ?? 0) + 1;
+    storySocial.set(v[0].path, row);
+  }
+  const storySocialRows = [...storySocial.entries()].map(([path, row]) => ({ path, row, total: Object.values(row).reduce((a, b) => a + b, 0) })).sort((a, b) => b.total - a.total);
+  // Readers who share: visits their links (?by=) brought, how many were new, and the tokens they earned for it.
+  const sharerVisits = new Map<string, PV[][]>();
+  for (const v of visits) { const by = v.find((x) => x.sharedBy)?.sharedBy; if (by) sharerVisits.set(by, [...(sharerVisits.get(by) ?? []), v]); }
+  const [sharerUsers, shareTxns] = await Promise.all([
+    db.user.findMany({ where: { id: { in: [...sharerVisits.keys()] } }, select: { id: true, email: true, phone: true, name: true } }),
+    db.tokenTxn.groupBy({ by: ["userId"], where: { reason: "share", createdAt: { gte: since } }, _sum: { amount: true }, _count: true }),
+  ]);
+  const sharerIds = new Set([...sharerVisits.keys(), ...shareTxns.map((x) => x.userId)]);
+  const extraUsers = await db.user.findMany({ where: { id: { in: [...sharerIds].filter((id) => !sharerUsers.some((u) => u.id === id)) } }, select: { id: true, email: true, phone: true, name: true } });
+  const sharerRows = [...sharerIds].map((id) => {
+    const u = [...sharerUsers, ...extraUsers].find((x) => x.id === id);
+    const vs = sharerVisits.get(id) ?? [];
+    const tx = shareTxns.find((x) => x.userId === id);
+    return {
+      id, label: u ? (u.name ? `${u.name} · ` : "") + (u.email ?? u.phone ?? "") : id, visits: vs.length, visitors: new Set(vs.map((s) => s[0].visitorId)).size,
+      rewarded: tx?._count ?? 0, tokens: tx?._sum.amount ?? 0, networks: top(vs, (s) => visitSource(s), 3).map(([k, n]) => `${k} ${n}`).join(", "),
+      stories: top(vs, (s) => titleOf.get(s[0].path) || s[0].path, 2).map(([k, n]) => `${short(k, 35)} (${n})`).join(" · "),
+    };
+  }).sort((a, b) => b.visits - a.visits || b.tokens - a.tokens);
+  const socialVisits = sourceRows.filter((r) => SOCIAL_SOURCES.includes(r.source)).reduce((n, r) => n + r.visits, 0);
+
   const bounce = visits.length ? Math.round((visits.filter((s) => s.length === 1).length / visits.length) * 100) : 0;
   const timed = views.filter((v) => v.seconds > 0);
   const avgTime = timed.length ? timed.reduce((n, v) => n + v.seconds, 0) / timed.length : 0;
@@ -93,7 +144,7 @@ export default async function Visitors({ searchParams }: { searchParams: Promise
     const answered = ev.filter((e) => e.correct !== null);
     const uid = vs.find((v) => v.userId)?.userId;
     return {
-      vid, name: visitorName(vid), member: uid ? users.find((u) => u.id === uid) : undefined, country: vs[0].country,
+      vid, came: visitSource(vs.filter((v) => v.sessionId === vs[0].sessionId)), name: visitorName(vid), member: uid ? users.find((u) => u.id === uid) : undefined, country: vs[0].country,
       visits: Math.max(ever?._count ?? 0, new Set(vs.map((v) => v.sessionId)).size), firstSeen: ever?._min.createdAt ?? vs[0].createdAt, last: vs[vs.length - 1],
       pages: vs.length, spins: ev.filter((e) => e.kind.startsWith("spin")).length, right: answered.filter((e) => e.correct).length, wrong: answered.filter((e) => !e.correct).length,
       won: ev.reduce((n, e) => n + (e.amount ?? 0), 0), clicks: ev.filter((e) => e.kind === "click").length,
@@ -112,23 +163,78 @@ export default async function Visitors({ searchParams }: { searchParams: Promise
         ))}
       </div>
 
+      <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-terminal-amber">Traffic sources · where visits come from ({socialVisits} from social networks) · click a source for its visits</h2>
+      <div className="term-panel mb-6 overflow-x-auto">
+        <table className="term-table">
+          <thead><tr><th>Source</th><th className="text-right">Visits</th><th className="text-right">Share</th><th className="text-right">Visitors</th><th className="text-right">From tagged links</th><th className="text-right">Pages / visit</th><th className="text-right">Bounce</th><th className="text-right">Avg visit</th><th className="text-right">Signed in</th><th>Top landing page</th></tr></thead>
+          <tbody>
+            {sourceRows.length === 0 && <tr><td colSpan={10} className="text-terminal-dim">No visits yet.</td></tr>}
+            {sourceRows.map((r) => (
+              <tr key={r.source}>
+                <td className="whitespace-nowrap"><Link href={`/admin/visitors?source=${encodeURIComponent(r.source)}&days=${days}`} className={`hover:text-terminal-amber ${SOCIAL_SOURCES.includes(r.source) ? "text-terminal-amber" : "text-slate-100"}`}>{r.source}</Link></td>
+                <td className="text-right">{r.visits}</td><td className="text-right">{Math.round((r.visits / visits.length) * 100)}%</td><td className="text-right">{r.visitors}</td>
+                <td className="text-right">{r.tagged || "–"}</td><td className="text-right">{r.pagesPer.toFixed(1)}</td><td className="text-right">{r.bounce}%</td>
+                <td className="text-right">{fmtSec(r.avgVisit)}</td><td className="text-right">{r.members || "–"}</td>
+                <td className="max-w-[18rem] truncate" title={r.topLanding?.[0]}>{r.topLanding ? `${short(titleOf.get(r.topLanding[0]) || r.topLanding[0], 45)} (${r.topLanding[1]})` : ""}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-terminal-amber">Stories × social networks (visits that landed on the story)</h2>
+      <div className="term-panel mb-6 overflow-x-auto">
+        <table className="term-table">
+          <thead><tr><th>Story</th>{SOCIAL_SOURCES.map((s) => <th key={s} className="text-right">{s}</th>)}<th className="text-right">Total</th></tr></thead>
+          <tbody>
+            {storySocialRows.length === 0 && <tr><td colSpan={SOCIAL_SOURCES.length + 2} className="text-terminal-dim">No visits from social networks yet. Share links carry ?source=twitter, linkedin, facebook, instagram, tiktok or youtube.</td></tr>}
+            {storySocialRows.map((r) => (
+              <tr key={r.path}>
+                <td><Link href={r.path} className="text-slate-100 hover:text-terminal-amber">{short(titleOf.get(r.path) || r.path, 55)}</Link></td>
+                {SOCIAL_SOURCES.map((s) => <td key={s} className="text-right">{r.row[s] || "–"}</td>)}
+                <td className="text-right text-slate-100">{r.total}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-terminal-amber">Who shared · readers whose share links (?by=) brought visits, and the tokens they earned</h2>
+      <div className="term-panel mb-6 overflow-x-auto">
+        <table className="term-table">
+          <thead><tr><th>Reader</th><th className="text-right">Visits brought</th><th className="text-right">Visitors</th><th className="text-right">Rewarded</th><th className="text-right">Tokens earned</th><th>Networks</th><th>Stories</th></tr></thead>
+          <tbody>
+            {sharerRows.length === 0 && <tr><td colSpan={7} className="text-terminal-dim">No visits from readers&apos; share links yet.</td></tr>}
+            {sharerRows.map((r) => (
+              <tr key={r.id}>
+                <td className="whitespace-nowrap"><Link href={`/admin/visitors?user=${r.id}&days=${days}`} className="text-slate-100 hover:text-terminal-amber">{r.label}</Link></td>
+                <td className="text-right">{r.visits}</td><td className="text-right">{r.visitors}</td><td className="text-right">{r.rewarded || "–"}</td>
+                <td className="text-right text-terminal-amber">{r.tokens ? `+${r.tokens}` : "–"}</td>
+                <td className="whitespace-nowrap">{r.networks}</td><td className="max-w-[22rem] truncate" title={r.stories}>{r.stories}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       <div className="mb-6 grid gap-4 md:grid-cols-2">
         <Table title="Countries (visits)" rows={top(landings, (v) => countryLabel(v.country))} />
         <Table title="Landing pages (where visits start)" rows={top(landings, (v) => v.path)} />
         <Table title="Exit pages (where visits end)" rows={top(exits, (v) => v.path)} />
-        <Table title="Where visitors come from" rows={top(landings.filter((v) => v.referrer), (v) => v.referrer!.split("/")[0])} />
+        <Table title="Referring sites (raw referrer)" rows={top(landings.filter((v) => v.referrer), (v) => v.referrer!.split("/")[0])} />
       </div>
 
       <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-terminal-amber">Every visitor (newest first) · click a name for everything they did</h2>
       <div className="term-panel mb-6 overflow-x-auto">
         <table className="term-table">
-          <thead><tr><th>Visitor</th><th>Country</th><th className="text-right">Visits</th><th className="text-right">Pages</th><th className="text-right">Clicks</th><th className="text-right">Spins</th><th className="text-right">Right / wrong</th><th className="text-right">Tokens won</th><th>First seen</th><th>Last seen</th><th>Left from</th></tr></thead>
+          <thead><tr><th>Visitor</th><th>Country</th><th>Came from</th><th className="text-right">Visits</th><th className="text-right">Pages</th><th className="text-right">Clicks</th><th className="text-right">Spins</th><th className="text-right">Right / wrong</th><th className="text-right">Tokens won</th><th>First seen</th><th>Last seen</th><th>Left from</th></tr></thead>
           <tbody>
-            {visitorRows.length === 0 && <tr><td colSpan={11} className="text-terminal-dim">No visitors yet.</td></tr>}
+            {visitorRows.length === 0 && <tr><td colSpan={12} className="text-terminal-dim">No visitors yet.</td></tr>}
             {visitorRows.map((r) => (
               <tr key={r.vid}>
                 <td className="whitespace-nowrap"><Link href={`/admin/visitors?visitor=${encodeURIComponent(r.vid)}&days=${days}`} className="text-slate-100 hover:text-terminal-amber">{r.name}</Link>{r.member && <span className="ml-2 text-terminal-amber">{r.member.name || r.member.email || r.member.phone}</span>}</td>
                 <td className="whitespace-nowrap">{countryLabel(r.country)}</td>
+                <td className={`whitespace-nowrap ${SOCIAL_SOURCES.includes(r.came) ? "text-terminal-amber" : "text-terminal-dim"}`}>{r.came}</td>
                 <td className="text-right">{r.visits}{r.visits > 1 && <span className="text-terminal-up"> ↺</span>}</td><td className="text-right">{r.pages}</td><td className="text-right">{r.clicks}</td><td className="text-right">{r.spins}</td>
                 <td className="text-right">{r.right + r.wrong ? `${r.right} / ${r.wrong}` : "–"}</td><td className="text-right">{r.won || "–"}</td>
                 <td className="whitespace-nowrap text-terminal-dim">{time(r.firstSeen)}</td><td className="whitespace-nowrap text-terminal-dim">{time(r.last.createdAt)}</td>
@@ -219,7 +325,7 @@ async function UserDetail({ userId, since, days }: { userId: string; since: Date
         {visits.length === 0 && <p className="text-terminal-dim">No visits in the last {days} days.</p>}
         {visits.map((s) => (
           <div key={s[0].sessionId} className="term-panel p-3">
-            <p className="mb-2 text-[11px] text-terminal-dim">{time(s[0].createdAt)} · {s.length} page{s.length > 1 ? "s" : ""} · {fmtSec(s.reduce((n, v) => n + v.seconds, 0))}{s[0].country !== undefined ? ` · ${countryLabel(s[0].country)}` : ""}{s[0].referrer ? ` · from ${s[0].referrer}` : ""}</p>
+            <p className="mb-2 text-[11px] text-terminal-dim">{time(s[0].createdAt)} · {s.length} page{s.length > 1 ? "s" : ""} · {fmtSec(s.reduce((n, v) => n + v.seconds, 0))}{s[0].country !== undefined ? ` · ${countryLabel(s[0].country)}` : ""}{` · via ${visitSource(s)}`}{s[0].referrer ? ` · from ${s[0].referrer}` : ""}</p>
             <ol className="space-y-1">
               {s.map((v, i) => (
                 <li key={v.id} className="flex gap-2 text-[12px]">
@@ -231,6 +337,47 @@ async function UserDetail({ userId, since, days }: { userId: string; since: Date
             </ol>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/** Every visit from one source (e.g. twitter): when, who, the page they landed on, how far they went. */
+async function SourceDetail({ source, since, days }: { source: string; since: Date; days: number }) {
+  const views: PV[] = await db.pageView.findMany({ where: { createdAt: { gte: since } }, orderBy: { createdAt: "asc" }, take: 100_000 });
+  const sessions = new Map<string, PV[]>();
+  for (const v of views) sessions.set(v.sessionId, [...(sessions.get(v.sessionId) ?? []), v]);
+  const visits = [...sessions.values()].filter((s) => visitSource(s) === source).reverse();
+  const landed = top(visits.map((s) => s[0]), (v) => v.path, 15);
+  const sharerIds = [...new Set(visits.map((s) => s.find((v) => v.sharedBy)?.sharedBy).filter(Boolean) as string[])];
+  const sharers = sharerIds.length ? await db.user.findMany({ where: { id: { in: sharerIds } }, select: { id: true, email: true, phone: true, name: true } }) : [];
+  const titleOf = new Map(views.map((v) => [v.path, v.title.replace(/ \| RALECHE$/, "")]));
+  return (
+    <div>
+      <Link href={`/admin/visitors?days=${days}`} className="font-mono text-[11px] uppercase tracking-widest text-terminal-dim hover:text-slate-100">← All visitors</Link>
+      <PageTitle title={`Visits from ${source}`} sub={`Last ${days} days · ${visits.length} visit${visits.length === 1 ? "" : "s"} · ${new Set(visits.map((s) => s[0].visitorId)).size} visitors`} />
+      <div className="mb-4 flex gap-3 font-mono text-[11px] uppercase tracking-widest">
+        {[7, 30, 90].map((d) => <Link key={d} href={`/admin/visitors?source=${encodeURIComponent(source)}&days=${d}`} className={d === days ? "text-terminal-amber" : "text-terminal-dim hover:text-slate-100"}>{d} days</Link>)}
+      </div>
+      <div className="mb-6"><Table title="Pages they landed on" rows={landed.map(([p, n]) => [titleOf.get(p) || p, n])} /></div>
+      <div className="term-panel overflow-x-auto">
+        <table className="term-table">
+          <thead><tr><th>When</th><th>Visitor</th><th>Country</th><th>Landed on</th><th className="text-right">Pages</th><th className="text-right">Time</th><th>Shared by</th><th>Referrer</th></tr></thead>
+          <tbody>
+            {visits.length === 0 && <tr><td colSpan={8} className="text-terminal-dim">No visits from {source} in the last {days} days.</td></tr>}
+            {visits.slice(0, 500).map((s) => (
+              <tr key={s[0].sessionId}>
+                <td className="whitespace-nowrap text-terminal-dim">{time(s[0].createdAt)}</td>
+                <td className="whitespace-nowrap"><Link href={`/admin/visitors?visitor=${encodeURIComponent(s[0].visitorId)}&days=${days}`} className="text-slate-100 hover:text-terminal-amber">{visitorName(s[0].visitorId)}</Link></td>
+                <td className="whitespace-nowrap">{countryLabel(s[0].country)}</td>
+                <td className="max-w-[20rem] truncate" title={s[0].path}><Link href={s[0].path} className="hover:text-terminal-amber">{short(titleOf.get(s[0].path) || s[0].path, 55)}</Link></td>
+                <td className="text-right">{s.length}</td><td className="text-right">{fmtSec(s.reduce((n, v) => n + v.seconds, 0))}</td>
+                <td className="whitespace-nowrap">{(() => { const by = s.find((v) => v.sharedBy)?.sharedBy; const u = by ? sharers.find((x) => x.id === by) : null; return by ? <Link href={`/admin/visitors?user=${by}&days=${days}`} className="text-terminal-amber hover:text-slate-100">{u?.name || u?.email || u?.phone || "member"}</Link> : <span className="text-terminal-dim">–</span>; })()}</td>
+                <td className="max-w-[14rem] truncate text-terminal-dim" title={s[0].referrer ?? ""}>{s[0].referrer ?? "–"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

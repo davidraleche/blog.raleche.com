@@ -2,9 +2,24 @@ import Link from "next/link";
 import { dashboardMetrics } from "@/lib/metrics";
 import { Panel, Stat, Badge, Delta, usd } from "@/components/admin/ui";
 import { MrrChart, VolumeChart, ViewsChart, PlanMix } from "@/components/admin/Charts";
+import { db } from "@/lib/db";
+import { sourceFromReferrer, SOCIAL_SOURCES } from "@/lib/traffic-source";
 
 export default async function Dashboard() {
-  const m = await dashboardMetrics();
+  const [m, landings, prevLandings] = await Promise.all([
+    dashboardMetrics(),
+    db.pageView.findMany({ where: { landing: true, createdAt: { gte: new Date(Date.now() - 7 * 86400e3) } }, select: { source: true, referrer: true }, take: 50_000 }),
+    db.pageView.findMany({ where: { landing: true, createdAt: { gte: new Date(Date.now() - 14 * 86400e3), lt: new Date(Date.now() - 7 * 86400e3) } }, select: { source: true, referrer: true }, take: 50_000 }),
+  ]);
+  // Traffic sources (7 days): where visits came from, by link tag (?source=) or referrer, vs the 7 days before.
+  const countSources = (rows: { source: string | null; referrer: string | null }[]) => {
+    const c = new Map<string, number>();
+    for (const r of rows) { const k = r.source ?? sourceFromReferrer(r.referrer) ?? "direct"; c.set(k, (c.get(k) ?? 0) + 1); }
+    return c;
+  };
+  const cur = countSources(landings), prev = countSources(prevLandings);
+  const sources = [...cur.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const socialTotal = [...cur.entries()].filter(([k]) => SOCIAL_SOURCES.includes(k)).reduce((n, [, v]) => n + v, 0);
   const fmtTime = (d: Date) => d.toLocaleString("en-US", { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
   const kindTone = { SIGNUP: "amber", SUB: "up", CHURN: "down", NEWS: "dim" } as const;
 
@@ -43,6 +58,24 @@ export default async function Dashboard() {
         </Panel>
         <Panel title="Readership · 30D"><ViewsChart data={m.daily} /></Panel>
       </div>
+
+      <Panel title={`Traffic sources · 7D · ${landings.length} visits · ${socialTotal} from social`} right={<Link href="/admin/visitors?days=7" className="term-label hover:text-white">All sources →</Link>}>
+        {sources.length === 0 ? <p className="font-mono text-xs text-terminal-dim">No visits yet.</p> : (
+          <table className="term-table">
+            <thead><tr><th>Source</th><th className="text-right">Visits</th><th className="w-1/2">Share</th><th className="text-right">Prev 7D</th></tr></thead>
+            <tbody>
+              {sources.map(([k, n]) => (
+                <tr key={k}>
+                  <td><Link href={`/admin/visitors?source=${encodeURIComponent(k)}&days=7`} className={`hover:text-white ${SOCIAL_SOURCES.includes(k) ? "text-terminal-amber" : "text-slate-100"}`}>{k}</Link></td>
+                  <td className="text-right tabular-nums">{n}</td>
+                  <td><div className="h-2 bg-terminal-amber/80" style={{ width: `${Math.max(2, Math.round((n / landings.length) * 100))}%` }} /></td>
+                  <td className="text-right tabular-nums text-terminal-dim">{prev.get(k) ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Panel>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_420px]">
         <Panel title="Top movers · articles" right={<Link href="/admin/posts" className="term-label hover:text-white">All posts →</Link>}>
