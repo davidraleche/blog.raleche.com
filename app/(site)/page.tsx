@@ -15,7 +15,7 @@ const published = () => ({ status: "published", publishedAt: { lte: new Date() }
 export default async function Home() {
   const { locale, t } = await getI18n();
   const [rawPosts, rawPopular, rawCategories, user] = await Promise.all([
-    db.post.findMany({ where: published(), include: { category: true }, orderBy: { publishedAt: "desc" }, take: 40 }), // newest story is the center (hero) story
+    db.post.findMany({ where: published(), include: { category: true }, orderBy: { publishedAt: "desc" }, take: 40 }), // the Featured story (or else the newest) is the center story
     db.post.findMany({ where: published(), include: { category: true }, orderBy: { views: "desc" }, take: 5 }),
     db.category.findMany({ orderBy: { sortOrder: "asc" }, include: { posts: { where: published(), include: { category: true }, orderBy: { publishedAt: "desc" }, take: 4 } } }),
     getUser(),
@@ -34,6 +34,9 @@ export default async function Home() {
   });
   if (!posts.length) return <p className="mx-auto max-w-7xl px-4 py-20 font-serif text-xl">{t("noStories")}</p>;
 
+  // The center (hero) story is the one marked Featured in the admin, or the newest one if none is.
+  const featuredAt = posts.findIndex((p) => p.featured);
+  if (featuredAt > 0) posts.unshift(...posts.splice(featuredAt, 1));
   const [hero, ...rest] = posts;
   const side = rest.slice(0, 4);
   const grid = rest.slice(4, 10);
