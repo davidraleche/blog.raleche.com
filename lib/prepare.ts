@@ -7,9 +7,10 @@ import { answersInSummary, generateQuiz, getQuiz, isValidQuiz, type QuizQuestion
 import { extractMentions, fetchTranscript } from "./mentions-ai";
 import { saveMentions, loadMentions, type Mentions } from "./books";
 import { extractVocab } from "./vocab-ai";
+import { writeExecutiveSummary } from "./summary-ai";
 import { saveVocab, loadVocab, mergeVocab } from "./vocab";
 
-export type PrepareReport = { slug: string; quiz: "created" | "kept" | "fixed" | "missing"; answersInSummary: boolean | null; languages: Locale[]; books?: number; vocab?: number; note?: string };
+export type PrepareReport = { slug: string; quiz: "created" | "kept" | "fixed" | "missing"; answersInSummary: boolean | null; languages: Locale[]; books?: number; vocab?: number; summaryWords?: number; note?: string };
 
 const OTHER = LOCALES.filter((l): l is Exclude<Locale, "en"> => l !== "en");
 
@@ -27,8 +28,8 @@ function mergeMentions(old: Mentions, add: Mentions): Mentions {
   return { books, people };
 }
 
-export async function prepareStory(postId: string, opts: { recheck?: boolean; rescanBooks?: boolean; rescanVocab?: boolean } = {}): Promise<PrepareReport> {
-  const post = await db.post.findUnique({ where: { id: postId }, select: { id: true, slug: true, title: true, dek: true, body: true, executiveSummary: true, status: true, mentionsAt: true, vocabAt: true, speaker: true, host: true } });
+export async function prepareStory(postId: string, opts: { recheck?: boolean; rescanBooks?: boolean; rescanVocab?: boolean; rewriteSummary?: boolean } = {}): Promise<PrepareReport> {
+  const post = await db.post.findUnique({ where: { id: postId }, select: { id: true, slug: true, title: true, dek: true, body: true, executiveSummary: true, status: true, mentionsAt: true, vocabAt: true, summaryAt: true, speaker: true, host: true, show: true } });
   if (!post || post.status !== "published") return { slug: post?.slug ?? postId, quiz: "missing", answersInSummary: null, languages: [], note: "not published" };
   const summary = post.executiveSummary || post.body;
   const report: PrepareReport = { slug: post.slug, quiz: "missing", answersInSummary: null, languages: [] };
@@ -84,6 +85,19 @@ export async function prepareStory(postId: string, opts: { recheck?: boolean; re
   }
   if (quiz && !isValidQuiz(quiz)) quiz = null;
 
+  // 1b. The paid executive summary: long and detailed, from the full transcript, stating every quiz answer (and ending with them).
+  if (!post.summaryAt || opts.rewriteSummary) {
+    try {
+      const md = await writeExecutiveSummary(post, await getTranscript(), quiz);
+      await db.post.update({ where: { id: post.id }, data: { executiveSummary: md, summaryAt: new Date() } });
+      post.executiveSummary = md;
+      report.summaryWords = md.split(/\s+/).length;
+    } catch (e) {
+      report.note = (e as Error).message.slice(0, 200);
+      console.error(`[prepare] executive summary for ${post.slug}: ${report.note}`);
+    }
+  }
+
   // 2. Translations: same strings the story page asks for, so readers get them straight from the cache.
   const summaryHtml = post.executiveSummary ? renderMarkdown(post.executiveSummary) : "";
   const quizTexts = quiz ? quiz.flatMap((q) => [q.q, ...q.options]) : [];
@@ -99,7 +113,7 @@ export async function prepareStory(postId: string, opts: { recheck?: boolean; re
 }
 
 /** Prepares several stories one after another (kept sequential to stay inside API limits). */
-export async function prepareStories(ids: string[], opts: { recheck?: boolean; rescanBooks?: boolean; rescanVocab?: boolean } = {}) {
+export async function prepareStories(ids: string[], opts: { recheck?: boolean; rescanBooks?: boolean; rescanVocab?: boolean; rewriteSummary?: boolean } = {}) {
   const reports: PrepareReport[] = [];
   for (const id of ids) reports.push(await prepareStory(id, opts).catch((e) => ({ slug: id, quiz: "missing" as const, answersInSummary: null, languages: [], note: (e as Error).message.slice(0, 200) })));
   console.log("[prepare]", JSON.stringify(reports));

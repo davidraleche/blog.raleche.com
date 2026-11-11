@@ -22,7 +22,7 @@ async function accessToken() {
 }
 
 /** Ask Gemini on Vertex AI for JSON matching a response schema. Throws if Vertex AI is off or the call fails. */
-export async function geminiJson<T>(prompt: string, responseSchema: object, temperature = 0.3): Promise<T> {
+export async function geminiJson<T>(prompt: string, responseSchema: object, temperature = 0.3, timeoutMs = 60_000): Promise<T> {
   const token = await accessToken();
   const candidates = workingModel ? [workingModel] : MODELS;
   let lastError = "no model available";
@@ -31,7 +31,7 @@ export async function geminiJson<T>(prompt: string, responseSchema: object, temp
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature, responseMimeType: "application/json", responseSchema } }),
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(timeoutMs), // long answers (e.g. executive summaries) pass a longer limit
     });
     if (!res.ok) {
       const text = (await res.text()).replace(/\s+/g, " ");

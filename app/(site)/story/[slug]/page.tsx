@@ -191,7 +191,7 @@ export default async function Story({ params, searchParams }: Props) {
           <TopUpDialog packs={topUpPacks()} balance={user.tokenBalance} cost={UNLOCK_COST} next={`/story/${raw.slug}`} then={`unlock:${raw.id}:${sp.topup}`} labels={topUpLabels(t)} />
         )}
         {justUnlocked && unlocked && (() => { const fromQuiz = !!quiz && !!quizPlay && quizPlay.correct < quiz.length; return <UnlockCelebration title={t("unlockCelebrateTitle")} detail={t(fromQuiz ? "unlockCelebrateQuiz" : "unlockCelebrateDetail")} target={fromQuiz ? "quiz" : "summary"} />; })()}
-        <ExecutiveSummary hasSummary={!!raw.executiveSummary} html={summaryHtml} member={member} unlocked={unlocked} signedIn={!!user} balance={user?.tokenBalance ?? 0} postId={raw.id} back={`/story/${raw.slug}`} t={t} />
+        <ExecutiveSummary hasSummary={!!raw.executiveSummary} words={raw.executiveSummary ? raw.executiveSummary.split(/\s+/).length : 0} html={summaryHtml} member={member} unlocked={unlocked} signedIn={!!user} balance={user?.tokenBalance ?? 0} postId={raw.id} back={`/story/${raw.slug}`} t={t} />
         {quiz && raw.status === "published" && (
           <StoryQuiz
             className="mb-10"
@@ -374,7 +374,7 @@ export default async function Story({ params, searchParams }: Props) {
   );
 }
 
-function ExecutiveSummary({ hasSummary, html, member, unlocked, signedIn, balance, postId, back, t }: { hasSummary: boolean; html: string; member: boolean; unlocked: boolean; signedIn: boolean; balance: number; postId: string; back: string; t: Awaited<ReturnType<typeof getI18n>>["t"] }) {
+function ExecutiveSummary({ hasSummary, words, html, member, unlocked, signedIn, balance, postId, back, t }: { hasSummary: boolean; words: number; html: string; member: boolean; unlocked: boolean; signedIn: boolean; balance: number; postId: string; back: string; t: Awaited<ReturnType<typeof getI18n>>["t"] }) {
   if (!hasSummary) return null;
   return (
     <aside id="summary" className="mb-10 scroll-mt-24 border-[3px] border-ink">
@@ -396,6 +396,7 @@ function ExecutiveSummary({ hasSummary, html, member, unlocked, signedIn, balanc
           </div>
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/60 px-4 text-center">
             <p className="font-display text-2xl font-bold uppercase">{t("takeaways")}</p>
+            {words > 0 && <p className="font-mono text-[11px] uppercase tracking-widest text-ink/70">{t("summaryWords", { n: Math.round(words / 100) * 100 })} · {t("summaryHasAnswers")}</p>}
             <div className="flex flex-wrap justify-center gap-2">
               {signedIn ? (
                 <form action={unlockSummary}>

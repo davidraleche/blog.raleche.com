@@ -2,30 +2,35 @@ import Link from "next/link";
 import { getI18n } from "@/lib/i18n/server";
 import { localizeFields } from "@/lib/localize";
 import { db } from "@/lib/db";
-import { getUser } from "@/lib/auth";
-import { isFreeMemo, memoListSelect } from "@/lib/memos";
-import { buyMemo } from "@/app/actions/memos";
-import { TopUpDialog } from "@/components/TopUpDialog";
-import { topUpLabels, topUpPacks } from "@/lib/topup";
+import { getUser, canReadSummaries } from "@/lib/auth";
+import { unlockSummary } from "@/app/actions/tokens";
+import { UNLOCK_COST } from "@/lib/token-config";
 import { BCP47 } from "@/lib/i18n/messages";
 
 export const metadata = {
-  title: "Buy Memo",
-  description: "In-depth memos on the interviews that matter: key numbers, themes, an action checklist and a 30-60-90 day plan. Pay with tokens.",
+  title: "Buy Executive summaries",
+  description: "A long, detailed executive summary of every interview: key ideas, numbers worth remembering, what it means for your business, a 30-60-90 day plan and the quiz answers. Unlock with tokens.",
   alternates: { canonical: "/memos" },
 };
 
-export default async function Memos({ searchParams }: { searchParams: Promise<{ error?: string; topup?: string }> }) {
+/**
+ * Buy Executive summaries: every published story's executive summary, unlocked one by one with tokens
+ * (the same unlock as on the story). Unlocking sends the reader to the story's summary.
+ */
+export default async function ExecutiveSummaries() {
   const { locale, t } = await getI18n();
-  const { error, topup } = await searchParams;
   const user = await getUser();
-  const [rawMemos, owned] = await Promise.all([
-    db.memo.findMany({ where: { active: true }, select: memoListSelect, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }),
-    user ? db.memoPurchase.findMany({ where: { userId: user.id }, select: { memoId: true } }) : [],
+  const subscriber = canReadSummaries(user);
+  const [rawPosts, owned] = await Promise.all([
+    db.post.findMany({
+      where: { status: "published", publishedAt: { lte: new Date() }, executiveSummary: { not: "" } },
+      select: { id: true, slug: true, title: true, dek: true, coverImage: true, executiveSummary: true },
+      orderBy: { publishedAt: "desc" },
+    }),
+    user ? db.unlock.findMany({ where: { userId: user.id }, select: { postId: true } }) : [],
   ]);
-  // Free samples first, so readers can see what a memo looks like before buying one.
-  const memos = (await localizeFields(locale, rawMemos, ["title", "summary"])).sort((a, b) => Number(isFreeMemo(b)) - Number(isFreeMemo(a)));
-  const ownedIds = new Set(owned.map((o) => o.memoId));
+  const posts = await localizeFields(locale, rawPosts.map(({ executiveSummary, ...p }) => ({ ...p, words: executiveSummary.split(/\s+/).length })), ["title", "dek"]);
+  const ownedIds = new Set(owned.map((o) => o.postId));
   const n = (v: number) => v.toLocaleString(BCP47[locale]);
 
   return (
@@ -41,43 +46,42 @@ export default async function Memos({ searchParams }: { searchParams: Promise<{ 
         )}
       </div>
 
-      {(() => {
-        const want = user && topup ? memos.find((m) => m.id === topup && !ownedIds.has(m.id) && m.fileSize) : null;
-        return want && user ? <TopUpDialog packs={topUpPacks()} balance={user.tokenBalance} cost={want.priceTokens} next="/memos" then={`memo:${want.id}`} labels={topUpLabels(t)} /> : null;
-      })()}
-      {error === "unavailable" && <p className="mx-auto mt-8 max-w-2xl border-l-4 border-accent bg-accent/5 px-4 py-3 text-sm">{t("memoUnavailable")}</p>}
-
-      {memos.length ? (
+      {posts.length ? (
         <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {memos.map((m) => {
-            const mine = ownedIds.has(m.id);
-            const onSale = !!m.fileSize;
-            const free = onSale && isFreeMemo(m);
+          {posts.map((p) => {
+            const story = `/story/${p.slug}`;
+            const mine = subscriber || ownedIds.has(p.id);
             return (
-              <div key={m.id} id={m.slug} className={`relative flex scroll-mt-24 flex-col border-[3px] target:ring-4 target:ring-accent ${free ? "border-terminal-amber shadow-[6px_6px_0_#f5a623]" : "border-ink"}`}>
-                {free && <span className="absolute left-3 top-3 z-10 bg-terminal-amber px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-ink shadow">{t("memoFreeBadge")}</span>}
-                {m.post?.coverImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={m.post.coverImage} alt="" className="aspect-[1200/630] w-full border-b-[3px] border-ink object-cover" loading="lazy" />
-                ) : (
-                  <div className="flex aspect-[1200/630] items-center justify-center border-b-[3px] border-ink bg-ink font-display text-5xl font-extrabold text-white/20">R</div>
-                )}
+              <div key={p.id} id={p.slug} className="relative flex scroll-mt-24 flex-col border-[3px] border-ink target:ring-4 target:ring-accent">
+                <Link href={story}>
+                  {p.coverImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.coverImage} alt="" className="aspect-[1200/630] w-full border-b-[3px] border-ink object-cover" loading="lazy" />
+                  ) : (
+                    <div className="flex aspect-[1200/630] items-center justify-center border-b-[3px] border-ink bg-ink font-display text-5xl font-extrabold text-white/20">R</div>
+                  )}
+                </Link>
                 <div className="flex flex-1 flex-col p-5">
-                  <h2 className="hed text-2xl">{m.title}</h2>
-                  <p className="mt-2 flex-1 font-serif text-ink/70">{m.summary}</p>
-                  <p className="mt-4 font-display text-3xl font-extrabold">{free ? t("memoFree") : onSale ? t("memoPrice", { n: n(m.priceTokens) }) : t("memoSoon")}</p>
+                  <h2 className="hed text-2xl"><Link href={story} className="hover:text-accent">{p.title}</Link></h2>
+                  {p.dek && <p className="mt-2 flex-1 font-serif text-ink/70">{p.dek}</p>}
+                  <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-ink/50">{t("summaryWords", { n: n(Math.round(p.words / 100) * 100) })}</p>
+                  <p className="mt-3 font-display text-3xl font-extrabold">{mine ? t("unlockedBadge") : t("memoPrice", { n: n(UNLOCK_COST) })}</p>
                   <div className="mt-3 flex flex-wrap gap-3 font-mono text-[11px] uppercase tracking-[0.15em]">
-                    {free ? (
-                      <a href={`/memos/${m.id}/file`} target="_blank" rel="noopener" className="bg-terminal-amber px-4 py-2 font-bold text-ink hover:bg-ink hover:text-white">{t("memoReadFree")}</a>
-                    ) : mine ? (
-                      <Link href="/account/memos" className="bg-ink px-4 py-2 text-white hover:bg-accent">{t("memoOpen")}</Link>
-                    ) : onSale ? (
-                      <form action={buyMemo}>
-                        <input type="hidden" name="memoId" value={m.id} />
-                        <button className="bg-ink px-4 py-2 uppercase text-white hover:bg-accent">{user ? t("memoBuy", { n: n(m.priceTokens) }) : t("memoSignIn")}</button>
+                    {mine ? (
+                      <>
+                        <Link href={`${story}#summary`} className="bg-ink px-4 py-2 text-white hover:bg-accent">{t("memoOpen")}</Link>
+                        <a href={`${story}/summary.pdf`} className="border border-ink px-4 py-2 hover:bg-ink hover:text-white">{t("memoDownload")}</a>
+                      </>
+                    ) : user ? (
+                      <form action={unlockSummary}>
+                        <input type="hidden" name="postId" value={p.id} />
+                        <input type="hidden" name="back" value={story} />
+                        <button className="bg-ink px-4 py-2 uppercase text-white hover:bg-accent">{t("memoBuy", { n: n(UNLOCK_COST) })}</button>
                       </form>
-                    ) : null}
-                    {m.post && <Link href={`/story/${m.post.slug}`} className="border border-ink px-4 py-2 hover:bg-ink hover:text-white">{t("readArticle")}</Link>}
+                    ) : (
+                      <Link href={`/signin?next=${encodeURIComponent(story)}`} className="bg-ink px-4 py-2 text-white hover:bg-accent">{t("memoSignIn")}</Link>
+                    )}
+                    <Link href={story} className="border border-ink px-4 py-2 hover:bg-ink hover:text-white">{t("readArticle")}</Link>
                   </div>
                 </div>
               </div>

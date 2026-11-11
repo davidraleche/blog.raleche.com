@@ -119,6 +119,7 @@ model Post {
   mentionsAt       DateTime? // when books/people were last extracted (null = not yet)
   vocabTerms       VocabTerm[]
   vocabAt          DateTime? // when the vocabulary was last extracted (null = not yet)
+  summaryAt        DateTime? // when the long executive summary (with the quiz answers) was written (null = not yet; the short imported one is replaced)
   speaker          String? // person interviewed, e.g. "Sam Altman"
   host             String? // interviewer, e.g. "Lenny Rachitsky"
   show             String? // podcast/channel, e.g. "Lenny's Podcast"

@@ -49,9 +49,12 @@ export async function savePost(form: FormData) {
     publishedAt: publishedAtRaw ? new Date(publishedAtRaw) : status === "published" ? new Date() : null,
   };
   if (data.featured) await db.post.updateMany({ where: { featured: true, NOT: { id } }, data: { featured: false } });
+  // A summary edited by hand is kept: marking it written stops the automatic rewrite from replacing it.
+  const before = id ? await db.post.findUnique({ where: { id }, select: { executiveSummary: true } }) : null;
+  const summaryEdited = !!data.executiveSummary && (!before || before.executiveSummary !== data.executiveSummary);
   const post = id
-    ? await db.post.update({ where: { id }, data })
-    : await db.post.create({ data: { ...data, authorId: admin.id } });
+    ? await db.post.update({ where: { id }, data: summaryEdited ? { ...data, summaryAt: new Date() } : data })
+    : await db.post.create({ data: { ...data, authorId: admin.id, summaryAt: summaryEdited ? new Date() : null } });
   // Publishing gets the story ready: books and people for the Books section, quiz, translations.
   if (post.status === "published") after(() => prepareStories([post.id]));
   revalidatePath("/", "layout");

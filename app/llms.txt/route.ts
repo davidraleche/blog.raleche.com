@@ -26,7 +26,7 @@ ${posts.map(line).join("\n")}
 ${categories.map((c) => `- [${c.name}](${absUrl(`/category/${c.slug}`)})`).join("\n")}
 - [Speakers](${absUrl("/speakers")}): everyone interviewed, with their stories
 - [Hosts](${absUrl("/hosts")}): the podcasts and interviewers
-- [Buy Memo](${absUrl("/memos")}): in-depth memos sold for tokens
+- [Buy Executive summaries](${absUrl("/memos")}): long, detailed executive summaries of every interview (with the quiz answers), unlocked with tokens
 
 ## Topics
 
