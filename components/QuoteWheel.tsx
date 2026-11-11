@@ -200,16 +200,22 @@ export function QuoteWheel({ quotes, labels, compact = false }: { quotes: Speake
 
 /**
  * The floating "Daily spin" button on every page: opens the same quote wheel in a popup.
- * Links with ?spin=1 (the weekly newsletter) open it on arrival.
+ * The popup opens and spins by itself on the first page of each visit; links with ?spin=1 (the weekly newsletter) always open it.
  */
 export function QuoteWheelButton({ quotes, labels, buttonLabel }: { quotes: SpeakerQuote[]; labels: QuoteWheelLabels; buttonLabel: string }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
+  // Opens and spins on its own once per visit (browser session), and on any link with ?spin=1.
   useEffect(() => {
-    if (!quotes.length || pathname.startsWith("/signin")) return;
-    if (!new URLSearchParams(window.location.search).has("spin")) return;
-    const id = setTimeout(() => setOpen(true), 600);
+    if (!quotes.length || /^\/(signin|signup|checkout|account)/.test(pathname)) return;
+    let seen = false;
+    try { seen = sessionStorage.getItem("qw_auto") === "1"; } catch {}
+    if (seen && !new URLSearchParams(window.location.search).has("spin")) return;
+    const id = setTimeout(() => {
+      try { sessionStorage.setItem("qw_auto", "1"); } catch {}
+      setOpen(true);
+    }, 900);
     return () => clearTimeout(id);
   }, [quotes.length, pathname]);
 
