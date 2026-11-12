@@ -306,6 +306,8 @@ export function QuestionShareVideo({ q, share }: { q: Q; share: QuestionShare })
   const [canShareFiles, setCanShareFiles] = useState(false);
   const [copied, setCopied] = useState<"caption" | "link" | null>(null);
   const [tip, setTip] = useState<{ kind: "intent" | "upload" | "error" | "ready"; platform: Platform } | null>(null);
+  /** Collapsed by default; opens on a tap, or by itself when the reader comes back from sign-in to #share-question. */
+  const [open, setOpen] = useState(false);
 
   const slug = (q.kind === "vocab" ? q.prompt : q.options.join(" ")).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "question";
   const base = q.kind === "vocab" ? "vocabulary" : "who-said-it";
@@ -349,12 +351,13 @@ export function QuestionShareVideo({ q, share }: { q: Q; share: QuestionShare })
       if (navigator.canShare?.({ files: [probe] })) setCanShareFiles(true);
     } catch {}
     if (!pickMime()) setUnsupported(true);
+    if (window.location.hash === "#share-question") setOpen(true);
   }, []);
 
   // Live preview: the same animation, looping, while the panel is on screen. Once the panel is in view, make the file too,
   // so Download and Share are instant (and phones' share sheet opens on the tap itself).
   useEffect(() => {
-    if (!box.current || !preview.current) return;
+    if (!open || !box.current || !preview.current) return;
     const ctx = preview.current.getContext("2d");
     if (!ctx) return;
     let raf = 0;
@@ -374,7 +377,7 @@ export function QuestionShareVideo({ q, share }: { q: Q; share: QuestionShare })
     io.observe(box.current);
     return () => { io.disconnect(); cancelAnimationFrame(raf); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoUrl]);
+  }, [videoUrl, open]);
 
   useEffect(() => () => { if (videoUrl) URL.revokeObjectURL(videoUrl); }, [videoUrl]);
 
@@ -451,11 +454,21 @@ export function QuestionShareVideo({ q, share }: { q: Q; share: QuestionShare })
       <div ref={probes} aria-hidden className="invisible absolute h-0 w-0 overflow-hidden">
         <span className="font-display">a</span><span className="font-serif">a</span><span className="font-mono">a</span>
       </div>
-      <div className="flex items-center justify-between gap-3 bg-ink px-5 py-3 text-white">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls="share-question-body"
+        className="flex w-full items-center justify-between gap-3 bg-ink px-5 py-3 text-left text-white hover:bg-ink/90"
+      >
         <span className="font-mono text-[11px] uppercase tracking-[0.2em]">{L.wgVideoTitle}</span>
-        <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-terminal-amber">{L.wgVideoBadge}</span>
-      </div>
-      <div className="grid gap-6 px-5 py-5 sm:grid-cols-[240px_1fr] sm:px-8">
+        <span className="flex shrink-0 items-center gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-terminal-amber">{L.wgVideoBadge}</span>
+          <span aria-hidden className={`inline-block text-sm transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
+        </span>
+      </button>
+      {open && (
+      <div id="share-question-body" className="grid gap-6 px-5 py-5 sm:grid-cols-[240px_1fr] sm:px-8">
         <div className="flex justify-center bg-ink/5 p-3 sm:self-start">
           {videoUrl ? (
             <video key={videoUrl} src={videoUrl} controls muted loop autoPlay playsInline className="aspect-[9/16] w-full max-w-[220px] border-2 border-ink bg-ink" />
@@ -529,6 +542,7 @@ export function QuestionShareVideo({ q, share }: { q: Q; share: QuestionShare })
           </details>
         </div>
       </div>
+      )}
     </section>
   );
 }
