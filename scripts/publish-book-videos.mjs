@@ -18,6 +18,11 @@ if (!dir || !bookFiles.length) {
 }
 const gcloud = (args, opts = {}) => execFileSync("gcloud", [...args, `--account=${ACCOUNT}`], { encoding: "utf8", ...opts });
 const tag = (s) => "#" + s.replace(/[^A-Za-z0-9]/g, "");
+// Notes that only restate who wrote the book are left out (same rule as the video).
+const note = (b) => {
+  const n = (b.note ?? "").replace(/^["“]|["”]$/g, "").trim();
+  return n.length < 25 || /^(book by|biography of|.{0,40} is the author of)/i.test(n) ? "" : n;
+};
 const VERB = { recommends: "recommends", reading: "is reading", influenced: "was shaped by", wrote: "wrote" };
 
 let manifest = { stories: {} };
@@ -41,7 +46,10 @@ for (const f of bookFiles) {
     formats,
     speaker: b.who,
     // The link to the book is added by the page (raleche.com/books/<slug>), so it is not in the text.
-    text: `${b.who} ${VERB[b.relation ?? "recommends"] ?? "recommends"} "${short}" by ${b.author}.\n\n"${b.note.replace(/^["“]|["”]$/g, "")}"`,
+    text: [
+      b.relation === "wrote" ? `"${short}" by ${b.author}.` : `${b.who} ${VERB[b.relation ?? "recommends"] ?? "recommends"} "${short}" by ${b.author}.`,
+      note(b) && `"${note(b)}"`,
+    ].filter(Boolean).join("\n\n"),
     credit: "",
     hashtags: [...new Set(["#Books", tag(b.who), tag(b.author), tag(short), "#Leadership"])].join(" "),
     updatedAt: new Date().toISOString(),
