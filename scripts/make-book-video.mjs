@@ -5,12 +5,14 @@
 //
 //   node scripts/make-book-video.mjs <book.json> <out dir>
 //
-// book.json: { slug, title, subtitle?, author, who, relation?, note }
+// book.json: { slug, title, subtitle?, author, who, relation?, note, cover? }
+// cover: path to the real cover image (jpg/png); without it a typographic cover is drawn.
+// The cover is on screen from the very first frame (it is the video's thumbnail).
 // Writes <out dir>/<slug>-vertical.mp4 and <slug>-wide.mp4 (upload them with scripts/publish-book-videos.mjs).
 import { execFileSync } from "child_process";
 import { readFileSync, writeFileSync, mkdirSync, mkdtempSync } from "fs";
 import { tmpdir } from "os";
-import { join } from "path";
+import { join, resolve } from "path";
 
 const [bookFile, out] = process.argv.slice(2);
 if (!bookFile || !out) {
@@ -25,10 +27,13 @@ const SECONDS = 5;
 
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const [main, sub] = book.subtitle ? [book.title, book.subtitle] : book.title.split(/:\s*(.*)/s);
-const relation = { recommends: "Recommended by", reading: "Read by", influenced: "Shaped", wrote: "Written by" }[book.relation ?? "recommends"] ?? "Recommended by";
-const note = book.note.replace(/^["“]|["”]$/g, "");
+const relation = { recommends: "Recommended by", reading: "On the reading list of", influenced: "Shaped", wrote: "Written by" }[book.relation ?? "recommends"] ?? "Recommended by";
+// Notes that only restate who wrote the book add nothing on screen.
+const rawNote = (book.note ?? "").replace(/^["“]|["”]$/g, "").trim();
+const note = rawNote.length < 25 || /^(book by|biography of|.{0,40} is the author of)/i.test(rawNote) ? "" : rawNote;
+const coverSrc = book.cover ? `file://${resolve(book.cover)}` : "";
 
-// Layers, in order, with when each comes in (seconds). The cover also rises into place.
+// Layers, in order, with when each comes in (seconds). The cover is there from frame 1 and settles into place.
 const LAYERS = ["bg", "cover", "who", "quote", "cta"];
 const FROM = { cover: 0, who: 0.6, quote: 1.4, cta: 2.8 };
 
@@ -50,17 +55,17 @@ function html(format, layer) {
   <div class="abs" style="${show("bg")}inset:0;background:#17120f">
     <div class="abs sans" style="left:${v ? 80 : 760}px;top:${v ? 110 : 120}px;font-size:28px;color:#f5a623">Raleche · Books</div>
   </div>
-  <div class="abs" style="${show("cover")}left:${cover.x}px;top:${cover.y}px;width:${cover.w}px;height:${cover.h}px;background:#0f3d44;border-top:${cover.w * 0.04}px solid #f5a623;box-shadow:24px 24px 0 #000;padding:${cover.w * 0.09}px">
+  ${coverSrc ? `<img class="abs" src="${coverSrc}" style="${show("cover")}left:${cover.x}px;top:${cover.y}px;width:${cover.w}px;height:${cover.h}px;object-fit:cover;box-shadow:24px 24px 0 #000">` : `<div class="abs" style="${show("cover")}left:${cover.x}px;top:${cover.y}px;width:${cover.w}px;height:${cover.h}px;background:#0f3d44;border-top:${cover.w * 0.04}px solid #f5a623;box-shadow:24px 24px 0 #000;padding:${cover.w * 0.09}px">
     <div style="width:${cover.w * 0.2}px;height:8px;background:#f5a623"></div>
     <div class="hed" style="margin-top:${cover.w * 0.07}px;font-size:${titleSize * cover.w / 560}px;color:#fff">${esc(main)}</div>
     ${sub ? `<div class="sans" style="margin-top:${cover.w * 0.05}px;font-size:${30 * cover.w / 560}px;line-height:1.35;letter-spacing:.08em;color:rgba(255,255,255,.85)">${esc(sub)}</div>` : ""}
     <div class="abs sans" style="left:${cover.w * 0.09}px;bottom:${cover.w * 0.09}px;font-size:${28 * cover.w / 560}px;letter-spacing:.12em;color:#f5a623">${esc(book.author)}</div>
-  </div>
+  </div>`}
   <div class="abs" style="${show("who")}left:${text.x}px;top:${text.y}px;width:${text.w}px">
     <div class="sans" style="font-size:${v ? 32 : 30}px;color:#f5a623">${esc(relation)}</div>
-    <div class="hed" style="margin-top:20px;font-size:${v ? 140 : 130}px;color:#fff">${esc(book.who)}</div>
+    <div class="hed" style="margin-top:20px;font-size:${Math.min(v ? 140 : 130, Math.floor(text.w / (book.who.length * 0.46)))}px;white-space:nowrap;color:#fff">${esc(book.who)}</div>
   </div>
-  <div class="abs" style="${show("quote")}left:${text.x}px;top:${text.y + (v ? 205 : 195)}px;width:${text.w}px;font-family:Georgia,serif;font-style:italic;font-size:${v ? 46 : 44}px;line-height:1.35;color:rgba(255,255,255,.92);border-left:6px solid #f5a623;padding-left:28px">“${esc(note)}”</div>
+  <div class="abs" style="${note ? "" : "display:none;"}${show("quote")}left:${text.x}px;top:${text.y + (v ? 205 : 195)}px;width:${text.w}px;font-family:Georgia,serif;font-style:italic;font-size:${v ? 46 : 44}px;line-height:1.35;color:rgba(255,255,255,.92);border-left:6px solid #f5a623;padding-left:28px">“${esc(note)}”</div>
   <div class="abs" style="${show("cta")}left:${cta.x}px;top:${cta.y}px;width:${cta.w}px">
     <div class="hed" style="height:${cta.h}px;background:#f5a623;color:#17120f;display:flex;align-items:center;justify-content:center;font-size:${v ? 76 : 72}px;padding-top:10px;box-shadow:10px 10px 0 #000">Get the book at raleche.com</div>
     <div class="sans" style="margin-top:28px;text-align:center;font-size:24px;letter-spacing:.12em;color:rgba(255,255,255,.6)">${esc(main)} · ${esc(book.author)}</div>
@@ -83,8 +88,8 @@ function render(format) {
   const f = [`[0:v]format=yuv420p[base0]`];
   LAYERS.slice(1).forEach((l, i) => {
     const n = i + 1, from = FROM[l];
-    f.push(`[${n}:v]format=rgba,fade=in:st=${from}:d=${l === "cta" ? 0.15 : 0.45}:alpha=1[l${n}]`);
-    const y = l === "cover" ? `'max(0,90*(1-t/0.6))'` : "0";
+    f.push(l === "cover" ? `[${n}:v]format=rgba[l${n}]` : `[${n}:v]format=rgba,fade=in:st=${from}:d=${l === "cta" ? 0.15 : 0.45}:alpha=1[l${n}]`);
+    const y = l === "cover" ? `'max(0,40*(1-t/0.5))'` : "0";
     f.push(`[base${i}][l${n}]overlay=x=0:y=${y}:format=auto${n === a - 1 ? "" : `[base${n}]`}`);
   });
   f[f.length - 1] += ",format=yuv420p[v]";

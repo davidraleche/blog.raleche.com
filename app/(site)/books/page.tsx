@@ -5,7 +5,7 @@ import { amazonTag, amazonUrl } from "@/lib/books";
 import { BookCover } from "@/components/BookCover";
 import type { Messages } from "@/lib/i18n/messages";
 import { AmazonButton } from "@/components/AmazonButton";
-import { StoryShareVideo } from "@/components/StoryShareVideo";
+import { BookShareVideo } from "@/components/BookShareVideo";
 import { bookMiniVideos } from "@/lib/story-videos";
 import { getUser } from "@/lib/auth";
 import { shareCodeFor } from "@/lib/share-rewards";
@@ -44,17 +44,6 @@ export default async function Books() {
       <h1 className="hed border-b-[3px] border-ink pb-4 text-7xl sm:text-9xl">{t("booksTitle")}</h1>
       <p className="mt-4 max-w-2xl font-serif text-xl text-ink/70">{t("booksDek")}</p>
 
-      {withVideo.map((b) => {
-        const v = videos[b.slug];
-        return (
-          <StoryShareVideo
-            key={b.id} slug={b.slug} storyUrl={`https://raleche.com/books/${b.slug}`} videoBase={`/books/${b.slug}/video`} sectionId={`share-${b.slug}`} linkLabel="Get the book"
-            formats={v.formats} speaker={v.speaker} text={v.text} credit={v.credit} hashtags={v.hashtags} labels={shareLabels} className="mt-10 max-w-3xl"
-            shareCode={shareCode} signinHref={user ? undefined : `/signin?next=${encodeURIComponent(`/books#share-${b.slug}`)}`}
-          />
-        );
-      })}
-
       {books.length === 0 && <p className="py-16 font-serif text-xl text-ink/60">{t("noBooks")}</p>}
 
       <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -75,7 +64,14 @@ export default async function Books() {
               </ul>
               <div className="mt-4 flex flex-wrap items-center gap-3 self-start">
                 <AmazonButton href={amazonUrl(b, tag)} label={t("buyOnAmazon")} className="h-10" />
-                {videos[b.slug] && <a href={`#share-${b.slug}`} className="font-mono text-[11px] font-bold uppercase tracking-widest text-accent hover:underline">▶ {t("bookVideoLink")}</a>}
+                {videos[b.slug] && (
+                  <BookShareVideo
+                    buttonLabel={t("bookVideoLink")} closeLabel={t("close")}
+                    slug={b.slug} storyUrl={`https://raleche.com/books/${b.slug}`} videoBase={`/books/${b.slug}/video`} sectionId={`share-${b.slug}`} linkLabel="More on raleche.com" buyLink={{ label: "Buy here (affiliate link)", url: amazonUrl(b, tag) }}
+                    formats={videos[b.slug].formats} speaker={videos[b.slug].speaker} text={videos[b.slug].text} credit={videos[b.slug].credit} hashtags={videos[b.slug].hashtags} labels={shareLabels}
+                    shareCode={shareCode} signinHref={user ? undefined : `/signin?next=${encodeURIComponent(`/books#share-${b.slug}`)}`}
+                  />
+                )}
               </div>
             </div>
           </article>

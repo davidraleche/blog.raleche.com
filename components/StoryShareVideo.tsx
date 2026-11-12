@@ -39,6 +39,8 @@ type Props = {
   sectionId?: string;
   /** Words before the link in the caption (default: "Full story"). */
   linkLabel?: string;
+  /** A "Buy here" line put in the caption before our link (the book's Amazon link with the affiliate tag). */
+  buyLink?: { label: string; url: string };
 };
 
 const fill = (s: string, platform: string) => s.replace(/\{platform\}/g, platform);
@@ -62,7 +64,7 @@ export async function copyText(text: string) {
 }
 
 /** End-of-story panel: the story's mini video, download, and one-click sharing to the networks. */
-export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit, hashtags, labels, shareCode, signinHref, className = "mt-12", videoBase, sectionId = "share-video", linkLabel = "Full story" }: Props) {
+export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit, hashtags, labels, shareCode, signinHref, className = "mt-12", videoBase, sectionId = "share-video", linkLabel = "Full story", buyLink }: Props) {
   const [format, setFormat] = useState<Format>(formats[0]);
   const [copied, setCopied] = useState<"caption" | "link" | null>(null);
   const [tip, setTip] = useState<{ kind: "intent" | "upload" | "error"; platform: Platform } | null>(null);
@@ -74,7 +76,7 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
   const fileName = (f: Format) => `raleche-${slug}-${f}.mp4`;
   // Every link we hand out says where it was shared (?source=twitter…), so the admin dashboard can count those visits.
   const linkFor = (source: string) => `${storyUrl}?source=${source}${shareCode ? `&by=${shareCode}` : ""}`;
-  const captionFor = (source: string) => [text, `${linkLabel}: ${linkFor(source)}`, credit, hashtags].filter(Boolean).join("\n\n");
+  const captionFor = (source: string) => [text, buyLink && `${buyLink.label}: ${buyLink.url}`, `${linkLabel}: ${linkFor(source)}`, credit, hashtags].filter(Boolean).join("\n\n");
   const caption = captionFor("share");
   // Short text for X (the link is added by X): the speaker and the quote.
   const quote = text.split(/\n\n/).pop() || text;
