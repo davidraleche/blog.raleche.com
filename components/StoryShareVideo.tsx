@@ -33,6 +33,12 @@ type Props = {
   /** Sign-in link back to this panel, shown to readers who aren't signed in. */
   signinHref?: string;
   className?: string;
+  /** Where the clips stream from (default: the story's /story/<slug>/video). */
+  videoBase?: string;
+  /** The section's anchor id (default: share-video). */
+  sectionId?: string;
+  /** Words before the link in the caption (default: "Full story"). */
+  linkLabel?: string;
 };
 
 const fill = (s: string, platform: string) => s.replace(/\{platform\}/g, platform);
@@ -56,7 +62,7 @@ async function copyText(text: string) {
 }
 
 /** End-of-story panel: the story's mini video, download, and one-click sharing to the networks. */
-export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit, hashtags, labels, shareCode, signinHref, className = "mt-12" }: Props) {
+export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit, hashtags, labels, shareCode, signinHref, className = "mt-12", videoBase, sectionId = "share-video", linkLabel = "Full story" }: Props) {
   const [format, setFormat] = useState<Format>(formats[0]);
   const [copied, setCopied] = useState<"caption" | "link" | null>(null);
   const [tip, setTip] = useState<{ kind: "intent" | "upload" | "error"; platform: Platform } | null>(null);
@@ -64,11 +70,11 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
   const blobs = useRef<Partial<Record<Format, Promise<File | null>>>>({});
   const box = useRef<HTMLElement>(null);
 
-  const src = (f: Format) => `/story/${slug}/video/${f}.mp4`;
+  const src = (f: Format) => `${videoBase ?? `/story/${slug}/video`}/${f}.mp4`;
   const fileName = (f: Format) => `raleche-${slug}-${f}.mp4`;
   // Every link we hand out says where it was shared (?source=twitter…), so the admin dashboard can count those visits.
   const linkFor = (source: string) => `${storyUrl}?source=${source}${shareCode ? `&by=${shareCode}` : ""}`;
-  const captionFor = (source: string) => [text, `Full story: ${linkFor(source)}`, credit, hashtags].filter(Boolean).join("\n\n");
+  const captionFor = (source: string) => [text, `${linkLabel}: ${linkFor(source)}`, credit, hashtags].filter(Boolean).join("\n\n");
   const caption = captionFor("share");
   // Short text for X (the link is added by X): the speaker and the quote.
   const quote = text.split(/\n\n/).pop() || text;
@@ -165,7 +171,7 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
     `flex-1 border-2 border-ink px-3 py-2 text-left ${format === f ? "bg-ink text-white" : "bg-white text-ink hover:bg-ink/5"}`;
 
   return (
-    <section ref={box} id="share-video" className={`${className} scroll-mt-24 border-[3px] border-ink`}>
+    <section ref={box} id={sectionId} className={`${className} scroll-mt-24 border-[3px] border-ink`}>
       <div className="flex items-center justify-between gap-3 bg-ink px-5 py-3 text-white">
         <span className="font-mono text-[11px] uppercase tracking-[0.2em]">{labels.shareVideoTitle}</span>
         <span className="font-mono text-[10px] uppercase tracking-widest text-terminal-amber">{labels.shareVideoBadge}</span>

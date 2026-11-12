@@ -12,7 +12,7 @@ export const VIDEO_FORMATS = ["vertical", "wide"] as const;
 export type VideoFormat = (typeof VIDEO_FORMATS)[number];
 
 export type StoryVideoInfo = { formats: VideoFormat[]; speaker?: string; text: string; credit: string; hashtags: string };
-type Manifest = { stories: Record<string, StoryVideoInfo> };
+type Manifest = { stories: Record<string, StoryVideoInfo>; books?: Record<string, StoryVideoInfo> };
 
 let token: { value: string; until: number } | null = null;
 async function accessToken() {
@@ -54,4 +54,16 @@ async function loadManifest(): Promise<Manifest> {
 export async function storyMiniVideo(slug: string): Promise<StoryVideoInfo | null> {
   const v = (await loadManifest()).stories?.[slug];
   return v && v.formats?.length ? v : null;
+}
+
+/** A book's 5-second share video (books/<slug>/<format>.mp4 in the bucket), or null when it has none. */
+export async function bookMiniVideo(slug: string): Promise<StoryVideoInfo | null> {
+  const v = (await loadManifest()).books?.[slug];
+  return v && v.formats?.length ? v : null;
+}
+
+/** Every book that has a share video, by slug. */
+export async function bookMiniVideos(): Promise<Record<string, StoryVideoInfo>> {
+  const all = (await loadManifest()).books ?? {};
+  return Object.fromEntries(Object.entries(all).filter(([, v]) => v.formats?.length));
 }
