@@ -5,6 +5,7 @@ import { BCP47 } from "@/lib/i18n/messages";
 import { Logo } from "./Logo";
 import { LanguageToggle } from "./LanguageToggle";
 import { MastheadSignup } from "./MastheadSignup";
+import { NavMenu } from "./NavMenu";
 import { getI18n } from "@/lib/i18n/server";
 import { localizeFields } from "@/lib/localize";
 
@@ -48,7 +49,10 @@ export async function Header() {
         <ul className="mx-auto flex max-w-7xl items-center gap-6 overflow-x-auto px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] [scrollbar-width:none]">
           <li><Link href="/" className="whitespace-nowrap font-bold hover:text-accent">{t("homeNav")}</Link></li>
           <li><Link href="/play" className="whitespace-nowrap font-bold text-terminal-amber hover:text-accent">{t("play")}</Link></li>
-          <li><Link href="/vocabulary" className="whitespace-nowrap hover:text-accent">{t("vocabTitle")}</Link></li>
+          <NavMenu label={t("vocabTitle")} href="/vocabulary" items={[
+            { href: "/vocabulary", label: t("vocabGameTitle"), note: t("vocabMenuPlay") },
+            { href: "/vocabulary/words", label: t("glossaryTitle"), note: t("vocabMenuAll") },
+          ]} />
           <li><Link href="/quotes" className="whitespace-nowrap hover:text-accent">{t("quotesNav")}</Link></li>
           <li><Link href="/books" className="whitespace-nowrap hover:text-accent">{t("books")}</Link></li>
           {categories.map((c) => (
