@@ -206,14 +206,16 @@ export function QuoteWheelButton({ quotes, labels, buttonLabel }: { quotes: Spea
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Opens and spins on its own once per visit (browser session), and on any link with ?spin=1.
+  // Opens on its own once a day (the visitor's local date), and on any link with ?spin=1.
   useEffect(() => {
     if (!quotes.length || /^\/(signin|signup|checkout|account)/.test(pathname)) return;
+    const d = new Date();
+    const day = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
     let seen = false;
-    try { seen = sessionStorage.getItem("qw_auto") === "1"; } catch {}
+    try { seen = localStorage.getItem("qw_auto_day") === day; } catch {}
     if (seen && !new URLSearchParams(window.location.search).has("spin")) return;
     const id = setTimeout(() => {
-      try { sessionStorage.setItem("qw_auto", "1"); } catch {}
+      try { localStorage.setItem("qw_auto_day", day); } catch {}
       setOpen(true);
     }, 900);
     return () => clearTimeout(id);
