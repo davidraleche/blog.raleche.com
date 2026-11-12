@@ -17,6 +17,7 @@ export async function WordGamePage({ kind }: { kind: GameKind }) {
   const labels = {
     next: t(kind === "vocab" ? "gameNextWord" : "gameNextQuote"), readStory: t("gameReadStory"), correct: t("gameCorrect"), wrong: t("gameWrong"),
     answerWas: t("gameAnswerWas"), earned: t("gameEarned"), capped: t("gameCapped", n), signIn: t("gameSignIn"), answered: t("gameAnswered"), saidIt: t("gameSaidIt"), error: t("gameError"), whereSaid: t("gameWhereSaid"), readQuote: t("gameReadQuote"),
+    pick: t(kind === "vocab" ? "gamePickMeaning" : "gamePickWho", n),
   };
   const hint = q?.hint ? t(`vocab_${q.hint}` as "vocab_ai") : "";
   return (

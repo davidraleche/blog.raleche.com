@@ -4,7 +4,7 @@ import Link from "next/link";
 import { answerWordGame, type GameResult } from "@/app/actions/word-games";
 import type { GameQuestion } from "@/lib/word-games";
 
-type Labels = Record<"next" | "readStory" | "correct" | "wrong" | "answerWas" | "earned" | "capped" | "signIn" | "answered" | "saidIt" | "error" | "whereSaid" | "readQuote", string>;
+type Labels = Record<"next" | "readStory" | "correct" | "wrong" | "answerWas" | "earned" | "capped" | "signIn" | "answered" | "saidIt" | "error" | "whereSaid" | "readQuote" | "pick", string>;
 
 /** One Vocabulary or Quotes question: pick one of four answers, see if it's right, then read the article or get the next one. */
 export function WordGame({ q: initial, labels, signInHref }: { q: GameQuestion; labels: Labels; signInHref: string }) {
@@ -35,6 +35,12 @@ export function WordGame({ q: initial, labels, signInHref }: { q: GameQuestion; 
           <blockquote className="font-display text-2xl font-bold leading-snug sm:text-4xl">“{q.prompt}”</blockquote>
         )}
       </div>
+      {picked === null && (
+        <p className="flex items-center gap-3 border-b-[3px] border-ink bg-terminal-amber px-5 py-3 font-mono text-xs font-bold uppercase tracking-widest text-ink sm:px-8 sm:text-sm">
+          <span aria-hidden className="inline-block animate-bounce text-xl">👇</span>
+          {labels.pick}
+        </p>
+      )}
       <ol data-no-track className="grid gap-3 p-5 sm:grid-cols-2 sm:p-8">
         {q.options.map((o, i) => {
           const isAnswer = result && i === result.answer;
@@ -45,11 +51,13 @@ export function WordGame({ q: initial, labels, signInHref }: { q: GameQuestion; 
                 type="button"
                 onClick={() => choose(i)}
                 disabled={picked !== null}
-                className={`flex h-full w-full items-start gap-3 border-2 px-4 py-3 text-left font-serif text-base transition ${
-                  isAnswer ? "border-green-700 bg-green-50" : isWrongPick ? "border-ink/40 bg-ink/5 line-through decoration-ink/40" : picked === i ? "border-ink bg-ink/5" : "border-ink hover:-translate-y-0.5 hover:shadow-[4px_4px_0_#111] disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                className={`group flex h-full w-full items-center gap-4 border-[3px] px-4 py-4 text-left font-serif text-base transition ${
+                  isAnswer ? "border-green-700 bg-green-50 shadow-[4px_4px_0_#15803d]" : isWrongPick ? "border-ink/40 bg-ink/5 line-through decoration-ink/40" : picked === i ? "border-ink bg-ink/5" : "cursor-pointer border-ink bg-white shadow-[4px_4px_0_#111] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-terminal-amber/20 hover:shadow-[7px_7px_0_#111] active:translate-x-1 active:translate-y-1 active:shadow-none"
                 } ${picked !== null && !isAnswer && picked !== i ? "opacity-50" : ""}`}
               >
-                <span className="font-mono text-xs font-bold">{"ABCD"[i]}</span>
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[3px] font-mono text-base font-bold transition ${isAnswer ? "border-green-700 bg-green-700 text-white" : picked === null ? "border-ink bg-terminal-amber group-hover:scale-110 group-hover:bg-ink group-hover:text-white" : "border-ink bg-white"}`}>
+                  {isAnswer ? "✓" : isWrongPick ? "✗" : "ABCD"[i]}
+                </span>
                 <span className={q.kind === "quote" ? "font-display text-lg font-bold" : ""}>{o}</span>
               </button>
             </li>
@@ -60,7 +68,7 @@ export function WordGame({ q: initial, labels, signInHref }: { q: GameQuestion; 
       {failed && <p className="px-5 pb-6 font-serif text-ink sm:px-8">{labels.error}</p>}
       {result && (
         <div className={`border-t-[3px] border-ink px-5 py-6 sm:px-8 ${result.correct ? "bg-green-50" : "bg-white"}`}>
-          <p className={`hed text-4xl ${result.correct ? "text-green-700" : "text-ink"}`}>{result.correct ? labels.correct : labels.wrong}</p>
+          <p className={`hed text-4xl ${result.correct ? "text-green-700" : "text-ink"}`}>{result.correct ? `🎉 ${labels.correct}` : `🤔 ${labels.wrong}`}</p>
           {!result.correct && <p className="mt-2 font-serif text-lg">{labels.answerWas.replace("{a}", q.options[result.answer])}</p>}
           {result.earned > 0 && <p className="mt-2 inline-block bg-terminal-amber px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest">{labels.earned.replace("{n}", String(result.earned))}</p>}
           {result.correct && result.reason === "capped" && <p className="mt-2 font-serif text-ink/70">{labels.capped}</p>}
