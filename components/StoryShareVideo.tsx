@@ -2,9 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 
 type Format = "vertical" | "wide";
-type Platform = "x" | "linkedin" | "facebook" | "instagram" | "tiktok" | "youtube";
+export type Platform = "x" | "linkedin" | "facebook" | "instagram" | "tiktok" | "youtube";
 
-const PLATFORMS: { id: Platform; name: string; format: Format; color: string }[] = [
+export const PLATFORMS: { id: Platform; name: string; format: Format; color: string }[] = [
   { id: "x", name: "X", format: "wide", color: "#000000" },
   { id: "linkedin", name: "LinkedIn", format: "wide", color: "#0a66c2" },
   { id: "facebook", name: "Facebook", format: "wide", color: "#1877f2" },
@@ -13,7 +13,7 @@ const PLATFORMS: { id: Platform; name: string; format: Format; color: string }[]
   { id: "youtube", name: "YouTube", format: "vertical", color: "#ff0000" },
 ];
 /** Where to upload a video on the networks without a web share link for video. */
-const UPLOAD_URL: Partial<Record<Platform, string>> = {
+export const UPLOAD_URL: Partial<Record<Platform, string>> = {
   instagram: "https://www.instagram.com/",
   tiktok: "https://www.tiktok.com/upload",
   youtube: "https://www.youtube.com/upload",
@@ -43,7 +43,7 @@ type Props = {
 
 const fill = (s: string, platform: string) => s.replace(/\{platform\}/g, platform);
 
-async function copyText(text: string) {
+export async function copyText(text: string) {
   try {
     await navigator.clipboard.writeText(text);
     return true;

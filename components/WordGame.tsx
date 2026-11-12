@@ -3,11 +3,12 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { answerWordGame, type GameResult } from "@/app/actions/word-games";
 import type { GameQuestion } from "@/lib/word-games";
+import { QuestionShareVideo, type QuestionShare } from "./QuestionShareVideo";
 
 type Labels = Record<"next" | "readStory" | "correct" | "wrong" | "answerWas" | "earned" | "capped" | "signIn" | "answered" | "saidIt" | "error" | "whereSaid" | "readQuote" | "pick", string>;
 
 /** One Vocabulary or Quotes question: pick one of four answers, see if it's right, then read the article or get the next one. */
-export function WordGame({ q: initial, labels, signInHref }: { q: GameQuestion; labels: Labels; signInHref: string }) {
+export function WordGame({ q: initial, labels, signInHref, share }: { q: GameQuestion; labels: Labels; signInHref: string; share?: QuestionShare }) {
   // Answering sets a cookie, which makes Next.js re-render the page with a fresh question: keep the one being answered until "Next".
   const [q] = useState(initial);
   const [picked, setPicked] = useState<number | null>(null);
@@ -26,6 +27,7 @@ export function WordGame({ q: initial, labels, signInHref }: { q: GameQuestion; 
   };
 
   return (
+    <>
     <div className="border-[3px] border-ink">
       <div className="border-b-[3px] border-ink px-5 py-8 sm:px-8">
         {q.hint && <p className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-ink/60">{q.hint}</p>}
@@ -101,12 +103,14 @@ export function WordGame({ q: initial, labels, signInHref }: { q: GameQuestion; 
                 {labels.readStory}: {result.story.title.length > 60 ? `${result.story.title.slice(0, 57)}…` : result.story.title}
               </Link>
             )}
-            <button type="button" onClick={() => window.location.reload()} className="border-2 border-ink px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-widest hover:bg-terminal-amber">
+            <button type="button" onClick={() => window.location.assign(window.location.pathname)} className="border-2 border-ink px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-widest hover:bg-terminal-amber">
               {labels.next} →
             </button>
           </div>
         </div>
       )}
     </div>
+    {share && <QuestionShareVideo q={q} share={share} />}
+    </>
   );
 }
