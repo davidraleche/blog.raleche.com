@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { createSession, destroySession, hashPassword, verifyPassword, upsertUser, safeNext } from "@/lib/auth";
 import { normalizePhone, sendOtp, verifyOtp } from "@/lib/sms";
+import { checkSignupBot } from "@/lib/bot-guard";
 
 export type AuthState = { error?: string; step?: "code"; phone?: string; devHint?: string } | null;
 
@@ -24,6 +25,9 @@ export async function emailAuth(_: AuthState, form: FormData): Promise<AuthState
     userId = existing.id;
     await db.user.update({ where: { id: userId }, data: { lastSeenAt: new Date() } });
   } else {
+    // New account: bots and floods are refused (signing in to an existing account is not affected).
+    const bot = await checkSignupBot(form, "signup");
+    if (bot) return { error: t("signupSlowDown") };
     const user = await upsertUser({ email }, { passwordHash: await hashPassword(password), name: String(form.get("name") ?? "") || undefined });
     userId = user.id;
     await db.user.update({ where: { id: userId }, data: { language: locale } });

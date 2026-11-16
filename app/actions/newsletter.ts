@@ -4,11 +4,16 @@ import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { sendEmail } from "@/lib/email";
 import { welcomeEmail } from "@/lib/welcome-email";
+import { checkSignupBot } from "@/lib/bot-guard";
 
 export async function subscribeNewsletter(_: unknown, form: FormData) {
   const { t, locale } = await getI18n();
   const email = z.string().email().safeParse(String(form.get("email") ?? "").trim().toLowerCase());
   if (!email.success) return { error: t("invalidEmail") };
+  // Bots get the same "you're on the list" answer, so they learn nothing; nothing is saved or emailed.
+  const bot = await checkSignupBot(form, "newsletter");
+  if (bot === "bot") return { ok: true, message: t("onTheList") };
+  if (bot === "limit") return { error: t("signupSlowDown") };
   const before = await db.subscriber.findUnique({ where: { email: email.data }, select: { status: true } });
   const sub = await db.subscriber.upsert({
     where: { email: email.data },

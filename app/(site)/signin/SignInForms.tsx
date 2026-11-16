@@ -2,6 +2,7 @@
 import { useActionState, useState } from "react";
 import { useT } from "@/components/I18nProvider";
 import { emailAuth, phoneAuth } from "@/app/actions/auth";
+import { BotTrap } from "@/components/BotTrap";
 
 export function SignInForms({ next, googleEnabled }: { next: string; googleEnabled: boolean }) {
   const t = useT();
@@ -32,8 +33,9 @@ export function SignInForms({ next, googleEnabled }: { next: string; googleEnabl
       </div>
 
       {tab === "email" ? (
-        <form action={emailAction} className="space-y-3">
+        <form action={emailAction} className="relative space-y-3">
           <input type="hidden" name="next" value={next} />
+          <BotTrap />
           <input name="email" type="email" required autoComplete="email" placeholder={t("email")} className="input" autoFocus />
           <input name="password" type="password" required minLength={8} autoComplete="current-password" placeholder={t("passwordPlaceholder")} className="input" />
           <label className="flex items-center gap-2 text-sm text-ink/70"><input type="checkbox" name="newsletter" defaultChecked /> {t("newsletterOptIn")}</label>
