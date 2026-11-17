@@ -29,7 +29,7 @@ function mergeMentions(old: Mentions, add: Mentions): Mentions {
 }
 
 export async function prepareStory(postId: string, opts: { recheck?: boolean; rescanBooks?: boolean; rescanVocab?: boolean; rewriteSummary?: boolean } = {}): Promise<PrepareReport> {
-  const post = await db.post.findUnique({ where: { id: postId }, select: { id: true, slug: true, title: true, dek: true, body: true, executiveSummary: true, status: true, mentionsAt: true, vocabAt: true, summaryAt: true, speaker: true, host: true, show: true } });
+  const post = await db.post.findUnique({ where: { id: postId }, select: { id: true, slug: true, title: true, dek: true, body: true, executiveSummary: true, status: true, englishOnly: true, mentionsAt: true, vocabAt: true, summaryAt: true, speaker: true, host: true, show: true } });
   if (!post || post.status !== "published") return { slug: post?.slug ?? postId, quiz: "missing", answersInSummary: null, languages: [], note: "not published" };
   const summary = post.executiveSummary || post.body;
   const report: PrepareReport = { slug: post.slug, quiz: "missing", answersInSummary: null, languages: [] };
@@ -101,7 +101,9 @@ export async function prepareStory(postId: string, opts: { recheck?: boolean; re
   // 2. Translations: same strings the story page asks for, so readers get them straight from the cache.
   const summaryHtml = post.executiveSummary ? renderMarkdown(post.executiveSummary) : "";
   const quizTexts = quiz ? quiz.flatMap((q) => [q.q, ...q.options]) : [];
-  for (const lang of OTHER) {
+  // Read again here: a story can be marked English only while its summary and vocabulary were being built.
+  const englishOnly = (await db.post.findUnique({ where: { id: post.id }, select: { englishOnly: true } }))?.englishOnly;
+  for (const lang of englishOnly ? [] : OTHER) {
     try {
       const [html] = await Promise.all([summaryHtml ? translateHtml(lang, summaryHtml) : Promise.resolve(""), translateMany(lang, [post.title, post.dek, ...quizTexts].filter(Boolean))]);
       if (!summaryHtml || html !== summaryHtml) report.languages.push(lang);

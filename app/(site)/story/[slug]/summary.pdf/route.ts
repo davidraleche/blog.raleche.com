@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 /** The executive summary as a PDF, for readers who unlocked it (or can read all summaries). */
 export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = await db.post.findUnique({ where: { slug }, select: { id: true, slug: true, title: true, speaker: true, status: true, executiveSummary: true } });
+  const post = await db.post.findUnique({ where: { slug }, select: { id: true, slug: true, title: true, speaker: true, status: true, executiveSummary: true, englishOnly: true } });
   if (!post?.executiveSummary || post.status !== "published") return new NextResponse("Not found", { status: 404 });
   const user = await getUser();
   const back = `/story/${post.slug}`;
@@ -24,7 +24,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
   let blocks = markdownBlocks(post.executiveSummary);
   let title = post.title;
   // French and Spanish fit the PDF's built-in fonts; Chinese readers get the English original.
-  if (locale === "fr" || locale === "es") {
+  if ((locale === "fr" || locale === "es") && !post.englishOnly) {
     const out = await translateMany(locale, [title, ...blocks.map((b) => b.text)]);
     title = out[0] || title;
     blocks = blocks.map((b, i) => ({ ...b, text: out[i + 1] || b.text }));

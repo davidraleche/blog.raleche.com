@@ -15,18 +15,18 @@ export default async function Glossary() {
   const { locale, t } = await getI18n();
   const rows = await db.vocabTerm.findMany({
     where: { post: { status: "published" } },
-    include: { post: { select: { slug: true, title: true } } },
+    include: { post: { select: { slug: true, title: true, englishOnly: true } } },
     orderBy: { createdAt: "asc" },
   });
-  const byWord = new Map<string, { term: string; definition: string; category: string; uses: { who: string; quote: string; slug: string; title: string }[] }>();
+  const byWord = new Map<string, { term: string; definition: string; category: string; english?: boolean; uses: { who: string; quote: string; slug: string; title: string }[] }>();
   for (const r of rows) {
     const k = norm(r.term);
-    const e = byWord.get(k) ?? { term: r.term, definition: r.definition, category: r.category, uses: [] };
+    const e = byWord.get(k) ?? { term: r.term, definition: r.definition, category: r.category, english: r.post.englishOnly, uses: [] };
     if (!e.uses.some((u) => u.slug === r.post.slug && u.who === r.who)) e.uses.push({ who: r.who, quote: r.quote, slug: r.post.slug, title: r.post.title });
     byWord.set(k, e);
   }
   const words = [...byWord.values()].sort((a, b) => a.term.localeCompare(b.term, "en", { sensitivity: "base" }));
-  const defs = await translateMany(locale, words.map((w) => w.definition));
+  const defs = await translateMany(locale, words.map((w) => (w.english ? "" : w.definition)));
   const groups = VOCAB_CATEGORIES.map((c) => ({ cat: c, list: words.map((w, i) => ({ ...w, definition: defs[i] || w.definition })).filter((w) => w.category === c) })).filter((g) => g.list.length);
 
   return (

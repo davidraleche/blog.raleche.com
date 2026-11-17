@@ -69,7 +69,7 @@ const ticket = (p: Omit<Payload, "n" | "e">) => seal({ ...p, n: crypto.randomByt
 
 /** A random word from the articles' vocabulary with four definitions (the other three from other words, same kind when possible). */
 export async function vocabQuestion(locale: Locale, ref?: string): Promise<GameQuestion | null> {
-  const terms = await db.vocabTerm.findMany({ where: { post: { status: "published", publishedAt: { lte: new Date() } } }, select: { id: true, term: true, definition: true, category: true, post: { select: { slug: true } } } });
+  const terms = await db.vocabTerm.findMany({ where: { post: { status: "published", publishedAt: { lte: new Date() } } }, select: { id: true, term: true, definition: true, category: true, post: { select: { slug: true, englishOnly: true } } } });
   if (terms.length < 4) return null;
   // A shared link (?q=<term id>.<seed>) opens that word with the same choices; otherwise story first, then one of its words, so every interview gets its turn.
   const asked = parseRef(ref);
@@ -79,7 +79,8 @@ export async function vocabQuestion(locale: Locale, ref?: string): Promise<GameQ
   const same = terms.filter((t) => t.category === q.category && t.id !== q.id).map((t) => t.definition);
   const pool = same.length >= 3 ? same : terms.filter((t) => t.id !== q.id).map((t) => t.definition);
   const { options, a } = choices(q.definition, pool, seed);
-  const translated = await translateMany(locale, options);
+  // A word from an English-only story is asked in English.
+  const translated = q.post.englishOnly ? options : await translateMany(locale, options);
   return { kind: "vocab", prompt: q.term, hint: q.category, options: options.map((o, i) => translated[i] || o), token: ticket({ k: "vocab", a, s: q.post.slug, r: q.id }), ref: `${q.id}.${seed.toString(36)}` };
 }
 

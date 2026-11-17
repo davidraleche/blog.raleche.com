@@ -108,6 +108,7 @@ model Post {
   status           String          @default("draft") // draft | published | scheduled
   featured         Boolean         @default(false)
   premium          Boolean         @default(false) // whole article members-only
+  englishOnly      Boolean         @default(false) // never translated: article, summary, quiz and vocabulary stay in English in every language
   readMinutes      Int             @default(5)
   views            Int             @default(0)
   unlocks          Unlock[]

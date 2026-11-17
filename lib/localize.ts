@@ -5,12 +5,16 @@ import type { Locale } from "./i18n/messages";
 type StrKeys<T> = { [K in keyof T]: T[K] extends string ? K : T[K] extends string | null ? K : never }[keyof T];
 
 /** Translate the given string fields of every row in one batch. */
+/** Stories marked English only keep their own text in every language. */
+const englishOnly = (r: object) => (r as { englishOnly?: boolean }).englishOnly === true;
+
 export async function localizeFields<T extends object, K extends StrKeys<T>>(locale: Locale, rows: T[], fields: K[]): Promise<T[]> {
   if (locale === "en" || !rows.length) return rows;
-  const src = rows.flatMap((r) => fields.map((f) => ((r[f] as string | null) ?? "")));
+  const src = rows.flatMap((r) => fields.map((f) => (englishOnly(r) ? "" : ((r[f] as string | null) ?? ""))));
   const out = await translateMany(locale, src);
   return rows.map((r, i) => {
     const copy = { ...r };
+    if (englishOnly(r)) return copy;
     fields.forEach((f, j) => {
       if (r[f]) (copy[f] as unknown) = out[i * fields.length + j];
     });
@@ -23,9 +27,9 @@ type WithCategory = { title: string; dek: string; category?: { name: string } | 
 /** Title, dek and category name for lists of stories. */
 export async function localizePosts<T extends WithCategory>(locale: Locale, posts: T[]): Promise<T[]> {
   if (locale === "en" || !posts.length) return posts;
-  const src = posts.flatMap((p) => [p.title, p.dek ?? "", p.category?.name ?? ""]);
+  const src = posts.flatMap((p) => (englishOnly(p) ? ["", "", p.category?.name ?? ""] : [p.title, p.dek ?? "", p.category?.name ?? ""]));
   const out = await translateMany(locale, src);
-  return posts.map((p, i) => ({
+  return posts.map((p, i) => englishOnly(p) ? { ...p, category: p.category ? { ...p.category, name: out[i * 3 + 2] } : p.category } : ({
     ...p,
     title: out[i * 3],
     dek: p.dek ? out[i * 3 + 1] : p.dek,

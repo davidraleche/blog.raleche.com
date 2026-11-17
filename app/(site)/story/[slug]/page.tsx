@@ -72,6 +72,8 @@ export default async function Story({ params, searchParams }: Props) {
   const [raw, user, { locale, t, date: fmtDate }, tagPages] = await Promise.all([load(slug), getUser(), getI18n(), tagIndex()]);
   if (!raw || (raw.status !== "published" && user?.role !== "ADMIN")) notFound();
 
+  // English-only stories: the article, summary, quiz and vocabulary stay in English (the page around them is still translated).
+  const contentLocale = raw.englishOnly ? "en" : locale;
   const subscriber = canReadSummaries(user);
   const unlocked = !subscriber && (await hasUnlocked(user?.id, raw.id));
   const member = subscriber || unlocked;
@@ -89,7 +91,7 @@ export default async function Story({ params, searchParams }: Props) {
     ? await Promise.all([
         user ? db.quizAttempt.findUnique({ where: { userId_postId: { userId: user.id, postId: raw.id } } }) : null,
         nextStory(raw.id, raw.publishedAt),
-        translateMany(locale, quiz.flatMap((q) => [q.q, ...q.options])),
+        translateMany(contentLocale, quiz.flatMap((q) => [q.q, ...q.options])),
       ])
     : [null, null, [] as string[]];
   const quizQuestions = quiz ? quiz.map((_, i) => ({ q: quizText[i * 5], options: quizText.slice(i * 5 + 1, i * 5 + 5) })) : [];
@@ -106,7 +108,7 @@ export default async function Story({ params, searchParams }: Props) {
   // Vocabulary (terms stay in English, the point is to learn them; definitions are translated).
   const vocabRows = await db.vocabTerm.findMany({ where: { postId: raw.id }, orderBy: { createdAt: "asc" } });
   if (raw.status === "published" && !raw.vocabAt) after(() => ensureVocab(raw));
-  const vocabDefs = vocabRows.length ? await translateMany(locale, vocabRows.map((v) => v.definition)) : [];
+  const vocabDefs = vocabRows.length ? await translateMany(contentLocale, vocabRows.map((v) => v.definition)) : [];
   const vocabTerms = vocabRows.map((v, i) => ({ ...v, definition: vocabDefs[i] || v.definition }));
   const vocabLabels = {
     ...Object.fromEntries((["vocabTitle", "vocabDek", "vocab_elegant", "vocab_ai", "vocab_tech", "vocab_trend"] as const).map((k) => [k, t(k)])),
@@ -172,9 +174,9 @@ export default async function Story({ params, searchParams }: Props) {
   const split = splitAfterShortVersion(body);
   const [[post, ...related], bodyHtml, restHtml, summaryHtml] = await Promise.all([
     localizePosts(locale, [raw, ...rawRelated]),
-    translateHtml(locale, renderMarkdown(split ? split[0] : body)),
-    split ? translateHtml(locale, renderMarkdown(split[1])) : Promise.resolve(""),
-    member && raw.executiveSummary ? translateHtml(locale, renderMarkdown(raw.executiveSummary)) : Promise.resolve(""),
+    translateHtml(contentLocale, renderMarkdown(split ? split[0] : body)),
+    split ? translateHtml(contentLocale, renderMarkdown(split[1])) : Promise.resolve(""),
+    member && raw.executiveSummary ? translateHtml(contentLocale, renderMarkdown(raw.executiveSummary)) : Promise.resolve(""),
   ]);
 
   const readerBlocks = (
