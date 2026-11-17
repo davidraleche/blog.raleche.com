@@ -62,7 +62,7 @@ function fit(ctx: CanvasRenderingContext2D, text: string, font: (px: number) => 
   }
 }
 
-/** Draw the frame at time t (seconds): question, then A-D one by one, then "Go play at raleche.com". Never shows the answer. */
+/** Draw the frame at time t (seconds): the question with all four choices from frame 0, badges pulsing, then "Go play at raleche.com". Never shows the answer. */
 function drawFrame(ctx: CanvasRenderingContext2D, t: number, q: Q, share: QuestionShare, f: Fonts) {
   const L = share.labels;
   ctx.save();
@@ -71,7 +71,8 @@ function drawFrame(ctx: CanvasRenderingContext2D, t: number, q: Q, share: Questi
   ctx.fillRect(0, 0, W, H);
 
   // Header: black band, RALECHE + the game's name in amber.
-  const hy = -120 * (1 - easeOut(t / 0.45));
+  // Everything is on screen from the first frame (the frame apps use as the thumbnail): header, question, strip, all four choices.
+  const hy = 0;
   ctx.fillStyle = INK;
   ctx.fillRect(0, hy, W, 120);
   ctx.fillStyle = "#ffffff";
@@ -89,7 +90,7 @@ function drawFrame(ctx: CanvasRenderingContext2D, t: number, q: Q, share: Questi
   const vocab = q.kind === "vocab";
   const PH = vocab ? 260 : 400;
   const py = 160;
-  const pa = easeOut((t - 0.2) / 0.5);
+  const pa = 1;
   ctx.globalAlpha = pa;
   ctx.textAlign = "left";
   ctx.fillStyle = INK;
@@ -118,7 +119,7 @@ function drawFrame(ctx: CanvasRenderingContext2D, t: number, q: Q, share: Questi
 
   // Amber "Can you guess?" strip, wiping in from the left.
   const sy = py + PH + 20;
-  const sw = W * easeOut((t - 0.9) / 0.35);
+  const sw = W;
   ctx.fillStyle = AMBER;
   ctx.fillRect(0, sy, sw, 64);
   ctx.fillStyle = INK;
@@ -140,8 +141,7 @@ function drawFrame(ctx: CanvasRenderingContext2D, t: number, q: Q, share: Questi
   const bh = (bottom - top - gap * 3) / 4;
   const bw = W - 80 - 10;
   q.options.forEach((o, i) => {
-    const start = 1.5 + i * 0.8;
-    const p = easeOut((t - start) / 0.45);
+    const p = 1;
     if (p <= 0) return;
     const x = 40 + (1 - p) * 90;
     const y = top + i * (bh + gap);
@@ -153,12 +153,13 @@ function drawFrame(ctx: CanvasRenderingContext2D, t: number, q: Q, share: Questi
     ctx.lineWidth = 6;
     ctx.strokeStyle = INK;
     ctx.strokeRect(x + 3, y + 3, bw - 6, bh - 6);
-    // Badge: pops in, then each one pulses in turn while the viewer thinks.
+    // Lettered badge (it grows briefly when its turn to pulse comes).
     const cx = x + 56;
     const cy = y + bh / 2;
-    const k = (t - 5) / 0.4 - i;
+    // From 1 s until the end frame, the badges pulse A, B, C, D in turn, every 2 seconds.
+    const k = t >= 1 && t < 6.4 ? ((t - 1) % 2) / 0.4 - i : -1;
     const pulse = k >= 0 && k <= 1 ? Math.sin(k * Math.PI) : 0;
-    const s = easeBack((t - start) / 0.5) * (1 + 0.14 * pulse);
+    const s = 1 + 0.14 * pulse;
     ctx.beginPath();
     ctx.arc(cx, cy, 31 * s, 0, Math.PI * 2);
     ctx.fillStyle = pulse > 0.3 ? INK : AMBER;
