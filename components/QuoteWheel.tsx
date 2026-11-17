@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 import { spinQuoteWheel } from "@/app/actions/quote-wheel";
 import { trackEvent } from "@/lib/track-client";
+import { WheelNewsletter } from "./WheelNewsletter";
 import { QUOTE_WHEEL_DAILY_MAX, QUOTE_WHEEL_PRIZE } from "@/lib/token-config";
 
 export type SpeakerQuote = { text: string; speaker: string; slug: string; title: string };
@@ -71,6 +72,7 @@ function WheelPanel({ quotes, labels, autoSpin = false, inModal = false }: { quo
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+  const [guest, setGuest] = useState(false);
   const last = useRef(-1);
   const rotRef = useRef(0);
   const started = useRef(false);
@@ -89,6 +91,7 @@ function WheelPanel({ quotes, labels, autoSpin = false, inModal = false }: { quo
     rotRef.current = target;
     setRotation(target);
     setTimeout(() => {
+      setGuest(!!outcome.guest);
       if (outcome.outcome === "tokens") {
         setResult({ kind: "tokens", amount: outcome.amount, credited: outcome.credited, balance: outcome.balance });
         confetti({ particleCount: 160, spread: 110, origin: { y: 0.55 }, colors: ["#f5a623", "#ffd76a", "#fff3b0", "#ffffff"], shapes: ["star", "circle"], zIndex: 2000 });
@@ -138,6 +141,7 @@ function WheelPanel({ quotes, labels, autoSpin = false, inModal = false }: { quo
               {!result.credited && <a href={signinHref} className="mt-4 inline-block rounded-full bg-white px-6 py-2 font-mono text-[12px] font-bold uppercase tracking-widest text-[#0b3a75] hover:bg-[#ffd76a]">{labels.signIn}</a>}
             </div>
           )}
+          {result && guest && !spinning && <WheelNewsletter source="quote-wheel" />}
           <button onClick={spin} disabled={spinning || !quotes.length} className="mt-6 w-full max-w-sm rounded-full bg-[linear-gradient(#ffe27a,#f2b51e)] py-4 font-display text-2xl font-extrabold uppercase tracking-wider text-[#5a3c04] shadow-[0_6px_0_#a8740c] transition hover:brightness-110 active:translate-y-1 active:shadow-[0_2px_0_#a8740c] disabled:opacity-60">
             {spinning ? "…" : result ? labels.spinAgain : labels.spin}
           </button>

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { audio, tick, fanfare, celebrate } from "@/lib/celebrate";
 import { spinWheel, claimSpin } from "@/app/actions/tokens";
+import { WheelNewsletter } from "./WheelNewsletter";
 
 export type WheelLabels = Record<
   "wheelTitle" | "wheelDek" | "spin" | "youWon" | "youWonOne" | "addedToBalance" | "signInToCollect" | "collectPrize" | "prizeCollected" | "comeBackTomorrow" | "alreadySpun" | "spinOncePerAccount" | "dailySpin" | "close" | "soundOn" | "soundOff" | "tokensLabel",
@@ -211,6 +212,7 @@ export function PrizeWheel({ signedIn, canSpin, claimPending, labels }: { signed
               {phase === "won" && message?.collect && (
                 <a href={`/signin?next=${encodeURIComponent(pathname)}`} className="block w-full rounded-full bg-[linear-gradient(#ffe27a,#f2b51e)] py-4 font-display text-xl font-extrabold uppercase tracking-wider text-[#5a3c04] shadow-[0_6px_0_#a8740c] hover:brightness-110">{labels.collectPrize}</a>
               )}
+              {phase === "won" && !signedIn && <div className="flex justify-center"><WheelNewsletter source="wheel" /></div>}
               {phase === "won" && !message?.collect && <p className="font-mono text-[11px] uppercase tracking-widest text-white/80">{labels.comeBackTomorrow}</p>}
             </div>
           </div>

@@ -40,7 +40,7 @@ export default async function Activity({ searchParams }: { searchParams: Promise
         <span className="font-mono text-[11px] uppercase tracking-widest text-terminal-dim">Email alerts</span>
         <Badge tone={alertsOn ? "up" : "down"}>{alertsOn ? "On" : "Off"}</Badge>
         <button className="text-terminal-amber hover:underline">{alertsOn ? "Turn off" : "Turn on"}</button>
-        <span className="text-terminal-dim">Comments, votes, spins, quizzes and purchases email you who did what, up to 40 a day (Resend&apos;s free plan sends 100 emails a day in total). Your own actions are not emailed.</span>
+        <span className="text-terminal-dim">Comments, votes, quizzes and purchases email you (wheel spins are listed here but not emailed) who did what, up to 40 a day (Resend&apos;s free plan sends 100 emails a day in total). Your own actions are not emailed.</span>
       </form>
       <div className="term-panel overflow-x-auto">
         <table className="term-table">

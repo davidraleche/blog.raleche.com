@@ -7,7 +7,7 @@ import { adminEmail } from "./auth";
 export type ActivityKind = "comment" | "vote" | "spin" | "quiz" | "purchase" | "unlock" | "memo" | "follow" | "visit" | "share_reward";
 
 /** Kinds that also send the admin an email (the rest are only logged). */
-const EMAILED: ActivityKind[] = ["comment", "vote", "spin", "quiz", "purchase", "memo", "visit"];
+const EMAILED: ActivityKind[] = ["comment", "vote", "quiz", "purchase", "memo", "visit"]; // spins are only logged (too many to email)
 /** Visits can be many, so at most this many visit alerts a day, leaving room in the daily cap for the other alerts. */
 const VISIT_EMAIL_CAP = Number(process.env.VISIT_ALERT_CAP ?? 20);
 /** Resend's free plan allows 100 emails a day for everything, so admin alerts are capped. */

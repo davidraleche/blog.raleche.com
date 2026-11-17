@@ -11,7 +11,7 @@ import { anonymousVisitorNote, logActivity } from "@/lib/activity";
 import { recordEvent } from "@/lib/visitor-events";
 import { QUOTE_WHEEL_DAILY_MAX, QUOTE_WHEEL_ODDS, QUOTE_WHEEL_PRIZE } from "@/lib/token-config";
 
-export type QuoteSpin = { outcome: "quote" } | { outcome: "tokens"; amount: number; credited: boolean; balance?: number };
+export type QuoteSpin = ({ outcome: "quote" } | { outcome: "tokens"; amount: number; credited: boolean; balance?: number }) & { guest?: boolean };
 
 /**
  * One spin of the quote wheel. The server decides: one in QUOTE_WHEEL_ODDS lands on tokens, the rest on a quote.
@@ -30,7 +30,7 @@ async function spin(): Promise<QuoteSpin> {
   const user = await getUser();
   if (!user) {
     await alertAnonymousSpin(hit);
-    return hit ? { outcome: "tokens", amount: QUOTE_WHEEL_PRIZE, credited: false } : { outcome: "quote" };
+    return hit ? { outcome: "tokens", amount: QUOTE_WHEEL_PRIZE, credited: false, guest: true } : { outcome: "quote", guest: true };
   }
   if (!hit) return { outcome: "quote" };
   // Each win of the day gets its own numbered ref, so two spins racing for the same slot can't both pay.
