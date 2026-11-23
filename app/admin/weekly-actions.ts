@@ -39,7 +39,7 @@ export async function sendWeeklyTest() {
   const lang: Locale = isLocale(admin.language) ? admin.language : "en";
   const build = await weeklyIn(lang, await loadWeeklyContent(db));
   const { subject, html } = build();
-  if (admin.email) await sendEmail(admin.email, `[TEST] ${subject}`, html);
+  if (admin.email) await sendEmail(admin.email, `[TEST] ${subject}`, html, [], lang);
   redirect("/admin/newsletter?weekly=test");
 }
 
@@ -56,7 +56,7 @@ export async function sendWeekly(form: FormData) {
     if (!builders.has(lang)) builders.set(lang, await weeklyIn(lang, content));
     const email = builders.get(lang)!(s.unsubscribeKey);
     if (lang === "en") subject = email.subject;
-    if (await sendEmail(s.email, email.subject, email.html)) sent++;
+    if (await sendEmail(s.email, email.subject, email.html, [], lang)) sent++;
   }
   // Keep a record in the campaign history.
   await db.campaign.create({

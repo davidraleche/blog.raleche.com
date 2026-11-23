@@ -49,7 +49,7 @@ export async function logActivity(a: { kind: ActivityKind; userId?: string | nul
 ${a.kind === "visit" ? `<p><a href="${url}/admin/visitors">Open the visitors dashboard</a></p>` : ""}
 ${post ? `<p><b>Story:</b> <a href="${url}/story/${post.slug}">${esc(post.title)}</a></p>` : ""}
 <p><b>What:</b> ${esc(a.detail)}</p>
-<p><a href="${url}/admin/activity">Open the activity dashboard</a></p>${capNote}</div>`;
+<p><a href="${url}/admin/activity">Open the activity dashboard</a></p>${capNote}</div><!--no-community-->`;
     if (await sendEmail(adminEmail(), `[RALECHE] ${LABEL[a.kind]}: ${who}`, html)) await db.activity.update({ where: { id: row.id }, data: { emailed: true } });
   } catch (e) {
     console.error(`[activity] ${a.kind} not recorded: ${(e as Error).message}`);

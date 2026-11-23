@@ -194,6 +194,7 @@ function campaignHtml(bodyHtml: string, unsubscribeKey?: string, lang: Locale = 
   return `<div style="max-width:600px;margin:auto;font-family:Georgia,serif;font-size:17px;line-height:1.6;color:#111">
 <div style="background:#000;color:#fff;padding:16px 20px;font-family:Arial Narrow,Arial,sans-serif;font-weight:800;font-size:28px;letter-spacing:2px">RALECHE</div>
 <div style="padding:20px">${bodyHtml}</div>
+<!--community-->
 <p style="font-family:monospace;font-size:11px;color:#888;padding:0 20px">${unsubscribeKey ? `<a href="${url}/unsubscribe?key=${unsubscribeKey}" style="color:#888">${messages[lang].unsubscribe}</a>` : "Test send"}</p></div>`;
 }
 
@@ -210,7 +211,7 @@ export async function sendCampaign(form: FormData) {
     // Test goes out in the admin's preferred language, so translations can be checked.
     const lang = isLocale(admin.language) ? admin.language : "en";
     const v = await campaignIn(lang, c.subject, c.body);
-    if (admin.email) await sendEmail(admin.email, `[TEST] ${v.subject}`, campaignHtml(v.html, undefined, lang));
+    if (admin.email) await sendEmail(admin.email, `[TEST] ${v.subject}`, campaignHtml(v.html, undefined, lang), [], lang);
     redirect(`/admin/newsletter/campaigns/${c.id}?test=1`);
   }
   if (c.status === "sent") redirect(`/admin/newsletter/campaigns/${c.id}`);
@@ -221,7 +222,7 @@ export async function sendCampaign(form: FormData) {
     const lang: Locale = isLocale(s.language) ? s.language : "en";
     if (!versions.has(lang)) versions.set(lang, await campaignIn(lang, c.subject, c.body));
     const v = versions.get(lang)!;
-    if (await sendEmail(s.email, v.subject, campaignHtml(v.html, s.unsubscribeKey, lang))) sent++;
+    if (await sendEmail(s.email, v.subject, campaignHtml(v.html, s.unsubscribeKey, lang), [], lang)) sent++;
   }
   await db.campaign.update({ where: { id: c.id }, data: { status: "sent", sentCount: sent, sentAt: new Date() } });
   redirect(`/admin/newsletter/campaigns/${c.id}?sent=${sent}`);

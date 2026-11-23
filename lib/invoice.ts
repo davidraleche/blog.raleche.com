@@ -147,6 +147,7 @@ ${row(base.number, d.number)}${row(base.date, day(d.paidAt, d.locale))}${d.card 
 <p style="margin:16px 0 0;font-family:Arial,sans-serif;font-size:13px;color:#666">📎 ${esc(c.attached)}</p>
 <p style="margin:24px 0 0"><a href="${url}/memos" style="background:#000;color:#fff;padding:12px 20px;text-decoration:none;font-family:Arial,sans-serif;font-size:14px;letter-spacing:1px">${esc(c.cta)} →</a></p>
 </div>
+<!--community-->
 <p style="font-family:Arial,sans-serif;font-size:12px;color:#888;padding:16px 20px 0;border-top:1px solid #e5e5e5;margin:8px 20px 0 20px">${esc(c.footer)}</p></div>`;
   return { subject: c.subject(d.number), html, filename: `RALECHE-invoice-${d.number}.pdf` };
 }

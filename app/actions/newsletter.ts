@@ -30,7 +30,7 @@ export async function subscribeNewsletter(_: unknown, form: FormData) {
         select: { title: true, slug: true, dek: true },
       });
       const { subject, html } = welcomeEmail({ locale, unsubscribeKey: sub.unsubscribeKey, stories });
-      if (!(await sendEmail(sub.email, subject, html))) console.error(`[newsletter] welcome email failed for subscriber ${sub.id}`);
+      if (!(await sendEmail(sub.email, subject, html, [], locale))) console.error(`[newsletter] welcome email failed for subscriber ${sub.id}`);
     } catch (e) {
       console.error(`[newsletter] welcome email error for subscriber ${sub.id}: ${(e as Error).message}`);
     }

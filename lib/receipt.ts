@@ -40,7 +40,7 @@ export async function sendPurchaseInvoice(sessionId: string, userId: string, tok
     };
     const pdf = await invoicePdf(data);
     const { subject, html, filename } = invoiceEmail(data);
-    const ok = await sendEmail(to, subject, html, [{ filename, content: pdf }]);
+    const ok = await sendEmail(to, subject, html, [{ filename, content: pdf }], locale);
     if (!ok) console.error(`[invoice] email to ${to} for ${s.id} was not accepted`);
   } catch (e) {
     console.error("[invoice] could not send:", (e as Error)?.message);

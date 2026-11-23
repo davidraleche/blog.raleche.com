@@ -67,7 +67,7 @@ export async function rewardShare(opts: {
 <p>${fmt(m.shareRewardEmailBody, { ...vars, title: title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") })}</p>
 <p><a href="${url}" style="color:#d6261c">${fmt(m.shareRewardEmailLink, vars)}</a></p>
 <p style="color:#666;font-size:13px">${fmt(m.shareRewardEmailFoot, { cap: SHARE_DAILY_CAP, n: SHARE_REWARD })}</p></div>`;
-    await sendEmail(sharer.email, fmt(m.shareRewardEmailSubject, vars), html).catch(() => {});
+    await sendEmail(sharer.email, fmt(m.shareRewardEmailSubject, vars), html, [], isLocale(sharer.language) ? sharer.language : "en").catch(() => {});
   }
   return true;
 }

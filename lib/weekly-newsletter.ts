@@ -138,6 +138,7 @@ ${latest}
 ${mostRead}
 <tr><td style="padding-top:30px;text-align:center">${button(url, L.readMore)}</td></tr>
 </table></td></tr>
+<!--community-row-->
 <tr><td style="padding:16px 20px;border-top:1px solid #e5e5e5;font-family:${SANS};font-size:12px;color:#888">${esc(L.footer)}<br><a href="${url}/unsubscribe?key=${encodeURIComponent(opts.unsubscribeKey ?? "test")}" style="color:#555">${esc(L.unsubscribe)}</a></td></tr>
 </table></div>`;
 

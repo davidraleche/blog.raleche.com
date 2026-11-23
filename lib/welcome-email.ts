@@ -23,6 +23,7 @@ ${s.dek ? `<div style="color:#555;font-size:15px;margin-top:4px">${esc(s.dek)}</
 ${stories.length ? `<div style="font-family:Arial,sans-serif;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:4px">${esc(m.welcomeLatest)}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${list}</table>` : ""}
 <p style="margin:28px 0 0"><a href="${url}" style="background:#000;color:#fff;padding:12px 20px;text-decoration:none;font-family:Arial,sans-serif;font-size:14px;letter-spacing:1px">${esc(m.welcomeCta)}</a></p>
 </div>
+<!--community-->
 <p style="font-family:Arial,sans-serif;font-size:12px;color:#888;padding:16px 20px 0;border-top:1px solid #e5e5e5;margin:24px 20px 0 20px">${esc(m.welcomeFooter)}<br><a href="${url}/unsubscribe?key=${encodeURIComponent(unsubscribeKey ?? "test")}" style="color:#555;text-decoration:underline">${esc(m.unsubscribe)}</a></p></div>`;
   return { subject: fmt(m.welcomeSubject), html };
 }

@@ -1,8 +1,12 @@
 import "server-only";
+import { withCommunity } from "./community-email";
+import type { Locale } from "./i18n/messages";
 
 export type Attachment = { filename: string; content: Uint8Array };
 
-export async function sendEmail(to: string, subject: string, html: string, attachments: Attachment[] = []) {
+/** Every email gets the WhatsApp/LinkedIn block (lib/community-email.ts) in the reader's language, unless it opts out. */
+export async function sendEmail(to: string, subject: string, body: string, attachments: Attachment[] = [], lang: Locale = "en") {
+  const html = withCommunity(body, lang);
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     console.log(`[email:dev] to=${to} subject=${subject}${attachments.length ? ` attachments=${attachments.map((a) => a.filename).join(",")}` : ""}`);

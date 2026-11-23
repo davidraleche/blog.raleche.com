@@ -29,7 +29,7 @@ export async function saveName(_: FormState, form: FormData): Promise<FormState>
 /** Two steps: send a code to the new address, then confirm it. The email only changes once the code is entered. */
 export async function changeEmail(_: FormState, form: FormData): Promise<FormState> {
   const user = await requireUser();
-  const { t } = await getI18n();
+  const { t, locale } = await getI18n();
   const parsed = z.string().email().safeParse(String(form.get("email") ?? "").trim().toLowerCase());
   if (!parsed.success) return { error: t("invalidEmail") };
   const email = parsed.data;
@@ -43,7 +43,7 @@ export async function changeEmail(_: FormState, form: FormData): Promise<FormSta
     if (process.env.NODE_ENV === "production" && !process.env.RESEND_API_KEY) return { error: t("emailChangeUnavailable") };
     try {
       const c = await issueCode(key);
-      await sendEmail(email, t("codeEmailSubject", { code: c }), `<p>${t("codeEmailBody", { code: `<b>${c}</b>` })}</p>`);
+      await sendEmail(email, t("codeEmailSubject", { code: c }), `<p>${t("codeEmailBody", { code: `<b>${c}</b>` })}</p>`, [], locale);
     } catch (e) {
       return { error: (e as Error).message };
     }
