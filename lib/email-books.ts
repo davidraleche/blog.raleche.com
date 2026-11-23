@@ -103,7 +103,7 @@ export async function emailBooksBlock(lang: Locale = "en") {
 <td style="vertical-align:top">
 <a href="${esc(b.url)}" style="color:#111;text-decoration:none;font-family:${SANS};font-weight:800;font-size:17px;line-height:1.25">${esc(b.title)}</a>
 <div style="font-family:${SANS};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888;margin-top:3px">${esc(b.author)}</div>
-${b.who.length ? `<div style="font-family:Georgia,serif;font-size:14px;color:#333;margin-top:6px">${esc(b.wrote ? t.wrote : t.by)} <b>${esc(b.who.join(", "))}</b>${b.note ? `: <i style="color:#555">“${esc(b.note.length > 120 ? `${b.note.slice(0, 117)}…` : b.note)}”</i>` : ""}</div>` : ""}
+${b.who.length ? `<div style="font-family:Georgia,serif;font-size:14px;color:#333;margin-top:6px">${esc(b.wrote ? t.wrote : t.by)} <b>${esc(b.who.join(", "))}</b>${b.note && !b.wrote ? `: <i style="color:#555">“${esc(b.note.length > 120 ? `${b.note.slice(0, 117)}…` : b.note)}”</i>` : ""}</div>` : ""}
 <div style="margin-top:10px"><a href="${esc(b.url)}" style="display:inline-block;background:#ff9900;color:#111;padding:10px 16px;text-decoration:none;font-family:${SANS};font-size:14px;font-weight:bold;border:2px solid #111">${esc(t.buy)}</a></div>
 </td></tr></table></td></tr>`,
     )
