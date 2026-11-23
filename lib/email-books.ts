@@ -50,11 +50,11 @@ type EmailBook = { title: string; author: string; cover: string | null; url: str
 
 let cache: { at: number; books: EmailBook[] } | null = null;
 
-/** Five books for this week: the most-mentioned books with a cover, rotating by week. Cached 10 minutes. */
+/** Five books for this week: the most-mentioned books, rotating by week. Cached 10 minutes. */
 export async function emailBooks(): Promise<EmailBook[]> {
   if (cache && Date.now() - cache.at < 10 * 60e3) return cache.books;
   const [all, tag] = await Promise.all([
-    db.book.findMany({ where: { coverUrl: { not: null } }, select: { title: true, author: true, asin: true, coverUrl: true, mentions: { select: { who: true, relation: true, note: true } } } }),
+    db.book.findMany({ select: { title: true, author: true, asin: true, coverUrl: true, mentions: { select: { who: true, relation: true, note: true } } } }),
     amazonTag(),
   ]);
   const ranked = all.filter((b) => b.mentions.length).sort((a, b) => b.mentions.length - a.mentions.length || a.title.localeCompare(b.title)).slice(0, 25);
@@ -89,7 +89,10 @@ export async function emailBooksBlock(lang: Locale = "en") {
     .map(
       (b, i) => `<tr><td style="padding:16px 0;${i ? "border-top:1px solid #e5e5e5;" : ""}">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
-<td style="vertical-align:top;width:96px;padding-right:16px">${b.cover ? `<a href="${esc(b.url)}" style="text-decoration:none"><img src="${esc(b.cover)}" width="88" alt="${esc(b.title)}" style="display:block;width:88px;height:auto;border:1px solid #ddd"></a>` : ""}</td>
+<td style="vertical-align:top;width:96px;padding-right:16px"><a href="${esc(b.url)}" style="text-decoration:none">${b.cover
+   ? `<img src="${esc(b.cover)}" width="88" alt="${esc(b.title)}" style="display:block;width:88px;height:auto;border:1px solid #ddd">`
+   : // No cover saved: a small title cover in the site's style (as on /books).
+     `<div style="width:88px;height:132px;box-sizing:border-box;background:#0f3d44;border-top:5px solid #f5a623;padding:8px 7px;font-family:${SANS};font-weight:800;font-size:${b.title.length > 40 ? 10 : 12}px;line-height:1.15;color:#fff;overflow:hidden">${esc(b.title.split(":")[0].slice(0, 60))}<div style="margin-top:6px;font-weight:normal;font-size:8px;letter-spacing:.5px;text-transform:uppercase;color:#f5a623">${esc(b.author.slice(0, 30))}</div></div>`}</a></td>
 <td style="vertical-align:top">
 <a href="${esc(b.url)}" style="color:#111;text-decoration:none;font-family:${SANS};font-weight:800;font-size:17px;line-height:1.25">${esc(b.title)}</a>
 <div style="font-family:${SANS};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888;margin-top:3px">${esc(b.author)}</div>
