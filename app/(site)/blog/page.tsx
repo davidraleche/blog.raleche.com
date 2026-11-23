@@ -3,7 +3,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { localizePosts } from "@/lib/localize";
-import { Kicker } from "@/components/Cards";
+import { Kicker, NumberedList } from "@/components/Cards";
 
 export const metadata: Metadata = {
   title: "Blog",
@@ -19,6 +19,7 @@ export default async function BlogPage() {
     orderBy: { publishedAt: "desc" },
   });
   const posts = await localizePosts(locale, raw);
+  const mostRead = [...posts].sort((a, b) => b.views - a.views).slice(0, 10);
 
   // Group by month of publication, keeping the newest-first order.
   const months: { label: string; posts: typeof posts }[] = [];
@@ -29,7 +30,7 @@ export default async function BlogPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <div className="mx-auto max-w-7xl px-4 py-10">
       <h1 className="hed border-b-[3px] border-ink pb-4 text-7xl sm:text-9xl">{t("blogNav")}</h1>
       <p className="mt-4 flex flex-wrap items-baseline justify-between gap-2 font-serif text-xl text-ink/70">
         {t("blogDek")}
@@ -37,6 +38,8 @@ export default async function BlogPage() {
       </p>
       {!posts.length && <p className="py-16 font-serif text-xl text-ink/60">{t("noStories")}</p>}
 
+      <div className="grid gap-12 lg:grid-cols-[1fr_320px]">
+      <div>
       {months.map((m) => (
         <section key={m.label} className="mt-12">
           <h2 className="kicker border-b border-ink/15 pb-2">{m.label}</h2>
@@ -67,6 +70,13 @@ export default async function BlogPage() {
           </ol>
         </section>
       ))}
+      </div>
+      {mostRead.length > 0 && (
+        <aside className="mt-12 lg:sticky lg:top-6 lg:self-start">
+          <NumberedList title={t("mostPopular")} posts={mostRead} />
+        </aside>
+      )}
+      </div>
     </div>
   );
 }
