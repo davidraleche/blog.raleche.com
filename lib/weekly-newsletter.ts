@@ -3,6 +3,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { QUOTE_WHEEL_DAILY_MAX, QUIZ_REWARD } from "./token-config";
 import { emailCover } from "./email-image";
+import { emailLogo } from "./email-brand";
 
 type Story = { title: string; slug: string; dek: string; coverImage: string | null; readMinutes: number };
 type QuizTeaser = Story & { question: string; options: string[] };
@@ -136,8 +137,8 @@ ${s.coverImage ? `<td style="vertical-align:top;width:112px;padding-left:12px">$
 
   const html = `<div style="background:#f4f4f4;padding:20px 0">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:auto;background:#fff;font-family:Georgia,serif;font-size:17px;line-height:1.55;color:#111">
-<tr><td style="background:#000;padding:18px 20px"><a href="${url}" style="color:#fff;text-decoration:none;font-family:'Arial Narrow',${SANS};font-weight:800;font-size:30px;letter-spacing:3px">RALECHE</a>
-<div style="font-family:${SANS};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;margin-top:4px">${esc(L.briefing)} · ${esc(date)}</div></td></tr>
+<tr><td style="padding:18px 20px 14px;border-bottom:3px solid #111">${emailLogo()}
+<div style="font-family:${SANS};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#666;margin-top:8px">${esc(L.briefing)} · ${esc(date)}</div></td></tr>
 <tr><td style="padding:0 20px 28px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0">
 ${wheel}
 ${quizzes}

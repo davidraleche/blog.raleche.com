@@ -3,6 +3,7 @@
 import { PDFDocument, StandardFonts, rgb, degrees } from "pdf-lib";
 import type { Locale } from "./i18n/messages";
 import { BCP47 } from "./i18n/messages";
+import { emailLogo } from "./email-brand";
 
 export type InvoiceData = {
   number: string;
@@ -131,7 +132,7 @@ export function invoiceEmail(d: InvoiceData) {
   const row = (k: string, v: string, strong = false) =>
     `<tr><td style="padding:10px 0;border-top:1px solid #e5e5e5;color:#666;font-family:Arial,sans-serif;font-size:13px">${esc(k)}</td><td align="right" style="padding:10px 0;border-top:1px solid #e5e5e5;font-family:Arial,sans-serif;font-size:${strong ? 18 : 14}px;${strong ? "font-weight:bold;" : ""}color:#111">${esc(v)}</td></tr>`;
   const html = `<div style="max-width:600px;margin:auto;font-family:Georgia,serif;font-size:17px;line-height:1.6;color:#111">
-<div style="background:#000;color:#fff;padding:16px 20px;font-family:Arial Narrow,Arial,sans-serif;font-weight:800;font-size:28px;letter-spacing:2px">RALECHE <span style="float:right;color:#f5a623;font-size:14px;letter-spacing:3px;line-height:40px">${esc(base.invoice)}</span></div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td style="padding:16px 20px">${emailLogo()}</td><td align="right" style="padding:16px 20px;font-family:Arial,sans-serif;font-weight:bold;color:#e1251b;font-size:14px;letter-spacing:3px;text-transform:uppercase">${esc(base.invoice)}</td></tr></table>
 <div style="height:5px;background:#e1251b"></div>
 <div style="padding:24px 20px">
 <h1 style="font-size:28px;margin:0 0 8px">${esc(c.heading)}</h1>

@@ -1,6 +1,7 @@
 // Welcome email for new newsletter subscribers. No server-only imports, so scripts can render it too.
 import { messages, fmt, type Locale } from "./i18n/messages";
 import { emailCover } from "./email-image";
+import { emailLogo } from "./email-brand";
 
 type Story = { title: string; slug: string; dek?: string | null; coverImage?: string | null };
 
@@ -22,7 +23,7 @@ ${s.dek ? `<div style="color:#555;font-size:15px;margin-top:4px">${esc(s.dek)}</
     )
     .join("");
   const html = `<div style="max-width:600px;margin:auto;font-family:Georgia,serif;font-size:17px;line-height:1.6;color:#111">
-<div style="background:#000;color:#fff;padding:16px 20px;font-family:Arial Narrow,Arial,sans-serif;font-weight:800;font-size:28px;letter-spacing:2px">RALECHE</div>
+<div style="padding:16px 20px;border-bottom:3px solid #111">${emailLogo()}</div>
 <div style="padding:20px">
 <h1 style="font-size:26px;margin:0 0 12px">${esc(m.welcomeHeading)}</h1>
 <p style="margin:0 0 24px">${esc(m.welcomeBody)}</p>

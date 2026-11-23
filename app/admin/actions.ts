@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/auth";
 import { slugify, readMinutes } from "@/lib/utils";
 import { importFromSource } from "@/lib/importer";
 import { sendEmail } from "@/lib/email";
+import { emailLogo } from "@/lib/email-brand";
 import { renderMarkdown } from "@/lib/markdown";
 import { stripe } from "@/lib/stripe";
 import { AD_KEYS } from "@/lib/ads";
@@ -192,7 +193,7 @@ export async function draftDigest() {
 function campaignHtml(bodyHtml: string, unsubscribeKey?: string, lang: Locale = "en") {
   const url = process.env.APP_URL || "http://localhost:3000";
   return `<div style="max-width:600px;margin:auto;font-family:Georgia,serif;font-size:17px;line-height:1.6;color:#111">
-<div style="background:#000;color:#fff;padding:16px 20px;font-family:Arial Narrow,Arial,sans-serif;font-weight:800;font-size:28px;letter-spacing:2px">RALECHE</div>
+<div style="padding:16px 20px;border-bottom:3px solid #111">${emailLogo()}</div>
 <div style="padding:20px">${bodyHtml}</div>
 <!--community-->
 <p style="font-family:monospace;font-size:11px;color:#888;padding:0 20px">${unsubscribeKey ? `<a href="${url}/unsubscribe?key=${unsubscribeKey}" style="color:#888">${messages[lang].unsubscribe}</a>` : "Test send"}</p></div>`;
