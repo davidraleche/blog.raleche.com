@@ -27,7 +27,7 @@ export async function subscribeNewsletter(_: unknown, form: FormData) {
         where: { status: "published" },
         orderBy: { publishedAt: "desc" },
         take: 3,
-        select: { title: true, slug: true, dek: true },
+        select: { title: true, slug: true, dek: true, coverImage: true },
       });
       const { subject, html } = welcomeEmail({ locale, unsubscribeKey: sub.unsubscribeKey, stories });
       if (!(await sendEmail(sub.email, subject, html, [], locale))) console.error(`[newsletter] welcome email failed for subscriber ${sub.id}`);

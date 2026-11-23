@@ -2,6 +2,7 @@
 // No server-only imports, so scripts can render and send it too.
 import type { PrismaClient } from "@prisma/client";
 import { QUOTE_WHEEL_DAILY_MAX, QUIZ_REWARD } from "./token-config";
+import { emailCover } from "./email-image";
 
 type Story = { title: string; slug: string; dek: string; coverImage: string | null; readMinutes: number };
 type QuizTeaser = Story & { question: string; options: string[] };
@@ -95,7 +96,10 @@ ${button(`${url}/?spin=1`, L.spinNow, "#e1251b")}
 ${content.quizzes
   .map(
     (q) => `<tr><td style="padding:16px 0;border-bottom:1px solid #e5e5e5">
-<div style="font-family:${SANS};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#e1251b">${esc(q.title)}</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
+${q.coverImage ? `<td style="vertical-align:top;width:132px;padding-right:12px">${emailCover(q.coverImage, story(q), 120, q.title)}</td>` : ""}
+<td style="vertical-align:top;font-family:${SANS};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#e1251b">${esc(q.title)}</td>
+</tr></table>
 <div style="font-weight:bold;font-size:19px;line-height:1.35;margin:6px 0 10px">${esc(q.question)}</div>
 ${q.options.map((o, i) => `<a href="${story(q, "#quiz")}" style="display:block;border:1px solid #111;padding:9px 12px;margin-bottom:6px;color:#111;text-decoration:none;font-family:${SANS};font-size:15px"><b>${"ABCD"[i]}.</b> ${esc(o)}</a>`).join("")}
 <div style="margin-top:10px">${button(story(q, "#quiz"), L.answer)}</div>
@@ -108,10 +112,12 @@ ${q.options.map((o, i) => `<a href="${story(q, "#quiz")}" style="display:block;b
 ${content.latest
   .map(
     (s, i) => `<tr><td style="padding:14px 0;border-bottom:1px solid #e5e5e5">
-${i === 0 && s.coverImage ? `<a href="${story(s)}"><img src="${esc(s.coverImage)}" width="560" alt="" style="display:block;width:100%;max-width:560px;height:auto;border:0;margin-bottom:12px"></a>` : ""}
+${i === 0 && s.coverImage ? `<div style="margin-bottom:12px">${emailCover(s.coverImage, story(s), 560, s.title)}</div>` : ""}
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td style="vertical-align:top">
 <a href="${story(s)}" style="color:#111;text-decoration:none;font-family:${SANS};font-weight:800;font-size:${i === 0 ? 24 : 18}px;line-height:1.2;text-transform:uppercase">${esc(s.title)}</a>
 ${s.dek ? `<div style="color:#555;font-size:15px;margin-top:6px">${esc(s.dek)}</div>` : ""}
 <div style="font-family:${SANS};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#999;margin-top:6px">${s.readMinutes} ${esc(L.minRead)}</div>
+</td>${i > 0 && s.coverImage ? `<td style="vertical-align:top;width:152px;padding-left:12px">${emailCover(s.coverImage, story(s), 140, s.title)}</td>` : ""}</tr></table>
 </td></tr>`,
   )
   .join("")}`;
@@ -120,9 +126,10 @@ ${s.dek ? `<div style="color:#555;font-size:15px;margin-top:6px">${esc(s.dek)}</
 ${content.mostRead
   .map(
     (s, i) => `<tr><td style="padding:12px 0;border-bottom:1px solid #e5e5e5">
-<table role="presentation" cellspacing="0" cellpadding="0"><tr>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
 <td style="vertical-align:top;width:44px;font-family:${SANS};font-weight:800;font-size:34px;line-height:1;color:#e1251b">${i + 1}</td>
 <td style="vertical-align:top"><a href="${story(s)}" style="color:#111;text-decoration:none;font-family:${SANS};font-weight:800;font-size:17px;line-height:1.25;text-transform:uppercase">${esc(s.title)}</a></td>
+${s.coverImage ? `<td style="vertical-align:top;width:112px;padding-left:12px">${emailCover(s.coverImage, story(s), 100, s.title)}</td>` : ""}
 </tr></table></td></tr>`,
   )
   .join("")}`;

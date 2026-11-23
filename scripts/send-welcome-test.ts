@@ -9,7 +9,7 @@ import { welcomeEmail } from "../lib/welcome-email";
 async function main() {
   const [to, lang = "en"] = process.argv.slice(2);
   if (!isLocale(lang)) throw new Error(`Unknown language ${lang}`);
-  const stories = await db.post.findMany({ where: { status: "published" }, orderBy: { publishedAt: "desc" }, take: 3, select: { title: true, slug: true, dek: true } });
+  const stories = await db.post.findMany({ where: { status: "published" }, orderBy: { publishedAt: "desc" }, take: 3, select: { title: true, slug: true, dek: true, coverImage: true } });
   const { subject, html } = welcomeEmail({ locale: lang, stories });
   const key = process.env.RESEND_API_KEY;
   if (!key || !to) {

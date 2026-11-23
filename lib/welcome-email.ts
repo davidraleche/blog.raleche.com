@@ -1,7 +1,8 @@
 // Welcome email for new newsletter subscribers. No server-only imports, so scripts can render it too.
 import { messages, fmt, type Locale } from "./i18n/messages";
+import { emailCover } from "./email-image";
 
-type Story = { title: string; slug: string; dek?: string | null };
+type Story = { title: string; slug: string; dek?: string | null; coverImage?: string | null };
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -10,9 +11,14 @@ export function welcomeEmail({ locale, unsubscribeKey, stories }: { locale: Loca
   const url = (process.env.APP_URL || "https://raleche.com").replace(/\/$/, "");
   const list = stories
     .map(
-      (s) => `<tr><td style="padding:12px 0;border-top:1px solid #e5e5e5">
-<a href="${url}/story/${encodeURIComponent(s.slug)}" style="color:#111;text-decoration:none;font-weight:bold;font-size:18px;line-height:1.3">${esc(s.title)}</a>
-${s.dek ? `<div style="color:#555;font-size:15px;margin-top:4px">${esc(s.dek)}</div>` : ""}</td></tr>`,
+      (s, i) => {
+        const href = `${url}/story/${encodeURIComponent(s.slug)}`;
+        const text = `<a href="${href}" style="color:#111;text-decoration:none;font-weight:bold;font-size:18px;line-height:1.3">${esc(s.title)}</a>
+${s.dek ? `<div style="color:#555;font-size:15px;margin-top:4px">${esc(s.dek)}</div>` : ""}`;
+        // The newest story with its cover full width; the others with a thumbnail on the right.
+        if (i === 0) return `<tr><td style="padding:12px 0;border-top:1px solid #e5e5e5">${s.coverImage ? `<div style="margin-bottom:10px">${emailCover(s.coverImage, href, 560, s.title)}</div>` : ""}${text}</td></tr>`;
+        return `<tr><td style="padding:12px 0;border-top:1px solid #e5e5e5"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td style="vertical-align:top">${text}</td>${s.coverImage ? `<td style="vertical-align:top;width:152px;padding-left:12px">${emailCover(s.coverImage, href, 140, s.title)}</td>` : ""}</tr></table></td></tr>`;
+      },
     )
     .join("");
   const html = `<div style="max-width:600px;margin:auto;font-family:Georgia,serif;font-size:17px;line-height:1.6;color:#111">
