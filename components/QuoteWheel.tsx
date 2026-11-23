@@ -202,26 +202,37 @@ export function QuoteWheel({ quotes, labels, compact = false }: { quotes: Speake
   );
 }
 
+/** How long a visitor browses the site before the wheel opens by itself. */
+const AUTO_OPEN_AFTER_MS = 3 * 60 * 1000;
+
 /**
  * The floating "Daily spin" button on every page: opens the same quote wheel in a popup.
- * The popup opens and spins by itself on the first page of each visit; links with ?spin=1 (the weekly newsletter) always open it.
+ * The popup opens and spins by itself once a day, after the visitor has been on the site for 3 minutes; links with ?spin=1 (the weekly newsletter) always open it right away.
  */
 export function QuoteWheelButton({ quotes, labels, buttonLabel }: { quotes: SpeakerQuote[]; labels: QuoteWheelLabels; buttonLabel: string }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Opens on its own once a day (the visitor's local date), and on any link with ?spin=1.
+  // Opens on its own once a day (the visitor's local date) after 3 minutes on the site, counted across pages; any ?spin=1 link opens it at once.
   useEffect(() => {
     if (!quotes.length || /^\/(signin|signup|checkout|account)/.test(pathname)) return;
     const d = new Date();
     const day = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    const forced = new URLSearchParams(window.location.search).has("spin");
     let seen = false;
     try { seen = localStorage.getItem("qw_auto_day") === day; } catch {}
-    if (seen && !new URLSearchParams(window.location.search).has("spin")) return;
+    if (seen && !forced) return;
+    let since = Date.now();
+    try {
+      const stored = Number(sessionStorage.getItem("qw_since"));
+      if (stored > 0) since = stored;
+      else sessionStorage.setItem("qw_since", String(since));
+    } catch {}
+    const wait = forced ? 900 : Math.max(900, AUTO_OPEN_AFTER_MS - (Date.now() - since));
     const id = setTimeout(() => {
       try { localStorage.setItem("qw_auto_day", day); } catch {}
       setOpen(true);
-    }, 900);
+    }, wait);
     return () => clearTimeout(id);
   }, [quotes.length, pathname]);
 
