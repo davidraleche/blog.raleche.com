@@ -1,4 +1,4 @@
-import "server-only";
+// No server-only import, so scripts can call Gemini too (e.g. scripts/write-book-pitches.ts).
 import { execFile } from "child_process";
 import { promisify } from "util";
 

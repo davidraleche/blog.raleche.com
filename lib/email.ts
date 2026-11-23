@@ -1,6 +1,6 @@
 import "server-only";
 import { withCommunity, NO_COMMUNITY } from "./community-email";
-import { emailBooksBlock } from "./email-books";
+import { emailBooksBlock, NO_BOOKS } from "./email-books";
 import { withLogo } from "./email-brand";
 import type { Locale } from "./i18n/messages";
 
@@ -11,7 +11,7 @@ export type Attachment = { filename: string; content: Uint8Array };
  * (lib/email-books.ts) and the WhatsApp/LinkedIn box (lib/community-email.ts), in the reader's language, unless it opts out.
  */
 export async function sendEmail(to: string, subject: string, body: string, attachments: Attachment[] = [], lang: Locale = "en") {
-  const books = body.includes(NO_COMMUNITY) ? "" : await emailBooksBlock(lang);
+  const books = body.includes(NO_COMMUNITY) || body.includes(NO_BOOKS) ? "" : await emailBooksBlock(lang);
   const html = withLogo(withCommunity(body, lang, books));
   const key = process.env.RESEND_API_KEY;
   if (!key) {

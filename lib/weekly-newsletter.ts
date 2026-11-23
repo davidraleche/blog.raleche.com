@@ -1,9 +1,10 @@
-// Weekly newsletter: daily wheel, quizzes on new stories, latest stories, most read.
+// Weekly newsletter: latest stories, books from our guests, quizzes on new stories, most read, then the wheel.
 // No server-only imports, so scripts can render and send it too.
 import type { PrismaClient } from "@prisma/client";
 import { QUOTE_WHEEL_DAILY_MAX, QUIZ_REWARD } from "./token-config";
 import { emailCover } from "./email-image";
 import { emailLogo } from "./email-brand";
+import { NO_BOOKS } from "./email-books";
 
 type Story = { title: string; slug: string; dek: string; coverImage: string | null; readMinutes: number };
 type QuizTeaser = Story & { question: string; options: string[] };
@@ -56,6 +57,7 @@ export function weeklyLabels() {
     quizDek: `Read the summary, then get both questions right to win ${QUIZ_REWARD} tokens per story.`,
     answer: `Answer & win ${QUIZ_REWARD} tokens`,
     latestHeading: "The latest",
+    booksHeading: "Books from our guests",
     minRead: "min read",
     mostReadHeading: "Most read",
     readMore: "Read more on Raleche",
@@ -77,13 +79,17 @@ function button(href: string, label: string, bg = "#111") {
   return `<a href="${href}" style="display:inline-block;background:${bg};color:#fff;padding:13px 22px;text-decoration:none;font-family:${SANS};font-size:13px;font-weight:bold;letter-spacing:1.5px;text-transform:uppercase">${esc(label)}</a>`;
 }
 
-export function weeklyNewsletter(content: WeeklyContent, opts: { unsubscribeKey?: string; date?: Date; labels?: WeeklyLabels; locale?: string } = {}) {
+/** `books` is the reading-list box (emailBooksBlock), placed after the latest stories instead of at the end. */
+export function weeklyNewsletter(content: WeeklyContent, opts: { unsubscribeKey?: string; date?: Date; labels?: WeeklyLabels; locale?: string; books?: string } = {}) {
   const L = opts.labels ?? weeklyLabels();
+  // Section numbers follow the order they appear in; empty sections are skipped.
+  const order = ["latest", ...(opts.books ? ["books"] : []), ...(content.quizzes.length ? ["quiz"] : []), "mostRead", "wheel"];
+  const num = (k: string) => order.indexOf(k) + 1;
   const url = (process.env.APP_URL || "https://raleche.com").replace(/\/$/, "");
   const story = (s: { slug: string }, hash = "") => `${url}/story/${encodeURIComponent(s.slug)}${hash}`;
   const date = (opts.date ?? new Date()).toLocaleDateString(opts.locale ?? "en-US", { month: "long", day: "numeric", year: "numeric" });
 
-  const wheel = `${heading(1, L.wheelHeading)}
+  const wheel = `${heading(num("wheel"), L.wheelHeading)}
 <tr><td style="background:#111;color:#fff;padding:26px 24px;text-align:center">
 <div style="font-size:44px;line-height:1">🎡</div>
 <div style="font-family:${SANS};font-weight:800;font-size:26px;text-transform:uppercase;margin-top:10px">${esc(L.wheelTitle)}</div>
@@ -92,7 +98,7 @@ ${button(`${url}/?spin=1`, L.spinNow, "#e1251b")}
 </td></tr>`;
 
   const quizzes = content.quizzes.length
-    ? `${heading(2, L.quizHeading)}
+    ? `${heading(num("quiz"), L.quizHeading)}
 <tr><td style="font-size:16px;color:#555;padding-bottom:6px">${esc(L.quizDek)}</td></tr>
 ${content.quizzes
   .map(
@@ -109,7 +115,7 @@ ${q.options.map((o, i) => `<a href="${story(q, "#quiz")}" style="display:block;b
   .join("")}`
     : "";
 
-  const latest = `${heading(3, L.latestHeading)}
+  const latest = `${heading(num("latest"), L.latestHeading)}
 ${content.latest
   .map(
     (s, i) => `<tr><td style="padding:14px 0;border-bottom:1px solid #e5e5e5">
@@ -123,7 +129,7 @@ ${s.dek ? `<div style="color:#555;font-size:15px;margin-top:6px">${esc(s.dek)}</
   )
   .join("")}`;
 
-  const mostRead = `${heading(4, L.mostReadHeading)}
+  const mostRead = `${heading(num("mostRead"), L.mostReadHeading)}
 ${content.mostRead
   .map(
     (s, i) => `<tr><td style="padding:12px 0;border-bottom:1px solid #e5e5e5">
@@ -135,15 +141,19 @@ ${s.coverImage ? `<td style="vertical-align:top;width:112px;padding-left:12px">$
   )
   .join("")}`;
 
-  const html = `<div style="background:#f4f4f4;padding:20px 0">
+  const books = opts.books ? `${heading(num("books"), L.booksHeading)}
+<tr><td>${opts.books}</td></tr>` : "";
+
+  const html = `${opts.books !== undefined ? NO_BOOKS : ""}<div style="background:#f4f4f4;padding:20px 0">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:auto;background:#fff;font-family:Georgia,serif;font-size:17px;line-height:1.55;color:#111">
 <tr><td style="padding:18px 20px 14px;border-bottom:3px solid #111">${emailLogo()}
 <div style="font-family:${SANS};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#666;margin-top:8px">${esc(L.briefing)} · ${esc(date)}</div></td></tr>
 <tr><td style="padding:0 20px 28px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-${wheel}
-${quizzes}
 ${latest}
+${books}
+${quizzes}
 ${mostRead}
+${wheel}
 <tr><td style="padding-top:30px;text-align:center">${button(url, L.readMore)}</td></tr>
 </table></td></tr>
 <!--community-row-->

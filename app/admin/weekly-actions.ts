@@ -5,6 +5,8 @@ import { requireAdmin } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
 import { translateMany } from "@/lib/translate";
 import { isLocale, type Locale } from "@/lib/i18n/messages";
+import { emailBooksBlock } from "@/lib/email-books";
+import { fillBookPitches } from "@/lib/book-pitch";
 import { loadWeeklyContent, weeklyLabels, weeklyNewsletter, type WeeklyContent, type WeeklyLabels } from "@/lib/weekly-newsletter";
 
 const DATE_LOCALE: Record<Locale, string> = { en: "en-US", fr: "fr-FR", es: "es-ES", zh: "zh-CN" };
@@ -12,7 +14,8 @@ const DATE_LOCALE: Record<Locale, string> = { en: "en-US", fr: "fr-FR", es: "es-
 /** The weekly briefing in one language: fixed labels and story text machine-translated (cached). */
 async function weeklyIn(lang: Locale, content: WeeklyContent) {
   const labels = weeklyLabels();
-  if (lang === "en") return (key?: string) => weeklyNewsletter(content, { labels, unsubscribeKey: key });
+  const books = await emailBooksBlock(lang);
+  if (lang === "en") return (key?: string) => weeklyNewsletter(content, { labels, unsubscribeKey: key, books });
 
   const labelKeys = Object.keys(labels) as (keyof WeeklyLabels)[];
   const stories = [...content.quizzes, ...content.latest, ...content.mostRead];
@@ -31,11 +34,12 @@ async function weeklyIn(lang: Locale, content: WeeklyContent) {
   const mostRead = content.mostRead.map(tStory);
   for (const q of quizzes) Object.assign(q, { question: next(), options: q.options.map(() => next()) });
   const localized = { quizzes, latest, mostRead };
-  return (key?: string) => weeklyNewsletter(localized, { labels: tLabels, unsubscribeKey: key, locale: DATE_LOCALE[lang] });
+  return (key?: string) => weeklyNewsletter(localized, { labels: tLabels, unsubscribeKey: key, locale: DATE_LOCALE[lang], books });
 }
 
 export async function sendWeeklyTest() {
   const admin = await requireAdmin();
+  await fillBookPitches().catch(() => 0); // books without a "why read it" pitch get one before sending
   const lang: Locale = isLocale(admin.language) ? admin.language : "en";
   const build = await weeklyIn(lang, await loadWeeklyContent(db));
   const { subject, html } = build();
@@ -46,6 +50,7 @@ export async function sendWeeklyTest() {
 export async function sendWeekly(form: FormData) {
   await requireAdmin();
   if (form.get("confirm") !== "yes") redirect("/admin/newsletter?weekly=confirm");
+  await fillBookPitches().catch(() => 0);
   const content = await loadWeeklyContent(db);
   const subs = await db.subscriber.findMany({ where: { status: "subscribed" } });
   const builders = new Map<Locale, Awaited<ReturnType<typeof weeklyIn>>>();
@@ -60,7 +65,7 @@ export async function sendWeekly(form: FormData) {
   }
   // Keep a record in the campaign history.
   await db.campaign.create({
-    data: { subject: subject || weeklyNewsletter(content).subject, body: "_Weekly briefing template: daily wheel, quizzes on new stories, latest, most read._", status: "sent", sentCount: sent, sentAt: new Date() },
+    data: { subject: subject || weeklyNewsletter(content).subject, body: "_Weekly briefing template: latest, books from our guests, quizzes on new stories, most read, wheel._", status: "sent", sentCount: sent, sentAt: new Date() },
   });
   redirect(`/admin/newsletter?weekly=sent&n=${sent}`);
 }

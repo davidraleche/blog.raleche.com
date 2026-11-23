@@ -5,7 +5,11 @@
 import { db } from "./db";
 import { amazonTag, amazonUrl } from "./books";
 import { emailImage } from "./email-image";
+import { translateMany } from "./translate";
 import type { Locale } from "./i18n/messages";
+
+/** In an email body, keeps lib/email.ts from adding the books box at the end (the email places it itself). */
+export const NO_BOOKS = "<!--books-inline-->";
 
 const TEXT: Record<Locale, { kicker: string; title: string; dek: string; by: string; wrote: string; buy: string; more: string; disclosure: string }> = {
   en: {
@@ -50,7 +54,7 @@ const TEXT: Record<Locale, { kicker: string; title: string; dek: string; by: str
   },
 };
 
-type EmailBook = { title: string; author: string; cover: string | null; url: string; who: string[]; wrote: boolean; note: string };
+type EmailBook = { title: string; author: string; cover: string | null; url: string; who: string[]; wrote: boolean; note: string; pitch: string };
 
 let cache: { at: number; books: EmailBook[] } | null = null;
 
@@ -58,7 +62,7 @@ let cache: { at: number; books: EmailBook[] } | null = null;
 export async function emailBooks(): Promise<EmailBook[]> {
   if (cache && Date.now() - cache.at < 10 * 60e3) return cache.books;
   const [all, tag] = await Promise.all([
-    db.book.findMany({ select: { title: true, author: true, asin: true, coverUrl: true, mentions: { select: { who: true, relation: true, note: true } } } }),
+    db.book.findMany({ select: { title: true, author: true, asin: true, coverUrl: true, pitch: true, mentions: { select: { who: true, relation: true, note: true } } } }),
     amazonTag(),
   ]);
   const ranked = all.filter((b) => b.mentions.length).sort((a, b) => b.mentions.length - a.mentions.length || a.title.localeCompare(b.title)).slice(0, 25);
@@ -77,6 +81,7 @@ export async function emailBooks(): Promise<EmailBook[]> {
       who: [...new Set((recs.length ? recs : b.mentions).map((m) => m.who))].slice(0, 3),
       wrote: !recs.length,
       note: rec?.note ?? "",
+      pitch: b.pitch,
     };
   });
   cache = { at: Date.now(), books };
@@ -90,6 +95,8 @@ const SANS = "Helvetica,Arial,sans-serif";
 export async function emailBooksBlock(lang: Locale = "en") {
   const books = await emailBooks().catch(() => []);
   if (!books.length) return "";
+  // Pitches are written in English; translate them for other readers (cached).
+  const pitches = await translateMany(lang, books.map((b) => b.pitch)).catch(() => books.map((b) => b.pitch));
   const t = TEXT[lang] ?? TEXT.en;
   const site = (process.env.APP_URL || "https://raleche.com").replace(/\/$/, "");
   const rows = books
@@ -103,7 +110,8 @@ export async function emailBooksBlock(lang: Locale = "en") {
 <td style="vertical-align:top">
 <a href="${esc(b.url)}" style="color:#111;text-decoration:none;font-family:${SANS};font-weight:800;font-size:17px;line-height:1.25">${esc(b.title)}</a>
 <div style="font-family:${SANS};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888;margin-top:3px">${esc(b.author)}</div>
-${b.who.length ? `<div style="font-family:Georgia,serif;font-size:14px;color:#333;margin-top:6px">${esc(b.wrote ? t.wrote : t.by)} <b>${esc(b.who.join(", "))}</b>${b.note && !b.wrote ? `: <i style="color:#555">“${esc(b.note.length > 120 ? `${b.note.slice(0, 117)}…` : b.note)}”</i>` : ""}</div>` : ""}
+${pitches[i] ? `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.45;color:#111;margin-top:8px;padding-left:10px;border-left:3px solid #ff9900">${esc(pitches[i])}</div>` : ""}
+${b.who.length ? `<div style="font-family:Georgia,serif;font-size:14px;color:#333;margin-top:6px">${esc(b.wrote ? t.wrote : t.by)} <b>${esc(b.who.join(", "))}</b>${b.note && !b.wrote && !pitches[i] ? `: <i style="color:#555">“${esc(b.note.length > 120 ? `${b.note.slice(0, 117)}…` : b.note)}”</i>` : ""}</div>` : ""}
 <div style="margin-top:10px"><a href="${esc(b.url)}" style="display:inline-block;background:#ff9900;color:#111;padding:10px 16px;text-decoration:none;font-family:${SANS};font-size:14px;font-weight:bold;border:2px solid #111">${esc(t.buy)}</a></div>
 </td></tr></table></td></tr>`,
     )

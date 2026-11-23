@@ -320,6 +320,7 @@ model Book {
   author    String
   asin      String? // Amazon product id; without it we link to an Amazon search
   coverUrl  String?
+  pitch     String        @default("") // one or two punchy sentences on why to read it (AI-written, used in emails)
   createdAt DateTime      @default(now())
   mentions  BookMention[]
 

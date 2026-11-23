@@ -4,11 +4,16 @@
 import { writeFileSync } from "node:fs";
 import { db } from "../lib/db";
 import { loadWeeklyContent, weeklyNewsletter } from "../lib/weekly-newsletter";
+import { emailBooksBlock } from "../lib/email-books";
+import { withCommunity } from "../lib/community-email";
 
 async function main() {
   const [to] = process.argv.slice(2);
   const content = await loadWeeklyContent(db);
-  const { subject, html } = weeklyNewsletter(content);
+  // Same as a real send: books after the latest stories, community box at the end (lib/email.ts adds it).
+  const built = weeklyNewsletter(content, { books: await emailBooksBlock("en") });
+  const { subject } = built;
+  const html = withCommunity(built.html, "en");
   console.log(`quizzes=${content.quizzes.length} latest=${content.latest.length} mostRead=${content.mostRead.length}`);
   const key = process.env.RESEND_API_KEY;
   if (!key || !to) {
