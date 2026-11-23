@@ -56,10 +56,10 @@ export function communityBlock(lang: Locale = "en") {
 </div>`;
 }
 
-/** The email with the block in its slot (or at the end); unchanged if it opted out. */
-export function withCommunity(html: string, lang: Locale = "en") {
+/** The email with the block in its slot (or at the end), after `before` (the books box); unchanged if it opted out. */
+export function withCommunity(html: string, lang: Locale = "en", before = "") {
   if (html.includes(NO_COMMUNITY)) return html;
-  const block = communityBlock(lang);
+  const block = before + communityBlock(lang);
   if (html.includes(COMMUNITY_SLOT)) return html.replace(COMMUNITY_SLOT, block);
   if (html.includes(COMMUNITY_ROW_SLOT)) return html.replace(COMMUNITY_ROW_SLOT, `<tr><td style="padding:0 20px 8px">${block}</td></tr>`);
   return html + block;
