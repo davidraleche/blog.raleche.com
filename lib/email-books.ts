@@ -7,46 +7,50 @@ import { amazonTag, amazonUrl } from "./books";
 import { emailImage } from "./email-image";
 import type { Locale } from "./i18n/messages";
 
-const TEXT: Record<Locale, { kicker: string; title: string; dek: string; by: string; buy: string; more: string; disclosure: string }> = {
+const TEXT: Record<Locale, { kicker: string; title: string; dek: string; by: string; wrote: string; buy: string; more: string; disclosure: string }> = {
   en: {
     kicker: "Reading list",
-    title: "5 books our guests swear by",
-    dek: "The books the leaders we interview keep coming back to. Tap a cover or a button to get yours on Amazon.",
+    title: "5 books from the people we interview",
+    dek: "Books our guests wrote or recommend. Tap a cover or a button to get yours on Amazon.",
     by: "Recommended by",
+    wrote: "Written by our guest",
     buy: "Buy on Amazon →",
     more: "See all the books on Raleche",
     disclosure: "As an Amazon Associate, Raleche earns from qualifying purchases, at no extra cost to you.",
   },
   fr: {
     kicker: "À lire",
-    title: "5 livres que nos invités recommandent",
-    dek: "Les livres auxquels les dirigeants que nous interviewons reviennent sans cesse. Touchez une couverture ou un bouton pour l'obtenir sur Amazon.",
+    title: "5 livres des personnes que nous interviewons",
+    dek: "Des livres écrits ou recommandés par nos invités. Touchez une couverture ou un bouton pour l'obtenir sur Amazon.",
     by: "Recommandé par",
+    wrote: "Écrit par notre invité",
     buy: "Acheter sur Amazon →",
     more: "Voir tous les livres sur Raleche",
     disclosure: "En tant que Partenaire Amazon, Raleche perçoit une commission sur les achats éligibles, sans frais pour vous.",
   },
   es: {
     kicker: "Para leer",
-    title: "5 libros que nuestros invitados recomiendan",
-    dek: "Los libros a los que vuelven una y otra vez los líderes que entrevistamos. Toca una portada o un botón para conseguirlo en Amazon.",
+    title: "5 libros de las personas que entrevistamos",
+    dek: "Libros que nuestros invitados escribieron o recomiendan. Toca una portada o un botón para conseguirlo en Amazon.",
     by: "Recomendado por",
+    wrote: "Escrito por nuestro invitado",
     buy: "Comprar en Amazon →",
     more: "Ver todos los libros en Raleche",
     disclosure: "Como Afiliado de Amazon, Raleche gana con las compras que reúnen los requisitos, sin coste extra para ti.",
   },
   zh: {
     kicker: "书单",
-    title: "嘉宾力荐的 5 本书",
-    dek: "我们采访的领导者反复提到的书。点击封面或按钮即可在 Amazon 购买。",
+    title: "受访嘉宾的 5 本书",
+    dek: "嘉宾撰写或推荐的书。点击封面或按钮即可在 Amazon 购买。",
     by: "推荐人",
+    wrote: "嘉宾著作",
     buy: "在 Amazon 购买 →",
     more: "在 Raleche 查看全部书籍",
     disclosure: "作为 Amazon 联盟成员，Raleche 从符合条件的购买中获得佣金，您无需额外付费。",
   },
 };
 
-type EmailBook = { title: string; author: string; cover: string | null; url: string; who: string[]; note: string };
+type EmailBook = { title: string; author: string; cover: string | null; url: string; who: string[]; wrote: boolean; note: string };
 
 let cache: { at: number; books: EmailBook[] } | null = null;
 
@@ -62,13 +66,16 @@ export async function emailBooks(): Promise<EmailBook[]> {
   const start = ranked.length > 5 ? (week * 5) % ranked.length : 0;
   const pick = Array.from({ length: Math.min(5, ranked.length) }, (_, i) => ranked[(start + i) % ranked.length]);
   const books = pick.map((b) => {
-    const rec = b.mentions.find((m) => m.relation !== "wrote" && m.note) ?? b.mentions.find((m) => m.relation !== "wrote") ?? b.mentions[0];
+    const recs = b.mentions.filter((m) => m.relation !== "wrote");
+    const rec = recs.find((m) => m.note) ?? recs[0] ?? b.mentions.find((m) => m.note) ?? b.mentions[0];
     return {
       title: b.title,
       author: b.author,
       cover: emailImage(b.coverUrl, 256),
       url: amazonUrl(b, tag),
-      who: [...new Set(b.mentions.filter((m) => m.relation !== "wrote").map((m) => m.who))].slice(0, 3),
+      // Who recommended it; for a book a guest wrote, that guest.
+      who: [...new Set((recs.length ? recs : b.mentions).map((m) => m.who))].slice(0, 3),
+      wrote: !recs.length,
       note: rec?.note ?? "",
     };
   });
@@ -96,7 +103,7 @@ export async function emailBooksBlock(lang: Locale = "en") {
 <td style="vertical-align:top">
 <a href="${esc(b.url)}" style="color:#111;text-decoration:none;font-family:${SANS};font-weight:800;font-size:17px;line-height:1.25">${esc(b.title)}</a>
 <div style="font-family:${SANS};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888;margin-top:3px">${esc(b.author)}</div>
-${b.who.length ? `<div style="font-family:Georgia,serif;font-size:14px;color:#333;margin-top:6px">${esc(t.by)} <b>${esc(b.who.join(", "))}</b>${b.note ? `: <i style="color:#555">“${esc(b.note.length > 120 ? `${b.note.slice(0, 117)}…` : b.note)}”</i>` : ""}</div>` : ""}
+${b.who.length ? `<div style="font-family:Georgia,serif;font-size:14px;color:#333;margin-top:6px">${esc(b.wrote ? t.wrote : t.by)} <b>${esc(b.who.join(", "))}</b>${b.note ? `: <i style="color:#555">“${esc(b.note.length > 120 ? `${b.note.slice(0, 117)}…` : b.note)}”</i>` : ""}</div>` : ""}
 <div style="margin-top:10px"><a href="${esc(b.url)}" style="display:inline-block;background:#ff9900;color:#111;padding:10px 16px;text-decoration:none;font-family:${SANS};font-size:14px;font-weight:bold;border:2px solid #111">${esc(t.buy)}</a></div>
 </td></tr></table></td></tr>`,
     )
