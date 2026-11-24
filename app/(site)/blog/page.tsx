@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/blog" },
 };
 
+/** Tags shown in the "Browse by tag" box before "More tags". */
+const TOP_TAGS = 20;
+
 export default async function BlogPage({ searchParams }: { searchParams: Promise<{ tag?: string }> }) {
   const { locale, t, date } = await getI18n();
   const tags = [...(await tagIndex())].map(([slug, e]) => ({ slug, ...e })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
@@ -35,6 +38,15 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
     if (months.at(-1)?.label !== label) months.push({ label, posts: [] });
     months.at(-1)!.posts.push(p);
   }
+
+  const tagChip = (x: (typeof tags)[number]) => (
+    <li key={x.slug}>
+      <Link href={`/blog?tag=${x.slug}`} scroll={false} aria-current={active?.slug === x.slug ? "page" : undefined}
+                      className={`inline-block border px-3 py-1 font-mono text-[11px] uppercase tracking-widest ${active?.slug === x.slug ? "border-ink bg-ink text-white" : "border-ink/30 hover:bg-ink hover:text-white"}`}>
+                      {x.name} <span className="opacity-60">{x.count}</span>
+                    </Link>
+    </li>
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
@@ -97,15 +109,17 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
                     {t("allTags")} <span className="opacity-60">{all.length}</span>
                   </Link>
                 </li>
-                {tags.map((x) => (
-                  <li key={x.slug}>
-                    <Link href={`/blog?tag=${x.slug}`} scroll={false} aria-current={active?.slug === x.slug ? "page" : undefined}
-                      className={`inline-block border px-3 py-1 font-mono text-[11px] uppercase tracking-widest ${active?.slug === x.slug ? "border-ink bg-ink text-white" : "border-ink/30 hover:bg-ink hover:text-white"}`}>
-                      {x.name} <span className="opacity-60">{x.count}</span>
-                    </Link>
-                  </li>
-                ))}
+                {tags.slice(0, TOP_TAGS).map(tagChip)}
               </ul>
+              {tags.length > TOP_TAGS && (
+                // The rest stay folded; open when the chosen tag is one of them.
+                <details className="group mt-3" open={tags.findIndex((x) => x.slug === active?.slug) >= TOP_TAGS || undefined}>
+                  <summary className="cursor-pointer list-none font-mono text-[11px] font-bold uppercase tracking-widest text-accent hover:underline">
+                    <span className="group-open:hidden">+ </span><span className="hidden group-open:inline">− </span>{t("moreTags", { n: tags.length - TOP_TAGS })}
+                  </summary>
+                  <ul className="mt-3 flex flex-wrap gap-2">{tags.slice(TOP_TAGS).map(tagChip)}</ul>
+                </details>
+              )}
             </nav>
           )}
         </aside>
