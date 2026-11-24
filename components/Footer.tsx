@@ -20,6 +20,7 @@ export async function Footer() {
           <p className="kicker mb-4 text-white/50">{t("sections")}</p>
           <ul className="space-y-2 font-display text-xl font-semibold uppercase">
             <li><Link href="/" className="hover:text-accent">{t("latest")}</Link></li>
+            <li><Link href="/explore" className="hover:text-accent">{t("exploreNav")}</Link></li>
             <li><Link href="/speakers" className="hover:text-accent">{t("speakers")}</Link></li>
             <li><Link href="/hosts" className="hover:text-accent">{t("hosts")}</Link></li>
             <li><Link href="/memos" className="hover:text-accent">{t("memoNav")}</Link></li>

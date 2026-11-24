@@ -49,6 +49,14 @@ export async function Header() {
         <ul className="mx-auto flex max-w-7xl items-center gap-6 overflow-x-auto px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] [scrollbar-width:none]">
           <li><Link href="/" className="whitespace-nowrap font-bold hover:text-accent">{t("homeNav")}</Link></li>
           <li><Link href="/blog" className="whitespace-nowrap font-bold hover:text-accent">{t("blogNav")}</Link></li>
+          <NavMenu label={t("exploreNav")} href="/explore" items={[
+            { href: "/explore#topics", label: t("exploreTopics") },
+            { href: "/explore#speakers", label: t("speakers") },
+            { href: "/explore#hosts", label: t("hosts") },
+            { href: "/explore#vocabulary", label: t("vocabTitle") },
+            { href: "/explore#quotes", label: t("quotesNav") },
+            { href: "/explore#books", label: t("books") },
+          ]} />
           <li><Link href="/play" className="whitespace-nowrap font-bold text-terminal-amber hover:text-accent">{t("play")}</Link></li>
           <NavMenu label={t("vocabTitle")} href="/vocabulary" items={[
             { href: "/vocabulary", label: t("vocabGameTitle"), note: t("vocabMenuPlay") },
