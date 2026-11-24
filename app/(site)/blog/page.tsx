@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { localizePosts } from "@/lib/localize";
 import { Kicker, NumberedList } from "@/components/Cards";
+import { splitTags, tagIndex, tagSlug } from "@/lib/tags";
 
 export const metadata: Metadata = {
   title: "Blog",
@@ -11,15 +12,21 @@ export const metadata: Metadata = {
   alternates: { canonical: "/blog" },
 };
 
-export default async function BlogPage() {
+export default async function BlogPage({ searchParams }: { searchParams: Promise<{ tag?: string }> }) {
   const { locale, t, date } = await getI18n();
+  const tags = [...(await tagIndex())].map(([slug, e]) => ({ slug, ...e })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  const tagParam = (await searchParams).tag;
+  const active = tags.find((x) => x.slug === tagParam) ?? null;
   const raw = await db.post.findMany({
     where: { status: "published", publishedAt: { lte: new Date() } },
     include: { category: true },
     orderBy: { publishedAt: "desc" },
   });
-  const posts = await localizePosts(locale, raw);
-  const mostRead = [...posts].sort((a, b) => b.views - a.views).slice(0, 10);
+  const all = await localizePosts(locale, raw);
+  const mostRead = [...all].sort((a, b) => b.views - a.views).slice(0, 10);
+  // ?tag=<slug>: only the stories with that tag (tags are read from the untranslated story).
+  const tagged = active ? new Set(raw.filter((p) => splitTags(p.tags).some((x) => tagSlug(x) === active.slug)).map((p) => p.id)) : null;
+  const posts = tagged ? all.filter((p) => tagged.has(p.id)) : all;
 
   // Group by month of publication, keeping the newest-first order.
   const months: { label: string; posts: typeof posts }[] = [];
@@ -34,8 +41,14 @@ export default async function BlogPage() {
       <h1 className="hed border-b-[3px] border-ink pb-4 text-7xl sm:text-9xl">{t("blogNav")}</h1>
       <p className="mt-4 flex flex-wrap items-baseline justify-between gap-2 font-serif text-xl text-ink/70">
         {t("blogDek")}
-        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink/50">{t("blogCount", { n: posts.length })}</span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink/50">{t("blogCount", { n: all.length })}</span>
       </p>
+      {active && (
+        <p className="mt-6 flex flex-wrap items-center gap-3 border-l-[3px] border-accent bg-accent/5 px-4 py-3 font-mono text-[12px] uppercase tracking-widest">
+          <span className="font-bold">{t("taggedStories", { tag: active.name, n: posts.length })}</span>
+          <Link href="/blog" scroll={false} className="text-accent underline hover:no-underline">{t("clearTag")} ✕</Link>
+        </p>
+      )}
       {!posts.length && <p className="py-16 font-serif text-xl text-ink/60">{t("noStories")}</p>}
 
       <div className="grid gap-12 lg:grid-cols-[1fr_320px]">
@@ -71,9 +84,30 @@ export default async function BlogPage() {
         </section>
       ))}
       </div>
-      {mostRead.length > 0 && (
-        <aside className="mt-12 lg:sticky lg:top-6 lg:self-start">
-          <NumberedList title={t("mostPopular")} posts={mostRead} />
+      {(mostRead.length > 0 || tags.length > 0) && (
+        <aside className="mt-12 space-y-10">
+          {mostRead.length > 0 && <NumberedList title={t("mostPopular")} posts={mostRead} />}
+          {tags.length > 0 && (
+            <nav aria-label={t("browseTags")}>
+              <h2 className="kicker border-b-[3px] border-ink pb-2">{t("browseTags")}</h2>
+              <ul className="mt-4 flex flex-wrap gap-2">
+                <li>
+                  <Link href="/blog" scroll={false} aria-current={!active ? "page" : undefined}
+                    className={`inline-block border px-3 py-1 font-mono text-[11px] uppercase tracking-widest ${!active ? "border-ink bg-ink text-white" : "border-ink/30 hover:bg-ink hover:text-white"}`}>
+                    {t("allTags")} <span className="opacity-60">{all.length}</span>
+                  </Link>
+                </li>
+                {tags.map((x) => (
+                  <li key={x.slug}>
+                    <Link href={`/blog?tag=${x.slug}`} scroll={false} aria-current={active?.slug === x.slug ? "page" : undefined}
+                      className={`inline-block border px-3 py-1 font-mono text-[11px] uppercase tracking-widest ${active?.slug === x.slug ? "border-ink bg-ink text-white" : "border-ink/30 hover:bg-ink hover:text-white"}`}>
+                      {x.name} <span className="opacity-60">{x.count}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
         </aside>
       )}
       </div>
