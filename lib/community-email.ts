@@ -56,6 +56,17 @@ export function communityBlock(lang: Locale = "en") {
 </div>`;
 }
 
+const BAR: Record<Locale, string> = { en: "Join the conversation", fr: "Rejoignez la conversation", es: "Únete a la conversación", zh: "加入讨论" };
+
+/** A slim strip with the WhatsApp and LinkedIn buttons, for the top of the newsletter (the full block stays at the end). */
+export function communityBar(lang: Locale = "en") {
+  const t = TEXT[lang] ?? TEXT.en;
+  const btn = (bg: string) =>
+    `display:inline-block;background:${bg};color:#fff;padding:8px 12px;margin:4px 3px 0;text-decoration:none;font-family:Arial,sans-serif;font-size:12px;font-weight:bold`;
+  return `<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#d6261c">${BAR[lang] ?? BAR.en}</div>
+<a href="${WHATSAPP_URL}" style="${btn("#1f9d55")}">💬 ${t.join}</a><a href="${LINKEDIN_URL}" style="${btn("#0a66c2")}">in ${t.connect}</a>`;
+}
+
 /** The email with the block in its slot (or at the end), after `before` (the books box); unchanged if it opted out. */
 export function withCommunity(html: string, lang: Locale = "en", before = "") {
   if (html.includes(NO_COMMUNITY)) return html;

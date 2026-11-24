@@ -5,6 +5,8 @@ import { QUOTE_WHEEL_DAILY_MAX, QUIZ_REWARD } from "./token-config";
 import { emailCover } from "./email-image";
 import { emailLogo } from "./email-brand";
 import { NO_BOOKS } from "./email-books";
+import { communityBar } from "./community-email";
+import { isLocale } from "./i18n/messages";
 
 type Story = { title: string; slug: string; dek: string; coverImage: string | null; readMinutes: number };
 type QuizTeaser = Story & { question: string; options: string[] };
@@ -97,6 +99,7 @@ export function weeklyNewsletter(content: WeeklyContent, opts: { unsubscribeKey?
   const num = (k: string) => order.indexOf(k) + 1;
   const url = (process.env.APP_URL || "https://raleche.com").replace(/\/$/, "");
   const story = (s: { slug: string }, hash = "") => `${url}/story/${encodeURIComponent(s.slug)}${hash}`;
+  const lang = ((l) => (isLocale(l) ? l : "en"))(opts.locale?.slice(0, 2) ?? "en"); // "fr-FR" → "fr"
   const date = (opts.date ?? new Date()).toLocaleDateString(opts.locale ?? "en-US", { month: "long", day: "numeric", year: "numeric" });
 
   const wheel = `${heading(num("wheel"), L.wheelHeading)}
@@ -158,6 +161,7 @@ ${s.coverImage ? `<td style="vertical-align:top;width:112px;padding-left:12px">$
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:auto;background:#fff;font-family:Georgia,serif;font-size:17px;line-height:1.55;color:#111">
 <tr><td style="padding:18px 20px 14px;border-bottom:3px solid #111">${emailLogo()}
 <div style="font-family:${SANS};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#666;margin-top:8px">${esc(L.briefing)} · ${esc(date)}</div></td></tr>
+<tr><td style="padding:12px 20px;background:#fafafa;border-bottom:1px solid #e5e5e5;text-align:center">${communityBar(lang)}</td></tr>
 <tr><td style="padding:0 20px 28px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0">
 ${latest}
 ${books}
