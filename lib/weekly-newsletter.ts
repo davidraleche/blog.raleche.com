@@ -8,7 +8,7 @@ import { NO_BOOKS } from "./email-books";
 
 type Story = { title: string; slug: string; dek: string; coverImage: string | null; readMinutes: number };
 type QuizTeaser = Story & { question: string; options: string[] };
-export type WeeklyContent = { quizzes: QuizTeaser[]; latest: Story[]; mostRead: (Story & { reads: number })[] };
+export type WeeklyContent = { quizzes: QuizTeaser[]; latest: Story[]; mostRead: (Story & { reads: number })[]; guests?: string[] };
 
 const storySelect = { id: true, title: true, slug: true, dek: true, coverImage: true, readMinutes: true } as const;
 const published = () => ({ status: "published", publishedAt: { lte: new Date() } });
@@ -42,7 +42,17 @@ export async function loadWeeklyContent(db: PrismaClient): Promise<WeeklyContent
     const posts = await db.post.findMany({ where: published(), orderBy: { views: "desc" }, take: 5, select: { ...storySelect, views: true } });
     mostRead = posts.map((p) => ({ ...p, reads: p.views }));
   }
-  return { quizzes, latest, mostRead };
+  // Guests of the newest stories, for the subject line ("Andy Jassy, Satya Nadella & more").
+  const speakers = await db.post.findMany({ where: { ...published(), speaker: { not: null } }, orderBy: { publishedAt: "desc" }, take: 10, select: { speaker: true } });
+  const guests = [...new Set(speakers.map((p) => p.speaker!.trim()).filter(Boolean))];
+  return { quizzes, latest, mostRead, guests };
+}
+
+/** "Andy Jassy, Satya Nadella & more": the first two guests, kept short for inbox previews. */
+function guestSnippet(guests: string[] = []) {
+  if (!guests.length) return "";
+  const two = guests.slice(0, 2).join(", ");
+  return guests.length > 2 ? `${two} & more` : two;
 }
 
 /** Every fixed piece of text, numbers already filled in, so it can be machine-translated as plain strings. */
@@ -63,7 +73,7 @@ export function weeklyLabels() {
     readMore: "Read more on Raleche",
     footer: "You get this because you subscribed to the Raleche briefing.",
     unsubscribe: "Unsubscribe",
-    subject: "The Raleche Briefing",
+    subject: "The IT Raleche's Briefing",
   };
 }
 export type WeeklyLabels = ReturnType<typeof weeklyLabels>;
@@ -160,5 +170,8 @@ ${wheel}
 <tr><td style="padding:16px 20px;border-top:1px solid #e5e5e5;font-family:${SANS};font-size:12px;color:#888">${esc(L.footer)}<br><a href="${url}/unsubscribe?key=${encodeURIComponent(opts.unsubscribeKey ?? "test")}" style="color:#555">${esc(L.unsubscribe)}</a></td></tr>
 </table></div>`;
 
-  return { subject: `${L.subject} — ${date}`, html };
+  // "The IT Raleche's Briefing — Andy Jassy, Satya Nadella & more 11/23/26"
+  const short = (opts.date ?? new Date()).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit" });
+  const who = guestSnippet(content.guests);
+  return { subject: `${L.subject} — ${who ? `${who} ` : ""}${short}`, html };
 }

@@ -33,7 +33,7 @@ async function weeklyIn(lang: Locale, content: WeeklyContent) {
   const latest = content.latest.map(tStory);
   const mostRead = content.mostRead.map(tStory);
   for (const q of quizzes) Object.assign(q, { question: next(), options: q.options.map(() => next()) });
-  const localized = { quizzes, latest, mostRead };
+  const localized = { quizzes, latest, mostRead, guests: content.guests };
   return (key?: string) => weeklyNewsletter(localized, { labels: tLabels, unsubscribeKey: key, locale: DATE_LOCALE[lang], books });
 }
 
