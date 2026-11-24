@@ -284,7 +284,7 @@ export default async function Story({ params, searchParams }: Props) {
         )}
 
         {transcriptAvailable && (
-          <section id="transcript" className="mt-12 border-[3px] border-ink p-6">
+          <section id="transcript" className="mt-12 scroll-mt-24 border-[3px] border-ink p-6">
             <p className="kicker">{t("transcriptTitle")}</p>
             <p className="mt-2 font-serif text-lg text-ink/80">{t("transcriptBlurb")}</p>
             <Link

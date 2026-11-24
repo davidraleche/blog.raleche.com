@@ -5,7 +5,7 @@ type Link = { id: string; label: string; icon: string };
 
 /**
  * Sticky reading helper on story pages: back to top, then jumps to the sections the story has.
- * Appears once the reader has scrolled past the header. Labels show from the sm breakpoint; phones get icons.
+ * A rail at mid-height on the right, shown once the reader has scrolled past the header. Icons with their labels, smaller on phones.
  */
 export function StoryJump({ links, topLabel }: { links: Link[]; topLabel: string }) {
   const [show, setShow] = useState(false);
@@ -27,7 +27,7 @@ export function StoryJump({ links, topLabel }: { links: Link[]; topLabel: string
   return (
     <nav
       aria-label="Jump to"
-      className={`fixed bottom-4 left-4 z-40 flex border-[3px] border-ink bg-white shadow-[4px_4px_0_0_#111] transition duration-300 ${show ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"}`}
+      className={`fixed right-2 top-1/2 z-40 flex -translate-y-1/2 flex-col border-[3px] border-ink bg-white shadow-[4px_4px_0_0_#111] transition duration-300 sm:right-4 ${show ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-4 opacity-0"}`}
     >
       {items.map((l, i) => (
         <button
@@ -36,10 +36,10 @@ export function StoryJump({ links, topLabel }: { links: Link[]; topLabel: string
           onClick={() => go(l.id)}
           title={l.label}
           aria-label={l.label}
-          className={`flex items-center gap-1.5 px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-widest hover:bg-ink hover:text-white ${i ? "border-l-2 border-ink" : ""}`}
+          className={`flex w-16 flex-col items-center gap-1 px-1 py-2 text-center font-mono text-[8px] font-bold uppercase leading-tight tracking-wide hover:bg-ink hover:text-white sm:w-24 sm:px-2 sm:py-2.5 sm:text-[10px] sm:tracking-wider ${i ? "border-t-2 border-ink" : ""}`}
         >
-          <span aria-hidden className="text-sm leading-none">{l.icon}</span>
-          <span className="hidden sm:inline">{l.label}</span>
+          <span aria-hidden className="text-base leading-none">{l.icon}</span>
+          <span className="break-words">{l.label}</span>
         </button>
       ))}
     </nav>
