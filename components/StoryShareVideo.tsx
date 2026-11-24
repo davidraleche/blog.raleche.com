@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { pickMime } from "@/lib/canvas-text";
+import { CLIP_LEN, CLIP_SIZE, drawStoryClip, loadClipImage, recordStoryClip, type ClipFonts, type StoryClip } from "@/lib/story-clip";
 
 type Format = "vertical" | "wide";
 export type Platform = "x" | "linkedin" | "facebook" | "instagram" | "tiktok" | "youtube";
@@ -41,6 +43,8 @@ type Props = {
   linkLabel?: string;
   /** A "Buy here" line put in the caption before our link (the book's Amazon link with the affiliate tag). */
   buyLink?: { label: string; url: string };
+  /** No made-in-advance video: draw this clip in the reader's browser instead (lib/story-clip.ts). */
+  clip?: StoryClip;
 };
 
 const fill = (s: string, platform: string) => s.replace(/\{platform\}/g, platform);
@@ -64,13 +68,20 @@ export async function copyText(text: string) {
 }
 
 /** End-of-story panel: the story's mini video, download, and one-click sharing to the networks. */
-export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit, hashtags, labels, shareCode, signinHref, className = "mt-12", videoBase, sectionId = "share-video", linkLabel = "Full story", buyLink }: Props) {
+export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit, hashtags, labels, shareCode, signinHref, className = "mt-12", videoBase, sectionId = "share-video", linkLabel = "Full story", buyLink, clip }: Props) {
   const [format, setFormat] = useState<Format>(formats[0]);
   const [copied, setCopied] = useState<"caption" | "link" | null>(null);
   const [tip, setTip] = useState<{ kind: "intent" | "upload" | "error"; platform: Platform } | null>(null);
   const [canShareFiles, setCanShareFiles] = useState(false);
   const blobs = useRef<Partial<Record<Format, Promise<File | null>>>>({});
   const box = useRef<HTMLElement>(null);
+  // Clips drawn in the browser: the finished file per format, the live preview, the fonts and the cover.
+  const [made, setMade] = useState<Partial<Record<Format, string>>>({});
+  const [left, setLeft] = useState<number | null>(null);
+  const [unsupported, setUnsupported] = useState(false);
+  const preview = useRef<HTMLCanvasElement>(null);
+  const probes = useRef<HTMLDivElement>(null);
+  const assets = useRef<Promise<{ fonts: ClipFonts; img: HTMLImageElement | null }> | null>(null);
 
   const src = (f: Format) => `${videoBase ?? `/story/${slug}/video`}/${f}.mp4`;
   const fileName = (f: Format) => `raleche-${slug}-${f}.mp4`;
@@ -82,8 +93,29 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
   const quote = text.split(/\n\n/).pop() || text;
   const shortText = (speaker && !quote.startsWith(speaker) ? `${speaker}: ${quote}` : quote).slice(0, 220);
 
+  const loadAssets = () =>
+    (assets.current ||= (async () => {
+      const fam = (cls: string) => { const el = probes.current?.querySelector(`.${cls}`); return el ? getComputedStyle(el).fontFamily : "sans-serif"; };
+      const fonts = { display: fam("font-display"), serif: fam("font-serif"), mono: fam("font-mono") };
+      await Promise.all([`800 40px ${fonts.display}`, `italic 400 30px ${fonts.serif}`, `700 26px ${fonts.mono}`].map((x) => document.fonts?.load(x).catch(() => null)));
+      return { fonts, img: await loadClipImage(clip?.cover ?? null) };
+    })());
+
+  /** Draw and record the clip in this format (in real time, 8 s); later calls get the same file. */
+  const makeClip = (f: Format) =>
+    (blobs.current[f] ||= (async () => {
+      if (!clip) return null;
+      const { fonts, img } = await loadAssets();
+      const blob = await recordStoryClip(f, clip, fonts, img, setLeft).catch(() => null);
+      setLeft(null);
+      if (!blob?.size) { setUnsupported(true); return null; }
+      const file = new File([blob], fileName(f).replace(/\.mp4$/, blob.type.includes("mp4") ? ".mp4" : ".webm"), { type: blob.type });
+      setMade((m) => ({ ...m, [f]: URL.createObjectURL(file) }));
+      return file;
+    })());
+
   const loadFile = (f: Format) =>
-    (blobs.current[f] ||= fetch(src(f))
+    clip ? makeClip(f) : (blobs.current[f] ||= fetch(src(f))
       .then((r) => (r.ok ? r.blob() : null))
       .then((b) => (b ? new File([b], fileName(f), { type: "video/mp4" }) : null))
       .catch(() => null));
@@ -94,9 +126,36 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
       const probe = new File([new Blob([""], { type: "video/mp4" })], "probe.mp4", { type: "video/mp4" });
       if (navigator.canShare?.({ files: [probe] })) setCanShareFiles(true);
     } catch {}
+    if (clip && !pickMime()) setUnsupported(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Drawn clips: a live preview of the chosen format while the panel is on screen, and the file made once it's in view,
+  // so Download and Share are quick.
   useEffect(() => {
-    if (!canShareFiles || !box.current) return;
+    if (!clip || made[format] || !box.current || !preview.current) return;
+    const ctx = preview.current.getContext("2d");
+    if (!ctx) return;
+    let raf = 0;
+    let visible = false;
+    let ready: { fonts: ClipFonts; img: HTMLImageElement | null } | null = null;
+    let t0 = performance.now();
+    loadAssets().then((a) => { ready = a; t0 = performance.now(); });
+    const loop = () => {
+      if (ready) drawStoryClip(ctx, ((performance.now() - t0) / 1000) % (CLIP_LEN + 0.6), format, clip, ready.fonts, ready.img);
+      if (visible) raf = requestAnimationFrame(loop);
+    };
+    const io = new IntersectionObserver((entries) => {
+      const now = entries.some((e) => e.isIntersecting);
+      if (now && !visible) { visible = true; raf = requestAnimationFrame(loop); if (pickMime()) makeClip(format); }
+      if (!now) { visible = false; cancelAnimationFrame(raf); }
+    }, { rootMargin: "100px" });
+    io.observe(box.current);
+    return () => { io.disconnect(); cancelAnimationFrame(raf); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [format, made[format]]);
+  useEffect(() => {
+    if (clip || !canShareFiles || !box.current) return;
     const io = new IntersectionObserver((entries) => {
       if (entries.some((e) => e.isIntersecting)) {
         formats.forEach(loadFile);
@@ -113,10 +172,17 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
     setTimeout(() => setCopied((c) => (c === what ? null : c)), 2000);
   };
 
-  const download = (f: Format) => {
+  const download = async (f: Format) => {
     const a = document.createElement("a");
-    a.href = `${src(f)}?download=1`;
-    a.download = fileName(f);
+    if (clip) {
+      const file = await makeClip(f);
+      if (!file) return;
+      a.href = URL.createObjectURL(file);
+      a.download = file.name;
+    } else {
+      a.href = `${src(f)}?download=1`;
+      a.download = fileName(f);
+    }
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -159,7 +225,7 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
       setTip(null);
       return;
     }
-    download(f);
+    await download(f);
     setTip({ kind: "upload", platform: p.id });
   };
 
@@ -173,7 +239,12 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
     `flex-1 border-2 border-ink px-3 py-2 text-left ${format === f ? "bg-ink text-white" : "bg-white text-ink hover:bg-ink/5"}`;
 
   return (
-    <section ref={box} id={sectionId} className={`${className} scroll-mt-24 border-[3px] border-ink`}>
+    <section ref={box} id={sectionId} className={`${className} relative scroll-mt-24 border-[3px] border-ink`}>
+      {clip && (
+        <div ref={probes} aria-hidden className="invisible absolute h-0 w-0 overflow-hidden">
+          <span className="font-display">a</span><span className="font-serif">a</span><span className="font-mono">a</span>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-3 bg-ink px-5 py-3 text-white">
         <span className="font-mono text-[11px] uppercase tracking-[0.2em]">{labels.shareVideoTitle}</span>
         <span className="font-mono text-[10px] uppercase tracking-widest text-terminal-amber">{labels.shareVideoBadge}</span>
@@ -200,22 +271,38 @@ export function StoryShareVideo({ slug, storyUrl, formats, speaker, text, credit
         )}
 
         <div className="mt-4 flex justify-center bg-ink/5 p-3">
+          {clip && !made[format] ? (
+            <canvas
+              key={format}
+              ref={preview}
+              width={CLIP_SIZE[format][0]}
+              height={CLIP_SIZE[format][1]}
+              className={format === "vertical" ? "aspect-[9/16] w-full max-w-[260px] bg-ink" : "aspect-video w-full bg-ink"}
+            />
+          ) : (
           <video
             key={format}
-            src={src(format)}
+            src={clip ? made[format] : src(format)}
             controls
+            autoPlay={!!clip}
             muted
             loop
             playsInline
             preload="metadata"
             className={format === "vertical" ? "aspect-[9/16] w-full max-w-[260px] bg-ink" : "aspect-video w-full bg-ink"}
           />
+          )}
         </div>
+        {left !== null && labels.wgVideoMaking && <p role="status" className="mt-2 font-mono text-[11px] font-bold uppercase tracking-widest text-ink/60">● {labels.wgVideoMaking.replace("{s}", String(left))}</p>}
         {credit && <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-ink/50">{credit}</p>}
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <a href={`${src(format)}?download=1`} download={fileName(format)} className="btn-dark">⬇ {labels.shareVideoDownload}</a>
-          {canShareFiles && <button type="button" onClick={onShare} className="btn-dark">↗ {labels.shareVideoShare}</button>}
+          {clip ? (
+            !unsupported && <button type="button" onClick={() => download(format)} disabled={left !== null && !made[format]} className="btn-dark disabled:opacity-60">⬇ {labels.shareVideoDownload}</button>
+          ) : (
+            <a href={`${src(format)}?download=1`} download={fileName(format)} className="btn-dark">⬇ {labels.shareVideoDownload}</a>
+          )}
+          {canShareFiles && !unsupported && <button type="button" onClick={onShare} className="btn-dark">↗ {labels.shareVideoShare}</button>}
           <button type="button" onClick={() => copyText(caption).then((ok) => ok && flash("caption"))} className="btn-light">
             {copied === "caption" ? `✓ ${labels.shareVideoCopied}` : labels.shareVideoCopyCaption}
           </button>

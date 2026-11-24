@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { PLATFORMS, UPLOAD_URL, copyText, type Platform } from "./StoryShareVideo";
+import { fit, pickMime, recordCanvas } from "@/lib/canvas-text";
 
 /** Video size (vertical 9:16) and length in seconds. */
 const W = 720;
@@ -27,40 +28,6 @@ const fill = (s: string, vars: Record<string, string | number>) => s.replace(/\{
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 const easeOut = (x: number) => 1 - Math.pow(1 - clamp(x), 3);
 const easeBack = (x: number) => { const c = 1.9; const p = clamp(x) - 1; return 1 + (c + 1) * p * p * p + c * p * p; };
-
-/** Break text into lines that fit maxW: words for Latin scripts, single characters for Chinese (and words too long for a line). */
-function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number) {
-  const units = text.match(/[⺀-鿿豈-﫿＀-￯　-〿]|[^\s⺀-鿿豈-﫿＀-￯　-〿]+\s*|\s+/g) ?? [];
-  const lines: string[] = [];
-  let line = "";
-  for (const u of units) {
-    if (ctx.measureText((line + u).trimEnd()).width <= maxW) { line += u; continue; }
-    if (line.trim()) lines.push(line.trimEnd());
-    line = "";
-    if (ctx.measureText(u.trimEnd()).width <= maxW) { line = u.trimStart(); continue; }
-    for (const ch of u) {
-      if (ctx.measureText(line + ch).width > maxW && line) { lines.push(line); line = ""; }
-      line += ch;
-    }
-  }
-  if (line.trim()) lines.push(line.trimEnd());
-  return lines;
-}
-
-/** The largest font size (from start down to min) at which the text fits the box; past min, the last line ends in "…". */
-function fit(ctx: CanvasRenderingContext2D, text: string, font: (px: number) => string, maxW: number, maxH: number, start: number, min: number, lh = 1.2) {
-  for (let px = start; ; px -= 2) {
-    ctx.font = font(px);
-    const lines = wrap(ctx, text, maxW);
-    if (lines.length * px * lh <= maxH) return { px, lines, lh };
-    if (px <= min) {
-      const keep = Math.max(1, Math.floor(maxH / (px * lh)));
-      const cut = lines.slice(0, keep);
-      cut[keep - 1] = cut[keep - 1].replace(/\s*\S{0,3}$/, "") + "…";
-      return { px, lines: cut, lh };
-    }
-  }
-}
 
 /** Draw the frame at time t (seconds): the question with all four choices from frame 0, badges pulsing, then "Go play at raleche.com". Never shows the answer. */
 function drawFrame(ctx: CanvasRenderingContext2D, t: number, q: Q, share: QuestionShare, f: Fonts) {
@@ -250,47 +217,9 @@ function drawFrame(ctx: CanvasRenderingContext2D, t: number, q: Q, share: Questi
   ctx.restore();
 }
 
-function pickMime() {
-  if (typeof MediaRecorder === "undefined") return null;
-  for (const m of ["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]) {
-    if (MediaRecorder.isTypeSupported(m)) return m;
-  }
-  return null;
-}
-
 /** Record the animation in real time (LEN seconds) into a video file. */
-async function recordVideo(q: Q, share: QuestionShare, fonts: Fonts, onProgress: (s: number) => void): Promise<Blob | null> {
-  const mime = pickMime();
-  const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext("2d");
-  if (!mime || !ctx || !canvas.captureStream) return null;
-  drawFrame(ctx, 0, q, share, fonts);
-  const stream = canvas.captureStream(30);
-  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 5_000_000 });
-  const chunks: Blob[] = [];
-  rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-  const done = new Promise<void>((res) => (rec.onstop = () => res()));
-  rec.start(250);
-  const t0 = performance.now();
-  await new Promise<void>((res) => {
-    const tick = () => {
-      const t = (performance.now() - t0) / 1000;
-      drawFrame(ctx, Math.min(t, LEN), q, share, fonts);
-      onProgress(Math.max(0, Math.ceil(LEN - t)));
-      if (t >= LEN) res();
-      // rAF pauses in background tabs: a timer keeps the clip going (at a lower frame rate) if the reader switches tabs.
-      else if (document.hidden) setTimeout(tick, 33);
-      else requestAnimationFrame(tick);
-    };
-    tick();
-  });
-  rec.stop();
-  stream.getTracks().forEach((tr) => tr.stop());
-  await done;
-  return new Blob(chunks, { type: mime.split(";")[0] });
-}
+const recordVideo = (q: Q, share: QuestionShare, fonts: Fonts, onProgress: (s: number) => void) =>
+  recordCanvas(W, H, LEN, (ctx, t) => drawFrame(ctx, t, q, share, fonts), onProgress);
 
 /** "Share this question as a mini video": a 9-second vertical clip of the question and its choices (no answer), made in the browser. */
 export function QuestionShareVideo({ q, share }: { q: Q; share: QuestionShare }) {
