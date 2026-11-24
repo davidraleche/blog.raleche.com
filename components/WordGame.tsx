@@ -26,6 +26,9 @@ export function WordGame({ q: initial, labels, signInHref, share }: { q: GameQue
     });
   };
 
+  // A fresh random question loads on every visit without ?q=, so "Next" works with or without an answer.
+  const nextQuestion = () => window.location.assign(window.location.pathname);
+
   return (
     <>
     <div className="border-[3px] border-ink">
@@ -66,6 +69,13 @@ export function WordGame({ q: initial, labels, signInHref, share }: { q: GameQue
           );
         })}
       </ol>
+      {picked === null && (
+        <div className="flex justify-end px-5 pb-6 sm:px-8">
+          <button type="button" onClick={nextQuestion} className="border-2 border-ink px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-widest hover:bg-terminal-amber">
+            {labels.next} →
+          </button>
+        </div>
+      )}
       {pending && <p className="px-5 pb-6 font-mono text-[11px] uppercase tracking-widest text-ink/50 sm:px-8">…</p>}
       {failed && <p className="px-5 pb-6 font-serif text-ink sm:px-8">{labels.error}</p>}
       {result && (
@@ -103,7 +113,7 @@ export function WordGame({ q: initial, labels, signInHref, share }: { q: GameQue
                 {labels.readStory}: {result.story.title.length > 60 ? `${result.story.title.slice(0, 57)}…` : result.story.title}
               </Link>
             )}
-            <button type="button" onClick={() => window.location.assign(window.location.pathname)} className="border-2 border-ink px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-widest hover:bg-terminal-amber">
+            <button type="button" onClick={nextQuestion} className="border-2 border-ink px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-widest hover:bg-terminal-amber">
               {labels.next} →
             </button>
           </div>

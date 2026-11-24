@@ -96,7 +96,10 @@ export function StoryQuiz({ postId, questions, signedIn, played, reward, signinH
           ) : !result ? (
             <button disabled={pending} className="btn bg-accent text-white hover:bg-ink">{labels.quizSubmit}</button>
           ) : won ? (
-            <p className="font-display text-3xl font-extrabold text-accent">{result.already ? fill(labels.quizPlayed, { c: result.correct }) : fill(labels.quizWin, { n: reward })}</p>
+            <div>
+              <p className="font-display text-3xl font-extrabold text-accent">{result.already ? fill(labels.quizPlayed, { c: result.correct }) : fill(labels.quizWin, { n: reward })}</p>
+              {next && <a href={`/story/${next.slug}#quiz`} className="btn-dark mt-4">{labels.quizNext} →</a>}
+            </div>
           ) : (
             <div>
               <p className="font-display text-2xl font-bold">{result.already ? fill(labels.quizPlayed, { c: result.correct }) : fill(labels.quizLose, { c: result.correct })}</p>
@@ -116,6 +119,8 @@ export function StoryQuiz({ postId, questions, signedIn, played, reward, signinH
               {summary && !summary.unlocked && <><input type="hidden" name="back" value={summary.back} /><input type="hidden" name="anchor" value="quiz" /></>}
             </div>
           )}
+          {/* Skip to the next story's quiz without answering this one. */}
+          {!result && next && <a href={`/story/${next.slug}#quiz`} className="btn-light mt-3">{labels.quizNext} →</a>}
           {(needAll || state?.error === "answerAll") && <p className="mt-2 font-mono text-[11px] uppercase tracking-widest text-accent">{labels.quizAnswerAll}</p>}
         </div>
       </form>

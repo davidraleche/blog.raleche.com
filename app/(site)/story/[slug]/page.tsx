@@ -37,6 +37,7 @@ import { TopUpDialog } from "@/components/TopUpDialog";
 import { topUpLabels, topUpPacks } from "@/lib/topup";
 import { JsonLd, articleJsonLd } from "@/lib/seo";
 import { tagIndex, tagSlug, splitTags } from "@/lib/tags";
+import { StoryJump } from "@/components/StoryJump";
 
 type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ unlocked?: string; topup?: string }> };
 
@@ -383,6 +384,14 @@ export default async function Story({ params, searchParams }: Props) {
           <div className="mt-6 grid gap-8 sm:grid-cols-3">{related.map((p) => <GridCard key={p.id} post={p} />)}</div>
         </section>
       )}
+      <StoryJump
+        topLabel={t("backToTop")}
+        links={[
+          ...(raw.executiveSummary ? [{ id: "summary", label: t("executiveSummary"), icon: "★" }] : []),
+          ...(vocabTerms.length ? [{ id: "vocabulary", label: t("vocabTitle"), icon: "Aa" }] : []),
+          ...(transcriptAvailable ? [{ id: "transcript", label: t("transcriptTitle"), icon: "¶" }] : []),
+        ]}
+      />
     </article>
   );
 }
