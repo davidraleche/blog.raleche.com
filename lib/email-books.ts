@@ -14,7 +14,7 @@ export const NO_BOOKS = "<!--books-inline-->";
 const TEXT: Record<Locale, { kicker: string; title: string; dek: string; by: string; wrote: string; buy: string; more: string; disclosure: string }> = {
   en: {
     kicker: "Reading list",
-    title: "5 books from the people we interview",
+    title: "{n} books from the people we interview",
     dek: "Books our guests wrote or recommend. Tap a cover or a button to get yours on Amazon.",
     by: "Recommended by",
     wrote: "Written by our guest",
@@ -24,7 +24,7 @@ const TEXT: Record<Locale, { kicker: string; title: string; dek: string; by: str
   },
   fr: {
     kicker: "À lire",
-    title: "5 livres des personnes que nous interviewons",
+    title: "{n} livres des personnes que nous interviewons",
     dek: "Des livres écrits ou recommandés par nos invités. Touchez une couverture ou un bouton pour l'obtenir sur Amazon.",
     by: "Recommandé par",
     wrote: "Écrit par notre invité",
@@ -34,7 +34,7 @@ const TEXT: Record<Locale, { kicker: string; title: string; dek: string; by: str
   },
   es: {
     kicker: "Para leer",
-    title: "5 libros de las personas que entrevistamos",
+    title: "{n} libros de las personas que entrevistamos",
     dek: "Libros que nuestros invitados escribieron o recomiendan. Toca una portada o un botón para conseguirlo en Amazon.",
     by: "Recomendado por",
     wrote: "Escrito por nuestro invitado",
@@ -44,7 +44,7 @@ const TEXT: Record<Locale, { kicker: string; title: string; dek: string; by: str
   },
   zh: {
     kicker: "书单",
-    title: "受访嘉宾的 5 本书",
+    title: "受访嘉宾的 {n} 本书",
     dek: "嘉宾撰写或推荐的书。点击封面或按钮即可在 Amazon 购买。",
     by: "推荐人",
     wrote: "嘉宾著作",
@@ -54,21 +54,26 @@ const TEXT: Record<Locale, { kicker: string; title: string; dek: string; by: str
   },
 };
 
-type EmailBook = { title: string; author: string; cover: string | null; url: string; who: string[]; wrote: boolean; note: string; pitch: string };
+export type EmailBook = { title: string; author: string; cover: string | null; url: string; who: string[]; wrote: boolean; note: string; pitch: string };
 
 let cache: { at: number; books: EmailBook[] } | null = null;
 
-/** Five books for this week: the most-mentioned books, rotating by week. Cached 10 minutes. */
-export async function emailBooks(): Promise<EmailBook[]> {
-  if (cache && Date.now() - cache.at < 10 * 60e3) return cache.books;
+/** Five books for this week: the most-mentioned books, rotating by week. Cached 10 minutes.
+ *  With `random`, `count` books picked at random among all mentioned books instead (not cached). */
+export async function emailBooks(opts: { count?: number; random?: boolean } = {}): Promise<EmailBook[]> {
+  const count = opts.count ?? 5;
+  if (!opts.random && count === 5 && cache && Date.now() - cache.at < 10 * 60e3) return cache.books;
   const [all, tag] = await Promise.all([
     db.book.findMany({ select: { title: true, author: true, asin: true, coverUrl: true, pitch: true, mentions: { select: { who: true, relation: true, note: true } } } }),
     amazonTag(),
   ]);
-  const ranked = all.filter((b) => b.mentions.length).sort((a, b) => b.mentions.length - a.mentions.length || a.title.localeCompare(b.title)).slice(0, 25);
+  const mentioned = all.filter((b) => b.mentions.length);
+  const ranked = mentioned.sort((a, b) => b.mentions.length - a.mentions.length || a.title.localeCompare(b.title)).slice(0, 25);
   const week = Math.floor(Date.now() / (7 * 864e5));
-  const start = ranked.length > 5 ? (week * 5) % ranked.length : 0;
-  const pick = Array.from({ length: Math.min(5, ranked.length) }, (_, i) => ranked[(start + i) % ranked.length]);
+  const start = ranked.length > count ? (week * count) % ranked.length : 0;
+  const pick = opts.random
+    ? [...mentioned].sort(() => Math.random() - 0.5).slice(0, count)
+    : Array.from({ length: Math.min(count, ranked.length) }, (_, i) => ranked[(start + i) % ranked.length]);
   const books = pick.map((b) => {
     const recs = b.mentions.filter((m) => m.relation !== "wrote");
     const rec = recs.find((m) => m.note) ?? recs[0] ?? b.mentions.find((m) => m.note) ?? b.mentions[0];
@@ -84,7 +89,7 @@ export async function emailBooks(): Promise<EmailBook[]> {
       pitch: b.pitch,
     };
   });
-  cache = { at: Date.now(), books };
+  if (!opts.random && count === 5) cache = { at: Date.now(), books };
   return books;
 }
 
@@ -92,8 +97,8 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 const SANS = "Helvetica,Arial,sans-serif";
 
 /** The box, or "" when there are no books. */
-export async function emailBooksBlock(lang: Locale = "en") {
-  const books = await emailBooks().catch(() => []);
+export async function emailBooksBlock(lang: Locale = "en", opts: { count?: number; random?: boolean; pick?: EmailBook[] } = {}) {
+  const books = opts.pick ?? (await emailBooks(opts).catch(() => []));
   if (!books.length) return "";
   // Pitches are written in English; translate them for other readers (cached).
   const pitches = await translateMany(lang, books.map((b) => b.pitch)).catch(() => books.map((b) => b.pitch));
@@ -118,7 +123,7 @@ ${b.who.length ? `<div style="font-family:Georgia,serif;font-size:14px;color:#33
     .join("");
   return `<div style="max-width:560px;margin:24px auto 0;padding:18px 20px;border:3px solid #111;background:#fff8ec;font-family:Georgia,serif;color:#111">
 <div style="font-family:${SANS};font-size:12px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#d6261c">📚 ${esc(t.kicker)}</div>
-<div style="font-family:${SANS};font-weight:800;font-size:22px;line-height:1.2;margin-top:6px">${esc(t.title)}</div>
+<div style="font-family:${SANS};font-weight:800;font-size:22px;line-height:1.2;margin-top:6px">${esc(t.title.replace("{n}", String(books.length)))}</div>
 <p style="margin:6px 0 4px;font-size:15px;color:#444">${esc(t.dek)}</p>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0">${rows}</table>
 <p style="margin:8px 0 0;font-family:${SANS};font-size:13px"><a href="${site}/books" style="color:#d6261c;font-weight:bold">${esc(t.more)} →</a></p>

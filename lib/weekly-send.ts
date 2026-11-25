@@ -1,17 +1,26 @@
-// Sending the briefing to every subscriber, in their language. Used by the admin "Send to N" button
-// (app/admin/weekly-actions.ts) and by the Monday/Wednesday 9am Eastern schedule (scripts/send-weekly.ts,
-// Cloud Run job "newsletter" started by Cloud Scheduler). No server-only imports, so scripts can run it.
+// Sending a newsletter to every subscriber, in their language. Two editions:
+//   briefing  Monday/Wednesday 9am Eastern (Cloud Run job "newsletter"), also the admin "Send to N" button
+//   quotes    Tuesday/Thursday 9am Eastern (Cloud Run job "newsletter-quotes"): quotes, quizzes, 3 random books
+// Both run scripts/send-weekly.ts, started by Cloud Scheduler. No server-only imports, so scripts can run it.
 import type { PrismaClient } from "@prisma/client";
 import { translateMany } from "./translate";
 import { isLocale, type Locale } from "./i18n/messages";
-import { emailBooksBlock } from "./email-books";
+import { emailBooks, emailBooksBlock } from "./email-books";
 import { fillBookPitches } from "./book-pitch";
 import { withCommunity } from "./community-email";
 import { withLogo } from "./email-brand";
-import { loadWeeklyContent, weeklyLabels, weeklyNewsletter, type WeeklyContent, type WeeklyLabels } from "./weekly-newsletter";
+import {
+  loadQuotesContent, loadWeeklyContent, quotesLabels, quotesNewsletter, weeklyLabels, weeklyNewsletter,
+  type QuotesContent, type QuotesLabels, type WeeklyContent, type WeeklyLabels,
+} from "./weekly-newsletter";
 
 const DATE_LOCALE: Record<Locale, string> = { en: "en-US", fr: "fr-FR", es: "es-ES", zh: "zh-CN" };
-const CAMPAIGN_BODY = "_Weekly briefing template: latest, books from our guests, quizzes on new stories, most read, wheel._";
+export type Edition = "briefing" | "quotes";
+/** How each edition is recorded in the campaign history (also how the 12-hour guard finds the last one). */
+const CAMPAIGN_BODY: Record<Edition, string> = {
+  briefing: "_Weekly briefing template: latest, books from our guests, quizzes on new stories, most read, wheel._",
+  quotes: "_Quotes & quiz template: quotes from our guests, quizzes, 3 random books._",
+};
 
 /** The weekly briefing in one language: fixed labels and story text machine-translated (cached). */
 export async function weeklyIn(lang: Locale, content: WeeklyContent) {
@@ -39,6 +48,26 @@ export async function weeklyIn(lang: Locale, content: WeeklyContent) {
   return (key?: string) => weeklyNewsletter(localized, { labels: tLabels, unsubscribeKey: key, locale: DATE_LOCALE[lang], books });
 }
 
+/** The quotes edition in one language (labels, quotes and quizzes machine-translated, cached). */
+export async function quotesIn(lang: Locale, content: QuotesContent, books: string) {
+  const labels = quotesLabels();
+  if (lang === "en") return (key?: string) => quotesNewsletter(content, { labels, unsubscribeKey: key, books });
+  const labelKeys = Object.keys(labels) as (keyof QuotesLabels)[];
+  const texts = [
+    ...labelKeys.map((k) => labels[k]),
+    ...content.quotes.map((q) => q.text),
+    ...content.quizzes.flatMap((q) => [q.title, q.question, ...q.options]),
+  ];
+  const out = await translateMany(lang, texts);
+  let i = 0;
+  const next = () => out[i++];
+  const tLabels = Object.fromEntries(labelKeys.map((k) => [k, next()])) as QuotesLabels;
+  const quotes = content.quotes.map((q) => ({ ...q, text: next() }));
+  const quizzes = content.quizzes.map((q) => ({ ...q, title: next(), question: next(), options: q.options.map(() => next()) }));
+  const localized = { quotes, quizzes, guests: content.guests };
+  return (key?: string) => quotesNewsletter(localized, { labels: tLabels, unsubscribeKey: key, locale: DATE_LOCALE[lang], books });
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** One email through Resend, retrying when rate-limited. Same wrapping as lib/email.ts (books box is already inside). */
@@ -63,28 +92,43 @@ async function deliver(to: string, subject: string, body: string, lang: Locale) 
   return false;
 }
 
-/** When the last briefing went out, so the schedule never sends twice in a row by mistake. */
-export async function lastBriefingAt(db: PrismaClient) {
-  const last = await db.campaign.findFirst({ where: { body: CAMPAIGN_BODY, status: "sent" }, orderBy: { sentAt: "desc" }, select: { sentAt: true } });
+/** When this edition last went out, so the schedule never sends it twice in a row by mistake. */
+export async function lastBriefingAt(db: PrismaClient, edition: Edition = "briefing") {
+  const last = await db.campaign.findFirst({ where: { body: CAMPAIGN_BODY[edition], status: "sent" }, orderBy: { sentAt: "desc" }, select: { sentAt: true } });
   return last?.sentAt ?? null;
 }
 
-/** Send the briefing to every subscriber, about 1.5 a second (Resend allows 2), and record the campaign. */
-export async function sendBriefingToAll(db: PrismaClient) {
+/** The edition in one language, as a function of the reader's unsubscribe key. Quotes and quizzes are picked once per send. */
+async function editionBuilder(db: PrismaClient, edition: Edition) {
+  if (edition === "briefing") {
+    const content = await loadWeeklyContent(db);
+    return { build: (lang: Locale) => weeklyIn(lang, content), fallback: () => weeklyNewsletter(content).subject };
+  }
+  const content = await loadQuotesContent(db);
+  // Same 3 random books for everyone in this send; the box is rendered per language.
+  const picked = await emailBooks({ count: 3, random: true });
+  return {
+    build: async (lang: Locale) => quotesIn(lang, content, await emailBooksBlock(lang, { pick: picked })),
+    fallback: () => quotesNewsletter(content).subject,
+  };
+}
+
+/** Send an edition to every subscriber, about 1.5 a second (Resend allows 2), and record the campaign. */
+export async function sendBriefingToAll(db: PrismaClient, edition: Edition = "briefing") {
   await fillBookPitches().catch(() => 0); // books without a "why read it" pitch get one before sending
-  const content = await loadWeeklyContent(db);
+  const ed = await editionBuilder(db, edition);
   const subs = await db.subscriber.findMany({ where: { status: "subscribed" }, orderBy: { createdAt: "asc" } });
-  const builders = new Map<Locale, Awaited<ReturnType<typeof weeklyIn>>>();
+  const builders = new Map<Locale, (key?: string) => { subject: string; html: string }>();
   let sent = 0;
   let subject = "";
   for (const s of subs) {
     const lang: Locale = isLocale(s.language) ? s.language : "en";
-    if (!builders.has(lang)) builders.set(lang, await weeklyIn(lang, content));
+    if (!builders.has(lang)) builders.set(lang, await ed.build(lang));
     const email = builders.get(lang)!(s.unsubscribeKey);
     if (lang === "en" || !subject) subject = email.subject;
     if (await deliver(s.email, email.subject, email.html, lang)) sent++;
     await sleep(650);
   }
-  await db.campaign.create({ data: { subject: subject || weeklyNewsletter(content).subject, body: CAMPAIGN_BODY, status: "sent", sentCount: sent, sentAt: new Date() } });
+  await db.campaign.create({ data: { subject: subject || ed.fallback(), body: CAMPAIGN_BODY[edition], status: "sent", sentCount: sent, sentAt: new Date() } });
   return { sent, total: subs.length, subject };
 }

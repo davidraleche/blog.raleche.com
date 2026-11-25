@@ -1,4 +1,5 @@
-// Weekly newsletter: latest stories, books from our guests, quizzes on new stories, most read, then the wheel.
+// Newsletters. Monday/Wednesday briefing: latest stories, books from our guests, quizzes on new stories, most read,
+// then the wheel. Tuesday/Thursday "Quotes & quiz": quotes from our guests, quizzes, 3 random books.
 // No server-only imports, so scripts can render and send it too.
 import type { PrismaClient } from "@prisma/client";
 import { QUOTE_WHEEL_DAILY_MAX, QUIZ_REWARD } from "./token-config";
@@ -7,6 +8,7 @@ import { emailLogo } from "./email-brand";
 import { NO_BOOKS } from "./email-books";
 import { communityBar } from "./community-email";
 import { isLocale } from "./i18n/messages";
+import { extractQuotes, isPersonName } from "./quote-extract";
 
 type Story = { title: string; slug: string; dek: string; coverImage: string | null; readMinutes: number };
 type QuizTeaser = Story & { question: string; options: string[] };
@@ -46,7 +48,7 @@ export async function loadWeeklyContent(db: PrismaClient): Promise<WeeklyContent
   }
   // Guests of the newest stories, for the subject line ("Andy Jassy, Satya Nadella & more").
   const speakers = await db.post.findMany({ where: { ...published(), speaker: { not: null } }, orderBy: { publishedAt: "desc" }, take: 10, select: { speaker: true } });
-  const guests = [...new Set(speakers.map((p) => p.speaker!.trim()).filter(Boolean))];
+  const guests = [...new Set(speakers.map((p) => p.speaker!.trim()).filter(isPersonName))];
   return { quizzes, latest, mostRead, guests };
 }
 
@@ -99,7 +101,7 @@ export function weeklyNewsletter(content: WeeklyContent, opts: { unsubscribeKey?
   const num = (k: string) => order.indexOf(k) + 1;
   const url = (process.env.APP_URL || "https://raleche.com").replace(/\/$/, "");
   const story = (s: { slug: string }, hash = "") => `${url}/story/${encodeURIComponent(s.slug)}${hash}`;
-  const lang = ((l) => (isLocale(l) ? l : "en"))(opts.locale?.slice(0, 2) ?? "en"); // "fr-FR" → "fr"
+  const lang = isLocaleOr(opts.locale?.slice(0, 2)); // "fr-FR" → "fr"
   const date = (opts.date ?? new Date()).toLocaleDateString(opts.locale ?? "en-US", { month: "long", day: "numeric", year: "numeric" });
 
   const wheel = `${heading(num("wheel"), L.wheelHeading)}
@@ -110,23 +112,7 @@ export function weeklyNewsletter(content: WeeklyContent, opts: { unsubscribeKey?
 ${button(`${url}/?spin=1`, L.spinNow, "#e1251b")}
 </td></tr>`;
 
-  const quizzes = content.quizzes.length
-    ? `${heading(num("quiz"), L.quizHeading)}
-<tr><td style="font-size:16px;color:#555;padding-bottom:6px">${esc(L.quizDek)}</td></tr>
-${content.quizzes
-  .map(
-    (q) => `<tr><td style="padding:16px 0;border-bottom:1px solid #e5e5e5">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
-${q.coverImage ? `<td style="vertical-align:top;width:132px;padding-right:12px">${emailCover(q.coverImage, story(q), 120, q.title)}</td>` : ""}
-<td style="vertical-align:top;font-family:${SANS};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#e1251b">${esc(q.title)}</td>
-</tr></table>
-<div style="font-weight:bold;font-size:19px;line-height:1.35;margin:6px 0 10px">${esc(q.question)}</div>
-${q.options.map((o, i) => `<a href="${story(q, "#quiz")}" style="display:block;border:1px solid #111;padding:9px 12px;margin-bottom:6px;color:#111;text-decoration:none;font-family:${SANS};font-size:15px"><b>${"ABCD"[i]}.</b> ${esc(o)}</a>`).join("")}
-<div style="margin-top:10px">${button(story(q, "#quiz"), L.answer)}</div>
-</td></tr>`,
-  )
-  .join("")}`
-    : "";
+  const quizzes = quizSection(content.quizzes, num("quiz"), L, story);
 
   const latest = `${heading(num("latest"), L.latestHeading)}
 ${content.latest
@@ -157,29 +143,151 @@ ${s.coverImage ? `<td style="vertical-align:top;width:112px;padding-left:12px">$
   const books = opts.books ? `${heading(num("books"), L.booksHeading)}
 <tr><td>${opts.books}</td></tr>` : "";
 
-  const raw = `${opts.books !== undefined ? NO_BOOKS : ""}<div style="background:#f4f4f4;padding:20px 0">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:auto;background:#fff;font-family:Georgia,serif;font-size:17px;line-height:1.55;color:#111">
-<tr><td style="padding:18px 20px 14px;border-bottom:3px solid #111">${emailLogo()}
-<div style="font-family:${SANS};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#666;margin-top:8px">${esc(L.briefing)} · ${esc(date)}</div></td></tr>
-<tr><td style="padding:12px 20px;background:#fafafa;border-bottom:1px solid #e5e5e5;text-align:center">${communityBar(lang)}</td></tr>
-<tr><td style="padding:0 20px 28px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-<!--sec:latest-->${latest}
+  const body = `<!--sec:latest-->${latest}
 <!--sec:books-->${books}
 <!--sec:quiz-->${quizzes}
 <!--sec:most-read-->${mostRead}
-<!--sec:wheel-->${wheel}
+<!--sec:wheel-->${wheel}`;
+  return emailShell({ kind: "briefing", body, L, lang, date, url, guests: content.guests, books: opts.books, unsubscribeKey: opts.unsubscribeKey, when: opts.date });
+}
+
+/** Quiz section: the first question of each story, every answer links to the quiz on the site. */
+function quizSection(quizzes: QuizTeaser[], n: number, L: { quizHeading: string; quizDek: string; answer: string }, story: (s: { slug: string }, hash?: string) => string) {
+  if (!quizzes.length) return "";
+  return `${heading(n, L.quizHeading)}
+<tr><td style="font-size:16px;color:#555;padding-bottom:6px">${esc(L.quizDek)}</td></tr>
+${quizzes
+  .map(
+    (q) => `<tr><td style="padding:16px 0;border-bottom:1px solid #e5e5e5">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
+${q.coverImage ? `<td style="vertical-align:top;width:132px;padding-right:12px">${emailCover(q.coverImage, story(q), 120, q.title)}</td>` : ""}
+<td style="vertical-align:top;font-family:${SANS};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#e1251b">${esc(q.title)}</td>
+</tr></table>
+<div style="font-weight:bold;font-size:19px;line-height:1.35;margin:6px 0 10px">${esc(q.question)}</div>
+${q.options.map((o, i) => `<a href="${story(q, "#quiz")}" style="display:block;border:1px solid #111;padding:9px 12px;margin-bottom:6px;color:#111;text-decoration:none;font-family:${SANS};font-size:15px"><b>${"ABCD"[i]}.</b> ${esc(o)}</a>`).join("")}
+<div style="margin-top:10px">${button(story(q, "#quiz"), L.answer)}</div>
+</td></tr>`,
+  )
+  .join("")}`;
+}
+
+/** Logo, date, WhatsApp/LinkedIn strip, the sections, "read more", community box slot and unsubscribe; links tagged. */
+function emailShell(o: {
+  kind: "briefing" | "quotes";
+  body: string;
+  L: { briefing: string; readMore: string; footer: string; unsubscribe: string; subject: string };
+  lang: ReturnType<typeof isLocaleOr>;
+  date: string;
+  url: string;
+  guests?: string[];
+  books?: string;
+  unsubscribeKey?: string;
+  when?: Date;
+}) {
+  const { L, url } = o;
+  const raw = `${o.books !== undefined ? NO_BOOKS : ""}<div style="background:#f4f4f4;padding:20px 0">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:auto;background:#fff;font-family:Georgia,serif;font-size:17px;line-height:1.55;color:#111">
+<tr><td style="padding:18px 20px 14px;border-bottom:3px solid #111">${emailLogo()}
+<div style="font-family:${SANS};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#666;margin-top:8px">${esc(L.briefing)} · ${esc(o.date)}</div></td></tr>
+<tr><td style="padding:12px 20px;background:#fafafa;border-bottom:1px solid #e5e5e5;text-align:center">${communityBar(o.lang)}</td></tr>
+<tr><td style="padding:0 20px 28px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+${o.body}
 <!--sec:read-more--><tr><td style="padding-top:30px;text-align:center">${button(url, L.readMore)}</td></tr>
 </table></td></tr>
 <!--sec:end--><!--community-row-->
-<tr><td style="padding:16px 20px;border-top:1px solid #e5e5e5;font-family:${SANS};font-size:12px;color:#888">${esc(L.footer)}<br><a href="${url}/unsubscribe?key=${encodeURIComponent(opts.unsubscribeKey ?? "test")}" style="color:#555">${esc(L.unsubscribe)}</a></td></tr>
+<tr><td style="padding:16px 20px;border-top:1px solid #e5e5e5;font-family:${SANS};font-size:12px;color:#888">${esc(L.footer)}<br><a href="${url}/unsubscribe?key=${encodeURIComponent(o.unsubscribeKey ?? "test")}" style="color:#555">${esc(L.unsubscribe)}</a></td></tr>
 </table></div>`;
 
-  const html = tagLinks(raw, url, `briefing-${(opts.date ?? new Date()).toISOString().slice(0, 10)}`);
+  const html = tagLinks(raw, url, `${o.kind}-${(o.when ?? new Date()).toISOString().slice(0, 10)}`);
 
   // "The IT Raleche's Briefing — Andy Jassy, Satya Nadella & more 11/23/26"
-  const short = (opts.date ?? new Date()).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit" });
-  const who = guestSnippet(content.guests);
+  const short = (o.when ?? new Date()).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit", timeZone: "America/New_York" });
+  const who = guestSnippet(o.guests);
   return { subject: `${L.subject} — ${who ? `${who} ` : ""}${short}`, html };
+}
+
+const isLocaleOr = (l: string | undefined) => (isLocale(l) ? l : "en");
+
+// ---------------------------------------------------------------------------------------------------------------
+// Tuesday/Thursday edition: quotes from our guests, quizzes, 3 random books, and the WhatsApp/LinkedIn boxes.
+
+type QuoteItem = { text: string; speaker: string; slug: string; title: string; coverImage: string | null };
+export type QuotesContent = { quotes: QuoteItem[]; quizzes: QuizTeaser[]; guests?: string[] };
+
+const shuffle = <T,>(a: T[]) => [...a].sort(() => Math.random() - 0.5);
+
+/** Five quotes from five different guests and three quizzes, picked at random so every edition differs. */
+export async function loadQuotesContent(db: PrismaClient): Promise<QuotesContent> {
+  const posts = await db.post.findMany({ where: { ...published(), speaker: { not: null } }, select: { slug: true, title: true, speaker: true, body: true, coverImage: true } });
+  const seen = new Set<string>();
+  const quotes: QuoteItem[] = [];
+  for (const p of shuffle(posts)) {
+    if (!isPersonName(p.speaker) || seen.has(p.speaker)) continue;
+    // Skip "quotes" that are really a headline (they name the speaker or repeat the title).
+    const q = shuffle(extractQuotes(p.body).filter((t) => !t.includes(p.speaker!) && !p.title.includes(t.slice(0, 30))))[0];
+    if (!q) continue;
+    seen.add(p.speaker);
+    quotes.push({ text: q, speaker: p.speaker, slug: p.slug, title: p.title, coverImage: p.coverImage });
+    if (quotes.length === 5) break;
+  }
+  const withQuiz = await db.post.findMany({ where: { ...published(), quiz: { isNot: null } }, select: { ...storySelect, quiz: { select: { questions: true } } } });
+  const quizzes = shuffle(withQuiz).slice(0, 3).flatMap((p) => {
+    const q = shuffle((p.quiz?.questions as { q: string; options: string[] }[] | undefined) ?? [])[0];
+    return q ? [{ id: p.id, title: p.title, slug: p.slug, dek: p.dek, coverImage: p.coverImage, readMinutes: p.readMinutes, question: q.q, options: q.options }] : [];
+  });
+  return { quotes, quizzes, guests: quotes.map((q) => q.speaker) };
+}
+
+export function quotesLabels() {
+  return {
+    briefing: "Quotes & quiz",
+    quotesHeading: "What our guests said",
+    quotesDek: "Lines from our interviews worth keeping. Tap one to read the full story.",
+    readStory: "Read the story",
+    quizHeading: "Quiz: test yourself",
+    quizDek: `Read the summary, then get both questions right to win ${QUIZ_REWARD} tokens per story.`,
+    answer: `Answer & win ${QUIZ_REWARD} tokens`,
+    booksHeading: "Books from our guests",
+    readMore: "Read more on Raleche",
+    footer: "You get this because you subscribed to the Raleche briefing.",
+    unsubscribe: "Unsubscribe",
+    subject: "The IT Raleche's Quotes & Quiz",
+  };
+}
+export type QuotesLabels = ReturnType<typeof quotesLabels>;
+
+/** `books` is the reading-list box (emailBooksBlock with 3 random books). */
+export function quotesNewsletter(content: QuotesContent, opts: { unsubscribeKey?: string; date?: Date; labels?: QuotesLabels; locale?: string; books?: string } = {}) {
+  const L = opts.labels ?? quotesLabels();
+  const order = ["quotes", ...(content.quizzes.length ? ["quiz"] : []), ...(opts.books ? ["books"] : [])];
+  const num = (k: string) => order.indexOf(k) + 1;
+  const url = (process.env.APP_URL || "https://raleche.com").replace(/\/$/, "");
+  const story = (s: { slug: string }, hash = "") => `${url}/story/${encodeURIComponent(s.slug)}${hash}`;
+  const lang = isLocaleOr(opts.locale?.slice(0, 2));
+  const date = (opts.date ?? new Date()).toLocaleDateString(opts.locale ?? "en-US", { month: "long", day: "numeric", year: "numeric" });
+
+  const quotes = `${heading(num("quotes"), L.quotesHeading)}
+<tr><td style="font-size:16px;color:#555;padding-bottom:6px">${esc(L.quotesDek)}</td></tr>
+${content.quotes
+  .map(
+    (q) => `<tr><td style="padding:18px 0;border-bottom:1px solid #e5e5e5">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td style="vertical-align:top">
+<div style="font-family:Georgia,serif;font-size:42px;line-height:.6;color:#e1251b">“</div>
+<a href="${story(q)}" style="color:#111;text-decoration:none;font-family:Georgia,serif;font-style:italic;font-size:20px;line-height:1.4">${esc(q.text)}</a>
+<div style="font-family:${SANS};font-size:12px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#111;margin-top:10px">— ${esc(q.speaker)}</div>
+<div style="margin-top:4px"><a href="${story(q)}" style="font-family:${SANS};font-size:13px;color:#e1251b;font-weight:bold;text-decoration:none">${esc(L.readStory)} →</a></div>
+</td>${q.coverImage ? `<td style="vertical-align:top;width:112px;padding-left:12px">${emailCover(q.coverImage, story(q), 100, q.title)}</td>` : ""}</tr></table>
+</td></tr>`,
+  )
+  .join("")}`;
+
+  const quizzes = quizSection(content.quizzes, num("quiz"), L, story);
+  const books = opts.books ? `${heading(num("books"), L.booksHeading)}
+<tr><td>${opts.books}</td></tr>` : "";
+  const body = `<!--sec:quotes-->${quotes}
+<!--sec:quiz-->${quizzes}
+<!--sec:books-->${books}`;
+  return emailShell({ kind: "quotes", body, L, lang, date, url, guests: content.guests, books: opts.books, unsubscribeKey: opts.unsubscribeKey, when: opts.date });
 }
 
 /**
