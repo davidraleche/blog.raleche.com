@@ -157,25 +157,50 @@ ${s.coverImage ? `<td style="vertical-align:top;width:112px;padding-left:12px">$
   const books = opts.books ? `${heading(num("books"), L.booksHeading)}
 <tr><td>${opts.books}</td></tr>` : "";
 
-  const html = `${opts.books !== undefined ? NO_BOOKS : ""}<div style="background:#f4f4f4;padding:20px 0">
+  const raw = `${opts.books !== undefined ? NO_BOOKS : ""}<div style="background:#f4f4f4;padding:20px 0">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:auto;background:#fff;font-family:Georgia,serif;font-size:17px;line-height:1.55;color:#111">
 <tr><td style="padding:18px 20px 14px;border-bottom:3px solid #111">${emailLogo()}
 <div style="font-family:${SANS};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#666;margin-top:8px">${esc(L.briefing)} · ${esc(date)}</div></td></tr>
 <tr><td style="padding:12px 20px;background:#fafafa;border-bottom:1px solid #e5e5e5;text-align:center">${communityBar(lang)}</td></tr>
 <tr><td style="padding:0 20px 28px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-${latest}
-${books}
-${quizzes}
-${mostRead}
-${wheel}
-<tr><td style="padding-top:30px;text-align:center">${button(url, L.readMore)}</td></tr>
+<!--sec:latest-->${latest}
+<!--sec:books-->${books}
+<!--sec:quiz-->${quizzes}
+<!--sec:most-read-->${mostRead}
+<!--sec:wheel-->${wheel}
+<!--sec:read-more--><tr><td style="padding-top:30px;text-align:center">${button(url, L.readMore)}</td></tr>
 </table></td></tr>
-<!--community-row-->
+<!--sec:end--><!--community-row-->
 <tr><td style="padding:16px 20px;border-top:1px solid #e5e5e5;font-family:${SANS};font-size:12px;color:#888">${esc(L.footer)}<br><a href="${url}/unsubscribe?key=${encodeURIComponent(opts.unsubscribeKey ?? "test")}" style="color:#555">${esc(L.unsubscribe)}</a></td></tr>
 </table></div>`;
+
+  const html = tagLinks(raw, url, `briefing-${(opts.date ?? new Date()).toISOString().slice(0, 10)}`);
 
   // "The IT Raleche's Briefing — Andy Jassy, Satya Nadella & more 11/23/26"
   const short = (opts.date ?? new Date()).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit" });
   const who = guestSnippet(content.guests);
   return { subject: `${L.subject} — ${who ? `${who} ` : ""}${short}`, html };
+}
+
+/**
+ * Every link to the site gets ?utm_source=newsletter&utm_medium=email&utm_campaign=briefing-2026-11-25&utm_content=<section>,
+ * so the admin's Visitors page shows visits from the newsletter, which edition and which part of it (header, latest, books,
+ * quiz, most-read, wheel, read-more). Sections are marked <!--sec:name--> in the template; the unsubscribe link stays plain.
+ */
+function tagLinks(html: string, site: string, campaign: string) {
+  let section = "header";
+  return html.split(/(<!--sec:[\w-]+-->)/).map((part) => {
+    const m = part.match(/^<!--sec:([\w-]+)-->$/);
+    if (m) {
+      section = m[1];
+      return "";
+    }
+    if (section === "end") return part;
+    return part.replace(/href="([^"]+)"/g, (all, href: string) => {
+      if (!href.startsWith(site) || href.includes("/unsubscribe")) return all;
+      const [base, hash] = href.split("#");
+      const q = `utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=${campaign}&amp;utm_content=${section}`;
+      return `href="${base}${base.includes("?") ? "&amp;" : "?"}${q}${hash !== undefined ? `#${hash}` : ""}"`;
+    });
+  }).join("");
 }

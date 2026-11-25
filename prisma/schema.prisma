@@ -398,6 +398,7 @@ model PageView {
   title     String   @default("")
   referrer  String?
   source    String? // where the visit came from: the ?source= (or utm_source) tag of the link, else guessed from the referrer (twitter, linkedin, google…)
+  campaign  String? // utm_campaign/utm_content of the link, e.g. "briefing-2026-11-25/latest" (which newsletter and which part of it)
   sharedBy  String? // the member whose share link (?by=) brought this visit
   landing   Boolean  @default(false) // first page of the visit
   country   String? // two-letter code, from the visitor's IP

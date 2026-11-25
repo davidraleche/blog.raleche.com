@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { trackEvent } from "@/lib/track-client";
 
 /** The ?source= tag of the page the reader arrived on, until its page view is recorded. */
-let carried: { path: string; source?: string; by?: string } | null = null;
+let carried: { path: string; source?: string; by?: string; campaign?: string } | null = null;
 
 /** Records each page view, and how long the page was actually visible when the reader leaves it. */
 export function VisitBeacon() {
@@ -38,17 +38,19 @@ export function VisitBeacon() {
     const qs = new URLSearchParams(location.search);
     const tagged = qs.get("source") || qs.get("utm_source") || undefined;
     const by = qs.get("by") || undefined; // who shared the link
-    if (tagged || by) carried = { path: location.pathname, source: tagged, by };
+    // Which newsletter and which part of it: utm_campaign / utm_content ("briefing-2026-11-25" / "latest").
+    const campaign = [qs.get("utm_campaign"), qs.get("utm_content")].filter(Boolean).join("/") || undefined;
+    if (tagged || by) carried = { path: location.pathname, source: tagged, by, campaign };
     // Kept outside the effect: in development React runs it twice, and the tag is already gone from the URL the second time.
     const mine = carried?.path === location.pathname ? carried : null;
-    const source = mine?.source, sharedBy = mine?.by;
+    const source = mine?.source, sharedBy = mine?.by, campaignTag = mine?.campaign;
     if (tagged || by) {
       ["source", "by", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"].forEach((k) => qs.delete(k));
       const rest = qs.toString();
       try { window.history.replaceState(window.history.state, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`); } catch {}
     }
     const t = setTimeout(() => {
-      fetch("/api/track", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ path: pathname, title: document.title, referrer: document.referrer, source, by: sharedBy }), keepalive: true })
+      fetch("/api/track", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ path: pathname, title: document.title, referrer: document.referrer, source, by: sharedBy, campaign: campaignTag }), keepalive: true })
         .then((r) => r.json())
         .then((j: { id?: string | null }) => { id = j.id ?? null; if (mine) carried = null; })
         .catch(() => {});

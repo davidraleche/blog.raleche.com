@@ -12,7 +12,7 @@ const ALIASES: Record<string, string> = {
   yt: "youtube", shorts: "youtube", "youtube-shorts": "youtube",
   tt: "tiktok",
   wa: "whatsapp",
-  mail: "email", newsletter: "email",
+  mail: "email",
 };
 
 /** A ?source= / utm_source value made safe for storage (lowercase, letters, digits, - and _), or null. */
@@ -20,6 +20,13 @@ export function cleanSource(v: string | null | undefined): string | null {
   const s = (v ?? "").trim().toLowerCase().replace(/[^a-z0-9._-]/g, "").slice(0, 40);
   if (!s) return null;
   return ALIASES[s] ?? s;
+}
+
+/** "utm_campaign/utm_content" from the link, e.g. "briefing-2026-11-25/latest", made safe for storage, or null. */
+export function cleanCampaign(tag: string | null | undefined) {
+  const c = (v: string) => v.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "").slice(0, 60);
+  const s = (tag ?? "").split("/").slice(0, 2).map(c).filter(Boolean).join("/");
+  return s || null;
 }
 
 const HOSTS: [RegExp, string][] = [

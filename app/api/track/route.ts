@@ -7,7 +7,7 @@ import { after } from "next/server";
 import { clientIp, countryOf, countryLabel } from "@/lib/geo";
 import { logActivity } from "@/lib/activity";
 import { visitorName } from "@/lib/visitor-name";
-import { cleanSource, sourceFromReferrer } from "@/lib/traffic-source";
+import { cleanCampaign, cleanSource, sourceFromReferrer } from "@/lib/traffic-source";
 import { sharerByCode, rewardShare } from "@/lib/share-rewards";
 
 const VISITOR = "vid"; // first-party visitor id, 1 year
@@ -19,7 +19,7 @@ const VISIT_MS = 30 * 60e3;
  * linked to the member when signed in, and forwards signed-in visits to the tts42 admin log as before.
  */
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => null)) as { path?: string; title?: string; referrer?: string; source?: string; by?: string } | null;
+  const body = (await req.json().catch(() => null)) as { path?: string; title?: string; referrer?: string; source?: string; by?: string; campaign?: string } | null;
   if (!body?.path || !body.path.startsWith("/") || body.path.length > 500) return Response.json({ error: "path required" }, { status: 400 });
   const h = await headers();
   const ua = h.get("user-agent") ?? "";
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     const ip = clientIp(h);
     const country = countryOf(ip);
     const pv = await db.pageView.create({
-      data: { visitorId, sessionId: sessionId!, userId: user?.id ?? null, path: body.path, title: (body.title ?? "").slice(0, 200), referrer, source, sharedBy: sharer?.id ?? null, landing, country },
+      data: { visitorId, sessionId: sessionId!, userId: user?.id ?? null, path: body.path, title: (body.title ?? "").slice(0, 200), referrer, source, campaign: cleanCampaign(body.campaign), sharedBy: sharer?.id ?? null, landing, country },
     });
     id = pv.id;
     if (sharer && landing) {

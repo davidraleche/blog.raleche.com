@@ -6,7 +6,7 @@ import { visitorName } from "@/lib/visitor-name";
 import { VisitorDetail } from "./VisitorDetail";
 import { sourceFromReferrer, SOCIAL_SOURCES } from "@/lib/traffic-source";
 
-type PV = { id: string; visitorId: string; sessionId: string; userId: string | null; path: string; title: string; referrer: string | null; source: string | null; sharedBy: string | null; landing: boolean; country: string | null; seconds: number; createdAt: Date };
+type PV = { id: string; visitorId: string; sessionId: string; userId: string | null; path: string; title: string; referrer: string | null; source: string | null; campaign: string | null; sharedBy: string | null; landing: boolean; country: string | null; seconds: number; createdAt: Date };
 
 const fmtSec = (s: number) => (s < 60 ? `${Math.round(s)}s` : `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`);
 const time = (d: Date) => d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" });
@@ -352,6 +352,8 @@ async function SourceDetail({ source, since, days }: { source: string; since: Da
   const sharerIds = [...new Set(visits.map((s) => s.find((v) => v.sharedBy)?.sharedBy).filter(Boolean) as string[])];
   const sharers = sharerIds.length ? await db.user.findMany({ where: { id: { in: sharerIds } }, select: { id: true, email: true, phone: true, name: true } }) : [];
   const titleOf = new Map(views.map((v) => [v.path, v.title.replace(/ \| RALECHE$/, "")]));
+  // For tagged links (the newsletter): the edition and section the visit came from, e.g. "briefing-2026-11-25/latest".
+  const campaigns = visits.map((s) => s.find((v) => v.campaign)?.campaign).filter(Boolean) as string[];
   return (
     <div>
       <Link href={`/admin/visitors?days=${days}`} className="font-mono text-[11px] uppercase tracking-widest text-terminal-dim hover:text-slate-100">← All visitors</Link>
@@ -360,11 +362,17 @@ async function SourceDetail({ source, since, days }: { source: string; since: Da
         {[7, 30, 90].map((d) => <Link key={d} href={`/admin/visitors?source=${encodeURIComponent(source)}&days=${d}`} className={d === days ? "text-terminal-amber" : "text-terminal-dim hover:text-slate-100"}>{d} days</Link>)}
       </div>
       <div className="mb-6"><Table title="Pages they landed on" rows={landed.map(([p, n]) => [titleOf.get(p) || p, n])} /></div>
+      {campaigns.length > 0 && (
+        <div className="mb-6 grid gap-4 md:grid-cols-2">
+          <Table title="Which edition (utm_campaign)" rows={top(campaigns, (c) => c.split("/")[0], 20)} />
+          <Table title="Which part of it (utm_content)" rows={top(campaigns.filter((c) => c.includes("/")), (c) => c.split("/")[1], 20)} />
+        </div>
+      )}
       <div className="term-panel overflow-x-auto">
         <table className="term-table">
-          <thead><tr><th>When</th><th>Visitor</th><th>Country</th><th>Landed on</th><th className="text-right">Pages</th><th className="text-right">Time</th><th>Shared by</th><th>Referrer</th></tr></thead>
+          <thead><tr><th>When</th><th>Visitor</th><th>Country</th><th>Landed on</th><th className="text-right">Pages</th><th className="text-right">Time</th><th>Shared by</th><th>Campaign</th><th>Referrer</th></tr></thead>
           <tbody>
-            {visits.length === 0 && <tr><td colSpan={8} className="text-terminal-dim">No visits from {source} in the last {days} days.</td></tr>}
+            {visits.length === 0 && <tr><td colSpan={9} className="text-terminal-dim">No visits from {source} in the last {days} days.</td></tr>}
             {visits.slice(0, 500).map((s) => (
               <tr key={s[0].sessionId}>
                 <td className="whitespace-nowrap text-terminal-dim">{time(s[0].createdAt)}</td>
@@ -373,6 +381,7 @@ async function SourceDetail({ source, since, days }: { source: string; since: Da
                 <td className="max-w-[20rem] truncate" title={s[0].path}><Link href={s[0].path} className="hover:text-terminal-amber">{short(titleOf.get(s[0].path) || s[0].path, 55)}</Link></td>
                 <td className="text-right">{s.length}</td><td className="text-right">{fmtSec(s.reduce((n, v) => n + v.seconds, 0))}</td>
                 <td className="whitespace-nowrap">{(() => { const by = s.find((v) => v.sharedBy)?.sharedBy; const u = by ? sharers.find((x) => x.id === by) : null; return by ? <Link href={`/admin/visitors?user=${by}&days=${days}`} className="text-terminal-amber hover:text-slate-100">{u?.name || u?.email || u?.phone || "member"}</Link> : <span className="text-terminal-dim">–</span>; })()}</td>
+                <td className="whitespace-nowrap text-terminal-dim">{s.find((v) => v.campaign)?.campaign ?? "–"}</td>
                 <td className="max-w-[14rem] truncate text-terminal-dim" title={s[0].referrer ?? ""}>{s[0].referrer ?? "–"}</td>
               </tr>
             ))}
