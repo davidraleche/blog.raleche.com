@@ -3,8 +3,10 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { db } from "./db";
 import type { Locale } from "./i18n/messages";
+import { geminiJson, LITE_MODELS } from "./vertex";
 
-// Google Cloud Translation (v3), called with the Cloud Run service account. Results are cached in the
+// Gemini Flash-Lite on Vertex AI (about 100x cheaper than Google Cloud Translation), with Cloud Translation (v3)
+// as the fallback for a batch Gemini gets wrong. Both use the Cloud Run service account. Results are cached in the
 // Translation table, so each piece of text is translated once per language.
 const TARGET: Record<Exclude<Locale, "en">, string> = { fr: "fr", es: "es", zh: "zh-CN" };
 const PROJECT = process.env.GOOGLE_CLOUD_PROJECT || "raleche-blog";
@@ -46,6 +48,35 @@ async function callApi(lang: Exclude<Locale, "en">, contents: string[], format: 
   return j.translations.map((t) => t.translatedText);
 }
 
+const LANG_NAME: Record<Exclude<Locale, "en">, string> = { fr: "French", es: "Spanish", zh: "Simplified Chinese" };
+const GEMINI_CHARS = 12_000; // per Gemini request: keeps answers fast and well under the output limit
+
+async function callGemini(lang: Exclude<Locale, "en">, contents: string[], format: Format) {
+  const prompt = [
+    `Translate each string in the JSON array below from English to ${LANG_NAME[lang]}.`,
+    "These are texts from a site about interviews with tech leaders: keep the tone natural and idiomatic, not word for word.",
+    "Keep people's names, company and product names, code, URLs, numbers and @handles unchanged.",
+    format === "html" ? "The strings are HTML: keep every tag and attribute exactly as it is and translate only the visible text." : "Keep markdown, line breaks and punctuation marks such as quotes as they are.",
+    `Answer with {"translations": [...]}: exactly ${contents.length} strings, in the same order, one per input string.`,
+    "",
+    JSON.stringify(contents),
+  ].join("\n");
+  const r = await geminiJson<{ translations: string[] }>(prompt, { type: "OBJECT", properties: { translations: { type: "ARRAY", items: { type: "STRING" } } }, required: ["translations"] }, 0.2, 120_000, LITE_MODELS);
+  const out = r?.translations;
+  if (!Array.isArray(out) || out.length !== contents.length || out.some((t, i) => typeof t !== "string" || (!t.trim() && !!contents[i].trim()))) throw new Error("Gemini returned a bad translation list");
+  return out;
+}
+
+/** Gemini first; Cloud Translation only if Gemini fails for this batch. */
+async function translateBatch(lang: Exclude<Locale, "en">, contents: string[], format: Format) {
+  try {
+    return await callGemini(lang, contents, format);
+  } catch (e) {
+    console.error("[translate] gemini failed, using Cloud Translation:", (e as Error).message.split("\n")[0]);
+    return callApi(lang, contents, format);
+  }
+}
+
 /** Translate many strings from English. Falls back to the English text if the API is unavailable. */
 export async function translateMany(lang: Locale, items: string[], format: Format = "text"): Promise<string[]> {
   if (lang === "en" || !items.length) return items;
@@ -58,11 +89,11 @@ export async function translateMany(lang: Locale, items: string[], format: Forma
       for (let i = 0; i < missing.length; ) {
         const batch: (typeof missing)[number][] = [];
         let size = 0;
-        while (i < missing.length && batch.length < 100 && (batch.length === 0 || size + missing[i][1].length <= MAX_CHARS)) {
+        while (i < missing.length && batch.length < 40 && (batch.length === 0 || size + missing[i][1].length <= GEMINI_CHARS)) {
           size += missing[i][1].length;
           batch.push(missing[i++]);
         }
-        const out = await callApi(lang, batch.map(([, s]) => s), format);
+        const out = await translateBatch(lang, batch.map(([, s]) => s), format);
         const rows = batch.map(([id], j) => ({ id, lang, text: out[j] }));
         await db.translation.createMany({ data: rows, skipDuplicates: true });
         rows.forEach((r) => cached.set(r.id, r.text));

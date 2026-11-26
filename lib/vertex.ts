@@ -6,7 +6,9 @@ const PROJECT = process.env.GOOGLE_CLOUD_PROJECT || "raleche-blog";
 // Tried in order; the first one this project can use is remembered. Set GEMINI_MODEL to force one.
 // gemini-2.5-flash was retired in Nov 2026 (it answered 404, or 403 "may not exist", and stopped every AI job).
 const MODELS = [process.env.GEMINI_MODEL || process.env.QUIZ_MODEL, "gemini-3.5-flash", "gemini-3.6-flash", "gemini-3-flash-preview", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite"].filter((m, i, a): m is string => !!m && a.indexOf(m) === i);
-let workingModel: string | null = null;
+// Cheap models first, for bulk work such as translation (lib/translate.ts).
+export const LITE_MODELS = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", ...MODELS];
+const working = new Map<string, string>();
 
 async function accessToken() {
   // On Cloud Run the metadata server answers; it can be slow under load, so retry before giving up.
@@ -22,9 +24,11 @@ async function accessToken() {
 }
 
 /** Ask Gemini on Vertex AI for JSON matching a response schema. Throws if Vertex AI is off or the call fails. */
-export async function geminiJson<T>(prompt: string, responseSchema: object, temperature = 0.3, timeoutMs = 60_000): Promise<T> {
+export async function geminiJson<T>(prompt: string, responseSchema: object, temperature = 0.3, timeoutMs = 60_000, models: string[] = MODELS): Promise<T> {
   const token = await accessToken();
-  const candidates = workingModel ? [workingModel] : MODELS;
+  const listKey = models.join(",");
+  const workingModel = working.get(listKey);
+  const candidates = workingModel ? [workingModel] : models;
   let lastError = "no model available";
   for (const model of candidates) {
     const res = await fetch(`https://aiplatform.googleapis.com/v1/projects/${PROJECT}/locations/global/publishers/google/models/${model}:generateContent`, {
@@ -39,9 +43,9 @@ export async function geminiJson<T>(prompt: string, responseSchema: object, temp
       if (!workingModel && (res.status === 404 || (res.status === 403 && /may not exist|not found/i.test(text)))) { lastError = `Vertex AI ${res.status} for ${model}`; continue; }
       throw new Error(`Vertex AI ${res.status} (${model}): ${text.slice(0, 300)}`);
     }
-    if (!workingModel) { workingModel = model; console.log(`[vertex] using ${model}`); }
+    if (!workingModel) { working.set(listKey, model); console.log(`[vertex] using ${model}`); }
     const j = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
     return JSON.parse(j.candidates?.[0]?.content?.parts?.[0]?.text ?? "null") as T;
   }
-  throw new Error(`${lastError}; none of ${MODELS.join(", ")} is available to project ${PROJECT}`);
+  throw new Error(`${lastError}; none of ${models.join(", ")} is available to project ${PROJECT}`);
 }
